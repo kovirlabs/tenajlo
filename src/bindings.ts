@@ -31,6 +31,8 @@ export const commands = {
 	getCommitFiles: (repoId: string, sha: string) => typedError<CommitFile[], AppError>(__TAURI_INVOKE("get_commit_files", { repoId, sha })),
 	/**  Diff of one file within a commit. */
 	getCommitDiff: (repoId: string, sha: string, path: string, oldPath: string | null) => typedError<FileDiff, AppError>(__TAURI_INVOKE("get_commit_diff", { repoId, sha, path, oldPath })),
+	/**  Local and remote branches. */
+	getBranches: (repoId: string) => typedError<BranchList, AppError>(__TAURI_INVOKE("get_branches", { repoId })),
 };
 
 /* Types */
@@ -47,6 +49,31 @@ export type AppError = {
 
 /**  Broad category the UI uses to pick a dialog. */
 export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "UnknownRepository" | "Storage" | "InvalidInput" | "Internal";
+
+export type Branch = {
+	/**  Short name: `main`, or `origin/main` for remote branches. */
+	name: string,
+	kind: BranchKind,
+	/**  Remote name for remote branches. */
+	remote: string | null,
+	/**  Upstream (`origin/main`) for local branches that track one. */
+	upstream: string | null,
+	tip: string,
+	isCurrent: boolean,
+	/**  ISO 8601 date of the tip commit. */
+	lastCommitDate: string,
+};
+
+export type BranchKind = "Local" | "Remote";
+
+/**  Branches grouped the way the branch dropdown shows them. */
+export type BranchList = {
+	current: string | null,
+	/**  Local branches, sorted by name (current included). */
+	local: Branch[],
+	/**  Remote branches with no local branch tracking them or sharing their name. */
+	remoteOnly: Branch[],
+};
 
 /**  Branch information from `# branch.*` headers. */
 export type BranchState = {

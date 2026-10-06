@@ -7,6 +7,7 @@ import { ChangesList } from "./ChangesList";
 import { CommitDetail } from "./CommitDetail";
 import { DiffPane } from "./DiffPane";
 import { HistoryList } from "./HistoryList";
+import { useBranchStore } from "../stores/branchStore";
 import { useHistoryStore } from "../stores/historyStore";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -23,11 +24,13 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   const status = useChangesStore((s) => s.status);
 
   const refreshHistory = useHistoryStore((s) => s.refresh);
+  const refreshBranches = useBranchStore((s) => s.refresh);
 
   useEffect(() => {
     void refreshChanges(repo.id);
     void refreshHistory(repo.id);
-  }, [repo.id, refreshChanges, refreshHistory]);
+    void refreshBranches(repo.id);
+  }, [repo.id, refreshChanges, refreshHistory, refreshBranches]);
 
   return (
     <div className="repo-view">

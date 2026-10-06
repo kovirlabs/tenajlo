@@ -4,8 +4,10 @@ use tauri::State;
 
 use super::repos::parse_id;
 use crate::error::AppError;
+use crate::git::branches;
 use crate::git::diff;
 use crate::git::log;
+use crate::git::parse::branches::BranchList;
 use crate::git::parse::diff::FileDiff;
 use crate::git::parse::log::{Commit, CommitFile};
 use crate::git::parse::status::WorkingDirectoryStatus;
@@ -91,4 +93,15 @@ pub async fn get_commit_diff(
     check_sha(&sha)?;
     let root = state.repos.root(parse_id(&repo_id)?)?;
     Ok(diff::commit_file_diff(&state.git()?, &root, &sha, &path, old_path.as_deref()).await?)
+}
+
+/// Local and remote branches.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_branches(
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<BranchList, AppError> {
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    Ok(branches::branches(&state.git()?, &root).await?)
 }

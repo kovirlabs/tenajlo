@@ -24,6 +24,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         commands::repo::get_history,
         commands::repo::get_commit_files,
         commands::repo::get_commit_diff,
+        commands::repo::get_branches,
     ])
 }
 
