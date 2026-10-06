@@ -1,0 +1,7 @@
+dist/
+target/
+src-tauri/
+pnpm-lock.yaml
+spec.md
+CLAUDE.md
+src/bindings.ts

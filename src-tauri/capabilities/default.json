@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Main window. Least privilege: core defaults only — no fs, shell, or http plugins (spec §10.3).",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
