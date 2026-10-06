@@ -1,6 +1,6 @@
 //! Read-only commands on the selected repository.
 
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use super::repos::parse_id;
 use crate::error::AppError;
@@ -104,4 +104,20 @@ pub async fn get_branches(
 ) -> Result<BranchList, AppError> {
     let root = state.repos.root(parse_id(&repo_id)?)?;
     Ok(branches::branches(&state.git()?, &root).await?)
+}
+
+/// Starts watching a repository for changes (emits `RepoChanged`). Replaces any previous watch.
+/// Watching is best-effort: on failure the UI still refreshes on window focus.
+#[tauri::command]
+#[specta::specta]
+pub fn watch_repository(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+) -> Result<(), AppError> {
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    if let Err(e) = state.watcher.watch(&app, repo_id, root) {
+        tracing::warn!(error = %e, "could not watch repository");
+    }
+    Ok(())
 }

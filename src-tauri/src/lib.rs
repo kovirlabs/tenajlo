@@ -7,25 +7,29 @@ pub mod redact;
 pub mod repo_manager;
 pub mod state;
 pub mod store;
+pub mod watcher;
 
 use tauri::Manager;
-use tauri_specta::{collect_commands, Builder};
+use tauri_specta::{collect_commands, collect_events, Builder};
 
 /// Registers every command with tauri-specta. Shared by the app and `export-bindings`.
 pub fn specta_builder() -> Builder<tauri::Wry> {
-    Builder::<tauri::Wry>::new().commands(collect_commands![
-        commands::app::check_git,
-        commands::repos::list_repositories,
-        commands::repos::add_local_repository,
-        commands::repos::remove_repository,
-        commands::repos::select_repository,
-        commands::repo::get_status,
-        commands::repo::get_working_diff,
-        commands::repo::get_history,
-        commands::repo::get_commit_files,
-        commands::repo::get_commit_diff,
-        commands::repo::get_branches,
-    ])
+    Builder::<tauri::Wry>::new()
+        .commands(collect_commands![
+            commands::app::check_git,
+            commands::repos::list_repositories,
+            commands::repos::add_local_repository,
+            commands::repos::remove_repository,
+            commands::repos::select_repository,
+            commands::repo::get_status,
+            commands::repo::get_working_diff,
+            commands::repo::get_history,
+            commands::repo::get_commit_files,
+            commands::repo::get_commit_diff,
+            commands::repo::get_branches,
+            commands::repo::watch_repository,
+        ])
+        .events(collect_events![watcher::RepoChanged])
 }
 
 /// Builds and runs the Tauri application.

@@ -6,6 +6,7 @@ use std::sync::RwLock;
 use crate::git::error::GitError;
 use crate::git::exec::GitBinary;
 use crate::repo_manager::RepoManager;
+use crate::watcher::RepoWatcher;
 
 /// Shared state injected into commands via `tauri::State`.
 pub struct AppState {
@@ -14,6 +15,7 @@ pub struct AppState {
     /// Set by `check_git` once a supported git is found.
     git: RwLock<Option<GitBinary>>,
     pub repos: RepoManager,
+    pub watcher: RepoWatcher,
 }
 
 impl AppState {
@@ -23,6 +25,7 @@ impl AppState {
             bundled_git_dir,
             git: RwLock::new(None),
             repos,
+            watcher: RepoWatcher::default(),
         }
     }
 

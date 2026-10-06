@@ -1,14 +1,12 @@
-import { useEffect } from "react";
 import type { Repository } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { useUiStore, type Tab } from "../stores/uiStore";
 import { getWorkingDiff } from "../api/diff";
+import { useRepoRefresh } from "../hooks/useRepoRefresh";
 import { ChangesList } from "./ChangesList";
 import { CommitDetail } from "./CommitDetail";
 import { DiffPane } from "./DiffPane";
 import { HistoryList } from "./HistoryList";
-import { useBranchStore } from "../stores/branchStore";
-import { useHistoryStore } from "../stores/historyStore";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "changes", label: "Changes" },
@@ -19,18 +17,9 @@ const TABS: { id: Tab; label: string }[] = [
 export function RepositoryView({ repo }: { repo: Repository }) {
   const tab = useUiStore((s) => s.tab);
   const setTab = useUiStore((s) => s.setTab);
-  const refreshChanges = useChangesStore((s) => s.refresh);
   const selectedPath = useChangesStore((s) => s.selectedPath);
   const status = useChangesStore((s) => s.status);
-
-  const refreshHistory = useHistoryStore((s) => s.refresh);
-  const refreshBranches = useBranchStore((s) => s.refresh);
-
-  useEffect(() => {
-    void refreshChanges(repo.id);
-    void refreshHistory(repo.id);
-    void refreshBranches(repo.id);
-  }, [repo.id, refreshChanges, refreshHistory, refreshBranches]);
+  useRepoRefresh(repo.id);
 
   return (
     <div className="repo-view">
