@@ -3,6 +3,7 @@
 use serde::Serialize;
 
 use crate::git::error::{GitError, GitErrorKind};
+use crate::repo_manager::RepoError;
 
 /// Broad category the UI uses to pick a dialog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
@@ -12,6 +13,9 @@ pub enum AppErrorKind {
     GitTimedOut,
     GitCancelled,
     Git,
+    UnknownRepository,
+    Storage,
+    InvalidInput,
     Internal,
 }
 
@@ -29,6 +33,11 @@ pub struct AppError {
 }
 
 impl AppError {
+    /// Rejected command input (bad id, bad path).
+    pub fn invalid_input(message: impl Into<String>) -> Self {
+        Self::new(AppErrorKind::InvalidInput, message, None)
+    }
+
     fn new(kind: AppErrorKind, message: impl Into<String>, details: Option<String>) -> Self {
         Self {
             kind,
@@ -69,7 +78,7 @@ impl From<GitError> for AppError {
             GitError::Failed { kind, stderr, .. } => AppError {
                 kind: AppErrorKind::Git,
                 git_kind: Some(kind),
-                message: "Git reported a problem.".into(),
+                message: git_message(kind).into(),
                 details: Some(stderr),
             },
             GitError::Spawn(e) => {
@@ -81,5 +90,45 @@ impl From<GitError> for AppError {
                 Some(crate::redact::redact(&s)),
             ),
         }
+    }
+}
+
+impl From<RepoError> for AppError {
+    fn from(err: RepoError) -> Self {
+        match err {
+            RepoError::UnknownRepository => AppError::new(
+                AppErrorKind::UnknownRepository,
+                "That repository is no longer in your list.",
+                None,
+            ),
+            RepoError::Git(e) => e.into(),
+            RepoError::Store(e) => AppError::new(
+                AppErrorKind::Storage,
+                "Anvil couldn't save your repository list.",
+                Some(crate::redact::redact(&e.to_string())),
+            ),
+        }
+    }
+}
+
+/// Plain-language message for a classified git failure (spec §5.5).
+fn git_message(kind: GitErrorKind) -> &'static str {
+    match kind {
+        GitErrorKind::AuthFailed => "The server didn't accept your sign-in. Check your account or token.",
+        GitErrorKind::HostKeyUnknown => "The server's identity couldn't be confirmed.",
+        GitErrorKind::SshKeyRejected => "The server didn't accept your SSH key.",
+        GitErrorKind::PushRejected => "The server has changes you don't have yet. Pull first, then push.",
+        GitErrorKind::PullDiverged => "Your branch and the server's branch have both changed.",
+        GitErrorKind::LocalChangesBlock => "You have changes that would be overwritten.",
+        GitErrorKind::TlsUntrusted => {
+            "This computer doesn't trust the server's certificate. Your IT team may need to install the company certificate."
+        }
+        GitErrorKind::HostUnreachable => "Couldn't reach the server. Check your network or VPN connection.",
+        GitErrorKind::MergeConflict => "Some files have conflicts that need to be resolved.",
+        GitErrorKind::NotARepository => "This folder isn't a Git repository.",
+        GitErrorKind::DubiousOwnership => {
+            "Git won't open this folder because it belongs to a different user account. Ask IT to fix the folder's owner, or mark it as safe with `git config --global --add safe.directory <path>`."
+        }
+        GitErrorKind::Unknown => "Git reported a problem.",
     }
 }

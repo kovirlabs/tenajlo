@@ -19,6 +19,8 @@ pub enum GitErrorKind {
     HostUnreachable,
     MergeConflict,
     NotARepository,
+    /// Folder owned by another user; git's `safe.directory` check refused it.
+    DubiousOwnership,
     Unknown,
 }
 
@@ -56,7 +58,9 @@ const PATTERNS: &[(&str, GitErrorKind)] = &[
     ("Could not resolve host", GitErrorKind::HostUnreachable),
     ("Could not resolve hostname", GitErrorKind::HostUnreachable),
     ("CONFLICT", GitErrorKind::MergeConflict),
+    ("detected dubious ownership", GitErrorKind::DubiousOwnership),
     ("not a git repository", GitErrorKind::NotARepository),
+    ("must be run in a work tree", GitErrorKind::NotARepository),
 ];
 
 /// Classifies git stderr into a [`GitErrorKind`].
@@ -146,6 +150,7 @@ mod tests {
                 "fatal: not a git repository (or any of the parent directories): .git",
                 GitErrorKind::NotARepository,
             ),
+            ("fatal: detected dubious ownership in repository at 'C:/Shared/repo'", GitErrorKind::DubiousOwnership),
             ("", GitErrorKind::Unknown),
             ("something else entirely", GitErrorKind::Unknown),
         ];

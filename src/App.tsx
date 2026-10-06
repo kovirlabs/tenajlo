@@ -1,10 +1,10 @@
 import { StartupGate } from "./components/StartupGate";
-import { EmptyShell } from "./views/EmptyShell";
+import { AppShell } from "./views/AppShell";
 
 export function App() {
   return (
     <StartupGate>
-      <EmptyShell />
+      <AppShell />
     </StartupGate>
   );
 }

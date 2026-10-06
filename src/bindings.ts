@@ -6,6 +6,21 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	/**  Locates git and reports its version and whether it meets the minimum. */
 	checkGit: () => typedError<GitInfo, AppError>(__TAURI_INVOKE("check_git")),
+	/**  Lists added repositories, most recently opened first. */
+	listRepositories: () => __TAURI_INVOKE<RepositoryList>("list_repositories"),
+	/**  Opens a folder picker and adds the chosen repository. `None` if the user cancelled. */
+	addLocalRepository: () => typedError<{
+	id: string,
+	/**  Alias, or the folder name. */
+	name: string,
+	path: string,
+	/**  The folder no longer exists (moved or deleted). */
+	missing: boolean,
+} | null, AppError>(__TAURI_INVOKE("add_local_repository")),
+	/**  Removes a repository from the list. Files on disk are not touched. */
+	removeRepository: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_repository", { id })),
+	/**  Selects a repository and marks it recently opened. */
+	selectRepository: (id: string) => typedError<Repository, AppError>(__TAURI_INVOKE("select_repository", { id })),
 };
 
 /* Types */
@@ -21,10 +36,12 @@ export type AppError = {
 };
 
 /**  Broad category the UI uses to pick a dialog. */
-export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "Internal";
+export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "UnknownRepository" | "Storage" | "InvalidInput" | "Internal";
 
 /**  Typed classification of a failed git invocation. */
-export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | "SshKeyRejected" | "PushRejected" | "PullDiverged" | "LocalChangesBlock" | "TlsUntrusted" | "HostUnreachable" | "MergeConflict" | "NotARepository" | "Unknown";
+export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | "SshKeyRejected" | "PushRejected" | "PullDiverged" | "LocalChangesBlock" | "TlsUntrusted" | "HostUnreachable" | "MergeConflict" | "NotARepository" | 
+/**  Folder owned by another user; git's `safe.directory` check refused it. */
+"DubiousOwnership" | "Unknown";
 
 /**  Result of the startup git check, sent to the UI. */
 export type GitInfo = {
@@ -41,6 +58,23 @@ export type GitVersion = {
 	major: number,
 	minor: number,
 	patch: number,
+};
+
+/**  A repository as shown in the UI. */
+export type Repository = {
+	id: string,
+	/**  Alias, or the folder name. */
+	name: string,
+	path: string,
+	/**  The folder no longer exists (moved or deleted). */
+	missing: boolean,
+};
+
+/**  The repository list plus current selection. */
+export type RepositoryList = {
+	/**  Most recently opened first. */
+	repositories: Repository[],
+	selectedId: string | null,
 };
 
 /* Tauri Specta runtime */

@@ -117,3 +117,131 @@ button:focus-visible {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+.toolbar {
+  gap: 1px;
+  padding: 0;
+}
+
+.popover {
+  position: relative;
+  height: 100%;
+}
+
+.toolbar-button {
+  height: 100%;
+  min-width: 220px;
+  padding: 0 12px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toolbar-button:hover,
+.toolbar-button[aria-expanded="true"] {
+  background: var(--bg);
+}
+
+.toolbar-label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+}
+
+.toolbar-label small {
+  font-weight: 400;
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+}
+
+.popover-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  width: 340px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+}
+
+.picker-filter {
+  width: calc(100% - 16px);
+  margin: 8px;
+  padding: 6px 8px;
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.picker-item {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--fg);
+  text-align: left;
+  padding: 6px 12px;
+}
+
+.picker-item:hover,
+.picker-item:focus-visible {
+  background: var(--bg-subtle);
+}
+
+.picker-item.current {
+  font-weight: 600;
+}
+
+.picker-empty {
+  padding: 6px 12px;
+}
+
+.picker-footer {
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  text-align: right;
+}
+
+.dialog {
+  max-width: 520px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+.dialog h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+
+.dialog-actions {
+  text-align: right;
+}
+
+code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  word-break: break-all;
+}

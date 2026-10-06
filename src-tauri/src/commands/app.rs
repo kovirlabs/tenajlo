@@ -14,5 +14,8 @@ pub async fn check_git(state: State<'_, AppState>) -> Result<version::GitInfo, A
     let git = binary::resolve(None, state.bundled_git_dir.as_deref())?;
     let info = version::detect(&git).await?;
     tracing::info!(version = %info.version, supported = info.supported, "git detected");
+    if info.supported {
+        state.set_git(git);
+    }
     Ok(info)
 }
