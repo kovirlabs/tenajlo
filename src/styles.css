@@ -371,3 +371,76 @@ code {
 .pane-message {
   padding: 12px;
 }
+
+.detail-header {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vlist {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.vlist-inner {
+  position: relative;
+  min-width: 100%;
+  width: max-content;
+}
+
+.vrow {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.diff {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+}
+
+.diff-row {
+  display: flex;
+  height: 100%;
+  line-height: 20px;
+  white-space: pre;
+}
+
+.diff-num {
+  width: 48px;
+  flex: none;
+  padding-right: 8px;
+  text-align: right;
+  color: var(--fg-muted);
+  user-select: none;
+}
+
+.diff-marker {
+  width: 16px;
+  flex: none;
+  user-select: none;
+}
+
+.diff-add {
+  background: var(--diff-add-bg);
+}
+
+.diff-delete {
+  background: var(--diff-del-bg);
+}
+
+.diff-hunk {
+  background: var(--diff-hunk-bg);
+  color: var(--fg-muted);
+  padding-left: 112px;
+}
+
+.diff-eof {
+  color: var(--danger);
+  padding-left: 4px;
+}

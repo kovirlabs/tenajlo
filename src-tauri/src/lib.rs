@@ -20,6 +20,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         commands::repos::remove_repository,
         commands::repos::select_repository,
         commands::repo::get_status,
+        commands::repo::get_working_diff,
     ])
 }
 

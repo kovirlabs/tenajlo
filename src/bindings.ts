@@ -23,6 +23,8 @@ export const commands = {
 	selectRepository: (id: string) => typedError<Repository, AppError>(__TAURI_INVOKE("select_repository", { id })),
 	/**  Working directory status for a repository. */
 	getStatus: (repoId: string) => typedError<WorkingDirectoryStatus, AppError>(__TAURI_INVOKE("get_status", { repoId })),
+	/**  Diff of a changed working-directory file. Unchanged if the file no longer has changes. */
+	getWorkingDiff: (repoId: string, path: string) => typedError<FileDiff, AppError>(__TAURI_INVOKE("get_working_diff", { repoId, path })),
 };
 
 /* Types */
@@ -53,6 +55,24 @@ export type BranchState = {
 	upstreamGone: boolean,
 };
 
+export type DiffHunk = {
+	/**  The full `@@ … @@ section` header line. */
+	header: string,
+	lines: DiffLine[],
+};
+
+export type DiffLine = {
+	kind: DiffLineKind,
+	/**  Line content without the +/-/space marker or line ending. */
+	text: string,
+	oldLine: number | null,
+	newLine: number | null,
+	/**  Followed by "\ No newline at end of file". */
+	noNewline: boolean,
+};
+
+export type DiffLineKind = "Context" | "Add" | "Delete";
+
 /**  One changed path. */
 export type FileChange = {
 	/**  Repo-relative path, `/`-separated. */
@@ -64,6 +84,11 @@ export type FileChange = {
 	/**  The path is a submodule (detected and shown only; spec §2). */
 	submodule: boolean,
 };
+
+/**  A file's diff, ready to render. */
+export type FileDiff = { type: "Text"; hunks: DiffHunk[] } | { type: "Binary" } | { type: "TooLarge" } | 
+/**  No content changes (e.g. only the file mode changed). */
+{ type: "Unchanged" };
 
 /**  What happened to a file, as shown in the Changes list. */
 export type FileStatusKind = "Untracked" | "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "Conflicted";
