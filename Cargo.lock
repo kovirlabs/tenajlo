@@ -52,6 +52,7 @@ name = "anvil"
 version = "0.1.0"
 dependencies = [
  "dunce",
+ "libc",
  "serde",
  "serde_json",
  "specta",

@@ -155,8 +155,12 @@ impl GitCommand {
             const CREATE_NO_WINDOW: u32 = 0x0800_0000;
             cmd.creation_flags(CREATE_NO_WINDOW);
         }
+        // Own process group, so helpers git spawns (ssh, git-remote-https) die with it.
+        #[cfg(unix)]
+        cmd.process_group(0);
 
         let mut child = cmd.spawn().map_err(GitError::Spawn)?;
+        let pid = child.id();
         let stdin_pipe = child.stdin.take();
         let input = self.stdin;
         let write_stdin = async move {
@@ -178,14 +182,22 @@ impl GitCommand {
             }
         };
 
-        // Dropping `wait` drops the child, and `kill_on_drop` kills it.
-        // TODO(M3): kill the whole process tree on Windows (job object) for remote ops.
-        let output = tokio::select! {
-            res = tokio::time::timeout(self.timeout, wait) => match res {
-                Ok(out) => out.map_err(GitError::Spawn)?,
-                Err(_) => return Err(GitError::TimedOut),
-            },
-            () = cancelled => return Err(GitError::Cancelled),
+        // `wait` is pinned so the child stays unreaped until the tree is killed;
+        // otherwise its process-group id could be recycled before `killpg`.
+        let wait = tokio::time::timeout(self.timeout, wait);
+        tokio::pin!(wait);
+        let mut tree = TreeKiller::new(pid);
+        let finished = tokio::select! {
+            res = &mut wait => Some(res),
+            () = cancelled => None,
+        };
+        let output = match finished {
+            Some(Ok(out)) => {
+                tree.disarm();
+                out.map_err(GitError::Spawn)?
+            }
+            Some(Err(_elapsed)) => return Err(GitError::TimedOut),
+            None => return Err(GitError::Cancelled),
         };
 
         let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -205,6 +217,47 @@ impl GitCommand {
             stderr,
         })
     }
+}
+
+/// Kills git's whole process tree when dropped, unless disarmed after a normal exit.
+///
+/// Declared after the pinned `wait` future, so it drops first: the group leader is
+/// still unreaped and its pid (the group id) cannot have been reused.
+struct TreeKiller(Option<u32>);
+
+impl TreeKiller {
+    fn new(pid: Option<u32>) -> Self {
+        Self(pid)
+    }
+
+    fn disarm(&mut self) {
+        self.0 = None;
+    }
+}
+
+impl Drop for TreeKiller {
+    fn drop(&mut self) {
+        if let Some(pid) = self.0.take() {
+            kill_tree(pid);
+        }
+    }
+}
+
+#[cfg(unix)]
+fn kill_tree(pgid: u32) {
+    let Ok(pgid) = libc::pid_t::try_from(pgid) else {
+        return;
+    };
+    // SAFETY: killpg has no memory-safety preconditions; a stale or invalid pgid just returns ESRCH.
+    unsafe {
+        libc::killpg(pgid, libc::SIGKILL);
+    }
+}
+
+#[cfg(windows)]
+fn kill_tree(_pid: u32) {
+    // TODO(M3): assign git to a job object and terminate the job here.
+    // Until then `kill_on_drop` kills only git itself.
 }
 
 /// `-c` flags applied to every invocation. Never written to the user's config.
@@ -308,6 +361,46 @@ mod tests {
         let res = sleeper().cancel_on(token).run(&git()).await;
         assert!(matches!(res, Err(GitError::Cancelled)), "{res:?}");
         assert!(started.elapsed() < Duration::from_secs(5));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn cancellation_kills_grandchildren() {
+        let dir = tempfile::tempdir().unwrap();
+        let pid_file = dir.path().join("pid");
+        let alias = format!(
+            "alias.zz=!echo $$ > '{}'; exec sleep 30",
+            pid_file.display()
+        );
+        let token = CancellationToken::new();
+        let canceller = token.clone();
+        let watch = pid_file.clone();
+        tokio::spawn(async move {
+            while !watch.exists() {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+            canceller.cancel();
+        });
+        let res = GitCommand::new(["-c", &alias, "zz"], Access::ReadOnly)
+            .cancel_on(token)
+            .run(&git())
+            .await;
+        assert!(matches!(res, Err(GitError::Cancelled)), "{res:?}");
+
+        let pid: libc::pid_t = std::fs::read_to_string(&pid_file)
+            .unwrap()
+            .trim()
+            .parse()
+            .unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(3);
+        // SAFETY: signal 0 only checks for existence.
+        while unsafe { libc::kill(pid, 0) } == 0 {
+            assert!(
+                std::time::Instant::now() < deadline,
+                "grandchild {pid} survived"
+            );
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
     }
 
     #[cfg(unix)]

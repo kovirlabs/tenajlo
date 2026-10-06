@@ -19,6 +19,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         commands::repos::add_local_repository,
         commands::repos::remove_repository,
         commands::repos::select_repository,
+        commands::repo::get_status,
     ])
 }
 

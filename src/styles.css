@@ -7,6 +7,12 @@
   --accent: #b5551a;
   --accent-fg: #ffffff;
   --danger: #b42318;
+  --added: #1a7f37;
+  --modified: #9a6700;
+  --selection: #dbe9fb;
+  --diff-add-bg: #e6ffec;
+  --diff-del-bg: #ffebe9;
+  --diff-hunk-bg: #ddf4ff;
   color-scheme: light dark;
   font-family: system-ui, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
@@ -22,6 +28,12 @@
     --accent: #f08a3c;
     --accent-fg: #161b22;
     --danger: #ff7b72;
+    --added: #3fb950;
+    --modified: #d29922;
+    --selection: #1f3a5f;
+    --diff-add-bg: #12261e;
+    --diff-del-bg: #2d1416;
+    --diff-hunk-bg: #121d2f;
   }
 }
 
@@ -244,4 +256,118 @@ button:focus-visible {
 code {
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   word-break: break-all;
+}
+
+.repo-view {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.sidebar {
+  width: 300px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+}
+
+.detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  flex: 1;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--fg-muted);
+  padding: 8px;
+}
+
+.tab[aria-selected="true"] {
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+.list-header {
+  padding: 6px 12px;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.changes-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  cursor: default;
+}
+
+.file-row:hover {
+  background: var(--bg-subtle);
+}
+
+.file-row.selected {
+  background: var(--selection);
+}
+
+.file-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-icon {
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.status-untracked,
+.status-added {
+  color: var(--added);
+}
+
+.status-modified,
+.status-renamed,
+.status-copied {
+  color: var(--modified);
+}
+
+.status-deleted,
+.status-conflicted {
+  color: var(--danger);
+}
+
+.pane-message {
+  padding: 12px;
 }

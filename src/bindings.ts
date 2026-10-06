@@ -21,6 +21,8 @@ export const commands = {
 	removeRepository: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_repository", { id })),
 	/**  Selects a repository and marks it recently opened. */
 	selectRepository: (id: string) => typedError<Repository, AppError>(__TAURI_INVOKE("select_repository", { id })),
+	/**  Working directory status for a repository. */
+	getStatus: (repoId: string) => typedError<WorkingDirectoryStatus, AppError>(__TAURI_INVOKE("get_status", { repoId })),
 };
 
 /* Types */
@@ -37,6 +39,34 @@ export type AppError = {
 
 /**  Broad category the UI uses to pick a dialog. */
 export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "UnknownRepository" | "Storage" | "InvalidInput" | "Internal";
+
+/**  Branch information from `# branch.*` headers. */
+export type BranchState = {
+	/**  Current branch name; `None` when HEAD is detached. */
+	name: string | null,
+	/**  HEAD commit; `None` in a repository with no commits yet. */
+	tip: string | null,
+	upstream: string | null,
+	ahead: number,
+	behind: number,
+	/**  An upstream is configured but no longer exists on the remote. */
+	upstreamGone: boolean,
+};
+
+/**  One changed path. */
+export type FileChange = {
+	/**  Repo-relative path, `/`-separated. */
+	path: string,
+	/**  Original path for renames and copies. */
+	oldPath: string | null,
+	kind: FileStatusKind,
+	staged: StagedState,
+	/**  The path is a submodule (detected and shown only; spec §2). */
+	submodule: boolean,
+};
+
+/**  What happened to a file, as shown in the Changes list. */
+export type FileStatusKind = "Untracked" | "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "Conflicted";
 
 /**  Typed classification of a failed git invocation. */
 export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | "SshKeyRejected" | "PushRejected" | "PullDiverged" | "LocalChangesBlock" | "TlsUntrusted" | "HostUnreachable" | "MergeConflict" | "NotARepository" | 
@@ -75,6 +105,16 @@ export type RepositoryList = {
 	/**  Most recently opened first. */
 	repositories: Repository[],
 	selectedId: string | null,
+};
+
+/**  How much of a file's change is staged. */
+export type StagedState = "None" | "Partial" | "Full";
+
+/**  Parsed working directory status. */
+export type WorkingDirectoryStatus = {
+	branch: BranchState,
+	files: FileChange[],
+	hasConflicts: boolean,
 };
 
 /* Tauri Specta runtime */
