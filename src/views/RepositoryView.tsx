@@ -4,7 +4,10 @@ import { useChangesStore } from "../stores/changesStore";
 import { useUiStore, type Tab } from "../stores/uiStore";
 import { getWorkingDiff } from "../api/diff";
 import { ChangesList } from "./ChangesList";
+import { CommitDetail } from "./CommitDetail";
 import { DiffPane } from "./DiffPane";
+import { HistoryList } from "./HistoryList";
+import { useHistoryStore } from "../stores/historyStore";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "changes", label: "Changes" },
@@ -19,9 +22,12 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   const selectedPath = useChangesStore((s) => s.selectedPath);
   const status = useChangesStore((s) => s.status);
 
+  const refreshHistory = useHistoryStore((s) => s.refresh);
+
   useEffect(() => {
     void refreshChanges(repo.id);
-  }, [repo.id, refreshChanges]);
+    void refreshHistory(repo.id);
+  }, [repo.id, refreshChanges, refreshHistory]);
 
   return (
     <div className="repo-view">
@@ -40,7 +46,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
             </button>
           ))}
         </div>
-        {tab === "changes" ? <ChangesList /> : <p className="pane-message muted">History</p>}
+        {tab === "changes" ? <ChangesList /> : <HistoryList />}
       </aside>
       <section className="detail" aria-label="Details">
         {tab === "changes" && (
@@ -58,6 +64,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
             empty="No changes to show."
           />
         )}
+        {tab === "history" && <CommitDetail repoId={repo.id} />}
       </section>
     </div>
   );

@@ -5,7 +5,9 @@ use tauri::State;
 use super::repos::parse_id;
 use crate::error::AppError;
 use crate::git::diff;
+use crate::git::log;
 use crate::git::parse::diff::FileDiff;
+use crate::git::parse::log::{Commit, CommitFile};
 use crate::git::parse::status::WorkingDirectoryStatus;
 use crate::git::status;
 use crate::state::AppState;
@@ -37,4 +39,56 @@ pub async fn get_working_diff(
         return Ok(FileDiff::Unchanged);
     };
     Ok(diff::working_dir_diff(&git, &root, file, current.branch.tip.is_some()).await?)
+}
+
+/// Largest page the History list may request.
+const MAX_HISTORY_PAGE: u32 = 500;
+
+/// A page of commits reachable from HEAD, newest first.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_history(
+    state: State<'_, AppState>,
+    repo_id: String,
+    skip: u32,
+    limit: u32,
+) -> Result<Vec<Commit>, AppError> {
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    Ok(log::history(&state.git()?, &root, skip, limit.min(MAX_HISTORY_PAGE)).await?)
+}
+
+fn check_sha(sha: &str) -> Result<(), AppError> {
+    if log::is_commit_hash(sha) {
+        Ok(())
+    } else {
+        Err(AppError::invalid_input("That commit id isn't valid."))
+    }
+}
+
+/// Files changed by a commit.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_commit_files(
+    state: State<'_, AppState>,
+    repo_id: String,
+    sha: String,
+) -> Result<Vec<CommitFile>, AppError> {
+    check_sha(&sha)?;
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    Ok(log::commit_files(&state.git()?, &root, &sha).await?)
+}
+
+/// Diff of one file within a commit.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_commit_diff(
+    state: State<'_, AppState>,
+    repo_id: String,
+    sha: String,
+    path: String,
+    old_path: Option<String>,
+) -> Result<FileDiff, AppError> {
+    check_sha(&sha)?;
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    Ok(diff::commit_file_diff(&state.git()?, &root, &sha, &path, old_path.as_deref()).await?)
 }

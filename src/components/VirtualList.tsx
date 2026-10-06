@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 type Props<T> = {
   items: readonly T[];
@@ -8,6 +8,8 @@ type Props<T> = {
   /** Extra rows rendered above and below the viewport. */
   overscan?: number;
   ariaLabel?: string;
+  /** Called when the last rendered row is within `overscan` of the end. */
+  onNearEnd?: () => void;
 };
 
 /** Fixed-row-height virtualized list. Renders only the rows in view. */
@@ -18,6 +20,7 @@ export function VirtualList<T>({
   className,
   overscan = 10,
   ariaLabel,
+  onNearEnd,
 }: Props<T>) {
   const ref = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -35,6 +38,11 @@ export function VirtualList<T>({
 
   const first = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
   const last = Math.min(items.length, Math.ceil((scrollTop + height) / rowHeight) + overscan);
+
+  const nearEnd = items.length > 0 && last >= items.length;
+  useEffect(() => {
+    if (nearEnd) onNearEnd?.();
+  }, [nearEnd, items.length, onNearEnd]);
 
   const rows: ReactNode[] = [];
   for (let i = first; i < last; i++) {

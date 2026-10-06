@@ -25,6 +25,12 @@ export const commands = {
 	getStatus: (repoId: string) => typedError<WorkingDirectoryStatus, AppError>(__TAURI_INVOKE("get_status", { repoId })),
 	/**  Diff of a changed working-directory file. Unchanged if the file no longer has changes. */
 	getWorkingDiff: (repoId: string, path: string) => typedError<FileDiff, AppError>(__TAURI_INVOKE("get_working_diff", { repoId, path })),
+	/**  A page of commits reachable from HEAD, newest first. */
+	getHistory: (repoId: string, skip: number, limit: number) => typedError<Commit[], AppError>(__TAURI_INVOKE("get_history", { repoId, skip, limit })),
+	/**  Files changed by a commit. */
+	getCommitFiles: (repoId: string, sha: string) => typedError<CommitFile[], AppError>(__TAURI_INVOKE("get_commit_files", { repoId, sha })),
+	/**  Diff of one file within a commit. */
+	getCommitDiff: (repoId: string, sha: string, path: string, oldPath: string | null) => typedError<FileDiff, AppError>(__TAURI_INVOKE("get_commit_diff", { repoId, sha, path, oldPath })),
 };
 
 /* Types */
@@ -53,6 +59,26 @@ export type BranchState = {
 	behind: number,
 	/**  An upstream is configured but no longer exists on the remote. */
 	upstreamGone: boolean,
+};
+
+/**  One commit in the History list. */
+export type Commit = {
+	sha: string,
+	shortSha: string,
+	parents: string[],
+	authorName: string,
+	authorEmail: string,
+	/**  Strict ISO 8601 with offset. */
+	authorDate: string,
+	summary: string,
+	body: string,
+};
+
+/**  A file changed by a commit. */
+export type CommitFile = {
+	path: string,
+	oldPath: string | null,
+	kind: FileStatusKind,
 };
 
 export type DiffHunk = {

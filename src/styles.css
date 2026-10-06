@@ -444,3 +444,70 @@ code {
   color: var(--danger);
   padding-left: 4px;
 }
+
+.commit-row {
+  height: 100%;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  cursor: default;
+}
+
+.commit-row:hover {
+  background: var(--bg-subtle);
+}
+
+.commit-row.selected {
+  background: var(--selection);
+}
+
+.commit-summary,
+.commit-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit-meta {
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.commit-detail {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.commit-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.commit-header h2 {
+  font-size: 1.05rem;
+  margin: 0 0 4px;
+}
+
+.commit-header p {
+  margin: 4px 0;
+}
+
+.commit-body {
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow: auto;
+}
+
+.commit-split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.commit-files {
+  width: 260px;
+  flex: none;
+  border-right: 1px solid var(--border);
+}
