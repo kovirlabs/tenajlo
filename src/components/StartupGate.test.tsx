@@ -31,6 +31,7 @@ const info = (minor: number): GitInfo => ({
   version: { major: 2, minor, patch: 1 },
   minimum: { major: 2, minor: 40, patch: 0 },
   supported: minor >= 40,
+  lfsVersion: "git-lfs/3.7.1 (GitHub; darwin arm64)",
 });
 
 const renderGate = () =>

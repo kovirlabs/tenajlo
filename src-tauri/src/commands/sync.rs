@@ -14,7 +14,7 @@ use crate::git::parse::progress::Progress;
 use crate::git::parse::status::WorkingDirectoryStatus;
 use crate::git::remote::{self, RemoteRun};
 use crate::git::sync_state::{self, split_upstream, SyncAction, SyncState};
-use crate::git::{branch_name, status};
+use crate::git::{branch_name, lfs, status};
 use crate::state::AppState;
 use crate::store::settings::PullStrategy;
 
@@ -103,12 +103,26 @@ pub async fn sync(
     )
     .await
     .map_err(prepare_error)?;
-    let run = RemoteRun {
+    let make_run = || RemoteRun {
         env: auth.env.clone(),
         config: auth.config.clone(),
-        cancel,
-        on_progress: progress_emitter(app, repo_id.clone(), op_id.clone()),
+        cancel: cancel.clone(),
+        on_progress: progress_emitter(app.clone(), repo_id.clone(), op_id.clone()),
     };
+    let run = make_run();
+
+    // LFS objects go up first, so the push never depends on a pre-push hook.
+    if let Plan::Push { remote, branch, .. } | Plan::Publish { remote, branch } = &plan {
+        let lfs = lfs::status(&git, &root);
+        if lfs.missing() {
+            return Err(lfs_missing());
+        }
+        if lfs.used {
+            if let Err(e) = lfs::push_objects(&git, &root, remote, branch, make_run()).await {
+                return Err(explain_failure(&state, &auth, e).await);
+            }
+        }
+    }
 
     let result = match plan {
         Plan::Fetch { remote } => remote::fetch(&git, &root, &remote, run).await,
@@ -255,6 +269,13 @@ pub(crate) fn prepare_error(err: PrepareError) -> AppError {
             e.to_string(),
         ),
     }
+}
+
+/// The repository stores files with Git LFS but git-lfs isn't installed here.
+pub(crate) fn lfs_missing() -> AppError {
+    AppError::invalid_input(
+        "This repository stores large files with Git LFS, which isn't installed on this computer. Install Git LFS (git-lfs.com), then restart Tenajlo.",
+    )
 }
 
 fn no_remote() -> AppError {

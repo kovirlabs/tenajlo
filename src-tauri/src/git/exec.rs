@@ -20,21 +20,44 @@ use crate::redact::redact;
 /// Default timeout for short, local operations.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Path to a resolved git executable.
+/// Path to a resolved git executable, and whether git-lfs works with it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct GitBinary(PathBuf);
+pub struct GitBinary {
+    path: PathBuf,
+    lfs: bool,
+}
 
 impl GitBinary {
     /// Wraps an already-resolved git path. Use `git::binary::resolve` to find one.
     pub fn new(path: PathBuf) -> Self {
-        Self(path)
+        Self { path, lfs: false }
+    }
+
+    /// Marks git-lfs as available (detected at startup): every invocation then carries the
+    /// LFS filter settings, so Tenajlo never needs `git lfs install` in the global config.
+    pub fn with_lfs(mut self, lfs: bool) -> Self {
+        self.lfs = lfs;
+        self
     }
 
     /// Filesystem path of the executable.
     pub fn path(&self) -> &Path {
-        &self.0
+        &self.path
+    }
+
+    /// git-lfs is installed (bundled on Windows).
+    pub fn has_lfs(&self) -> bool {
+        self.lfs
     }
 }
+
+/// What `git lfs install` would write to the global config (CLAUDE.md rule 5: per invocation).
+const LFS_FILTER_FLAGS: [&str; 4] = [
+    "filter.lfs.clean=git-lfs clean -- %f",
+    "filter.lfs.smudge=git-lfs smudge -- %f",
+    "filter.lfs.process=git-lfs filter-process",
+    "filter.lfs.required=true",
+];
 
 /// Whether an invocation may modify the repository.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -166,11 +189,17 @@ impl GitCommand {
     }
 
     /// Full argument vector including base `-c` flags. Exposed for tests.
-    fn full_args(&self) -> Vec<OsString> {
+    fn full_args(&self, git: &GitBinary) -> Vec<OsString> {
         let mut out: Vec<OsString> = Vec::with_capacity(self.args.len() + 4);
         for flag in base_config_flags() {
             out.push("-c".into());
             out.push(flag.into());
+        }
+        if git.lfs {
+            for flag in LFS_FILTER_FLAGS {
+                out.push("-c".into());
+                out.push(flag.into());
+            }
         }
         for flag in &self.extra_config {
             out.push("-c".into());
@@ -182,7 +211,7 @@ impl GitCommand {
 
     /// Spawns git and waits for it to exit, honoring timeout and cancellation.
     pub async fn run(self, git: &GitBinary) -> Result<GitOutput, GitError> {
-        let args = self.full_args();
+        let args = self.full_args(git);
         tracing::debug!(
             args = %redact(&args.iter().map(|a| a.to_string_lossy()).collect::<Vec<_>>().join(" ")),
             access = ?self.access,
@@ -395,16 +424,20 @@ mod tests {
     #[test]
     fn base_flags_precede_user_args() {
         let cmd = GitCommand::new(["status", "--", "-weird-file"], Access::ReadOnly);
-        let args = cmd.full_args();
+        let args = cmd.full_args(&git());
         assert_eq!(args[0], "-c");
         assert_eq!(args[1], "core.quotepath=false");
         assert_eq!(args[args.len() - 1], "-weird-file");
 
         let args = GitCommand::new(["fetch"], Access::Mutating)
             .config("credential.helper=")
-            .full_args();
+            .full_args(&git());
         let n = args.len();
         assert_eq!(&args[n - 3..], ["-c", "credential.helper=", "fetch"]);
+
+        let lfs = GitCommand::new(["status"], Access::ReadOnly).full_args(&git().with_lfs(true));
+        assert!(lfs.contains(&OsString::from("filter.lfs.process=git-lfs filter-process")));
+        assert!(!args.contains(&OsString::from("filter.lfs.required=true")));
     }
 
     #[tokio::test]

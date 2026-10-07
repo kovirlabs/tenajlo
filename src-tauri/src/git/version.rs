@@ -16,6 +16,8 @@ pub struct GitInfo {
     pub minimum: GitVersion,
     /// `version >= minimum`.
     pub supported: bool,
+    /// `git lfs version` output (e.g. `git-lfs/3.7.1 (…)`), or `None` if not installed.
+    pub lfs_version: Option<String>,
 }
 
 /// Runs `git --version` and compares it against [`GitVersion::MINIMUM`].
@@ -30,7 +32,18 @@ pub async fn detect(git: &GitBinary) -> Result<GitInfo, GitError> {
         version,
         minimum: GitVersion::MINIMUM,
         supported: version >= GitVersion::MINIMUM,
+        lfs_version: lfs_version(git).await,
     })
+}
+
+/// `git lfs version`; `None` when git-lfs isn't installed ("'lfs' is not a git command").
+async fn lfs_version(git: &GitBinary) -> Option<String> {
+    let out = GitCommand::new(["lfs", "version"], Access::ReadOnly)
+        .run(git)
+        .await
+        .ok()?;
+    let text = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+    text.starts_with("git-lfs/").then_some(text)
 }
 
 #[cfg(test)]
@@ -48,5 +61,7 @@ mod tests {
             info.version
         );
         assert_eq!(info.minimum, GitVersion::MINIMUM);
+        // Tests run with git-lfs installed (CLAUDE.md).
+        assert!(info.lfs_version.is_some_and(|v| v.starts_with("git-lfs/")));
     }
 }

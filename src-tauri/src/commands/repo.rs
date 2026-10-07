@@ -6,6 +6,7 @@ use super::repos::parse_id;
 use crate::error::AppError;
 use crate::git::branches;
 use crate::git::diff;
+use crate::git::lfs::{self, LfsStatus};
 use crate::git::log;
 use crate::git::parse::branches::BranchList;
 use crate::git::parse::diff::FileDiff;
@@ -13,6 +14,14 @@ use crate::git::parse::log::{Commit, CommitFile};
 use crate::git::parse::status::WorkingDirectoryStatus;
 use crate::git::status;
 use crate::state::AppState;
+
+/// Whether the repository uses Git LFS and whether git-lfs is installed (for a warning).
+#[tauri::command]
+#[specta::specta]
+pub fn get_lfs_status(state: State<'_, AppState>, repo_id: String) -> Result<LfsStatus, AppError> {
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    Ok(lfs::status(&state.git()?, &root))
+}
 
 /// Working directory status for a repository.
 #[tauri::command]

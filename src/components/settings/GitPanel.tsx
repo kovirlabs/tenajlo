@@ -111,6 +111,13 @@ function GitLocation() {
           {gitPath ? " (chosen in Settings)" : ""}
         </p>
       )}
+      {info && (
+        <p className="muted">
+          {info.lfsVersion
+            ? `Git LFS: ${info.lfsVersion.split(" ")[0]?.replace("git-lfs/", "")}`
+            : "Git LFS isn't installed. Repositories with large files (CAD, PLC archives) need it: get it from git-lfs.com."}
+        </p>
+      )}
       <InlineError error={error} />
       <div className="dialog-actions">
         {gitPath && (

@@ -67,6 +67,9 @@ pub async fn commit_changes(
             "Resolve the conflicted files before committing.",
         ));
     }
+    if crate::git::lfs::status(&git, &root).missing() {
+        return Err(super::sync::lfs_missing());
+    }
     // A merge can be committed with nothing staged (e.g. every conflict resolved as "ours").
     let operation = merge::operation_state(&git, &root, &current)
         .await?

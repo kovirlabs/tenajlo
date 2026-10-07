@@ -39,6 +39,8 @@ export const commands = {
 	 *  Watching is best-effort: on failure the UI still refreshes on window focus.
 	 */
 	watchRepository: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { repoId })),
+	/**  Whether the repository uses Git LFS and whether git-lfs is installed (for a warning). */
+	getLfsStatus: (repoId: string) => typedError<LfsStatus, AppError>(__TAURI_INVOKE("get_lfs_status", { repoId })),
 	/**  Stages (`staged = true`) or unstages the given changed files. */
 	setStaged: (repoId: string, paths: string[], staged: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_staged", { repoId, paths, staged })),
 	/**  Commits the staged changes. Returns the new commit's SHA. */
@@ -331,6 +333,8 @@ export type GitInfo = {
 	minimum: GitVersion,
 	/**  `version >= minimum`. */
 	supported: boolean,
+	/**  `git lfs version` output (e.g. `git-lfs/3.7.1 (…)`), or `None` if not installed. */
+	lfsVersion: string | null,
 };
 
 /**  Progress of a running remote operation. */
@@ -351,6 +355,13 @@ export type GitVersion = {
 export type Identity = {
 	name: string | null,
 	email: string | null,
+};
+
+/**  Whether a repository needs LFS and whether this computer has it. */
+export type LfsStatus = {
+	/**  `.gitattributes` routes files through the LFS filter, or `.lfsconfig` exists. */
+	used: boolean,
+	installed: boolean,
 };
 
 /**  What to do with uncommitted changes when switching (GitHub Desktop's two choices). */

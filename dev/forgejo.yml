@@ -18,6 +18,7 @@ services:
       - FORGEJO__server__SSH_DOMAIN=localhost
       - FORGEJO__server__SSH_PORT=2222
       - FORGEJO__service__DISABLE_REGISTRATION=true
+      - FORGEJO__server__LFS_START_SERVER=true
     ports:
       - "127.0.0.1:3000:3000"
       - "127.0.0.1:2222:22"

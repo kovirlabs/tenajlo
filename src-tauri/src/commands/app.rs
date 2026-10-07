@@ -13,9 +13,9 @@ pub async fn check_git(state: State<'_, AppState>) -> Result<version::GitInfo, A
     let override_path = state.settings.get().git_path.map(std::path::PathBuf::from);
     let git = binary::resolve(override_path.as_deref(), state.bundled_git_dir.as_deref())?;
     let info = version::detect(&git).await?;
-    tracing::info!(version = %info.version, supported = info.supported, "git detected");
+    tracing::info!(version = %info.version, supported = info.supported, lfs = ?info.lfs_version, "git detected");
     if info.supported {
-        state.set_git(git);
+        state.set_git(git.with_lfs(info.lfs_version.is_some()));
     }
     Ok(info)
 }

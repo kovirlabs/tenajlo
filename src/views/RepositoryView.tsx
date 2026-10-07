@@ -5,6 +5,7 @@ import { getWorkingDiff } from "../api/diff";
 import { useRepoRefresh } from "../hooks/useRepoRefresh";
 import { useBackgroundFetch } from "../hooks/useBackgroundFetch";
 import { ConflictBanner } from "../components/conflicts/ConflictBanner";
+import { LfsBanner } from "../components/LfsBanner";
 import { ChangesList } from "./ChangesList";
 import { CommitBox } from "./CommitBox";
 import { CommitDetail } from "./CommitDetail";
@@ -28,6 +29,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   return (
     <div className="repo-view">
       <aside className="sidebar">
+        <LfsBanner repoId={repo.id} />
         <ConflictBanner repoId={repo.id} />
         <div role="tablist" className="tabs">
           {TABS.map((t) => (
