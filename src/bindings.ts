@@ -41,6 +41,15 @@ export const commands = {
 	watchRepository: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { repoId })),
 	/**  Stages (`staged = true`) or unstages the given changed files. */
 	setStaged: (repoId: string, paths: string[], staged: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_staged", { repoId, paths, staged })),
+	/**  Commits the staged changes. Returns the new commit's SHA. */
+	commitChanges: (repoId: string, summary: string, description: string) => typedError<string, AppError>(__TAURI_INVOKE("commit_changes", { repoId, summary, description })),
+	/**  The name and email git will record on commits in this repository. */
+	getIdentity: (repoId: string) => typedError<Identity, AppError>(__TAURI_INVOKE("get_identity", { repoId })),
+	/**
+	 *  Saves name and email to the global git config. The UI calls this only after the user
+	 *  explicitly confirms (CLAUDE.md rule 5).
+	 */
+	setGlobalIdentity: (name: string, email: string) => typedError<null, AppError>(__TAURI_INVOKE("set_global_identity", { name, email })),
 };
 
 /** Events */
@@ -162,7 +171,9 @@ export type FileStatusKind = "Untracked" | "Added" | "Modified" | "Deleted" | "R
 /**  Typed classification of a failed git invocation. */
 export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | "SshKeyRejected" | "PushRejected" | "PullDiverged" | "LocalChangesBlock" | "TlsUntrusted" | "HostUnreachable" | "MergeConflict" | "NotARepository" | 
 /**  Folder owned by another user; git's `safe.directory` check refused it. */
-"DubiousOwnership" | "Unknown";
+"DubiousOwnership" | 
+/**  `user.name` / `user.email` not configured. */
+"IdentityMissing" | "Unknown";
 
 /**  Result of the startup git check, sent to the UI. */
 export type GitInfo = {
@@ -179,6 +190,12 @@ export type GitVersion = {
 	major: number,
 	minor: number,
 	patch: number,
+};
+
+/**  Effective identity for a repository (local, then global config). */
+export type Identity = {
+	name: string | null,
+	email: string | null,
 };
 
 /**  Emitted (debounced) when files or git state in a watched repository change. */

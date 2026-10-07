@@ -29,6 +29,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::repo::get_branches,
             commands::repo::watch_repository,
             commands::changes::set_staged,
+            commands::changes::commit_changes,
+            commands::changes::get_identity,
+            commands::changes::set_global_identity,
         ])
         .events(collect_events![watcher::RepoChanged])
 }

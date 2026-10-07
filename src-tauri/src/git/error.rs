@@ -21,6 +21,8 @@ pub enum GitErrorKind {
     NotARepository,
     /// Folder owned by another user; git's `safe.directory` check refused it.
     DubiousOwnership,
+    /// `user.name` / `user.email` not configured.
+    IdentityMissing,
     Unknown,
 }
 
@@ -59,6 +61,10 @@ const PATTERNS: &[(&str, GitErrorKind)] = &[
     ("Could not resolve hostname", GitErrorKind::HostUnreachable),
     ("CONFLICT", GitErrorKind::MergeConflict),
     ("detected dubious ownership", GitErrorKind::DubiousOwnership),
+    ("Please tell me who you are", GitErrorKind::IdentityMissing),
+    ("Author identity unknown", GitErrorKind::IdentityMissing),
+    ("empty ident name", GitErrorKind::IdentityMissing),
+    ("no email was given", GitErrorKind::IdentityMissing),
     ("not a git repository", GitErrorKind::NotARepository),
     ("must be run in a work tree", GitErrorKind::NotARepository),
 ];

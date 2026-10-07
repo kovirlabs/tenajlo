@@ -129,6 +129,7 @@ fn git_message(kind: GitErrorKind) -> &'static str {
         GitErrorKind::DubiousOwnership => {
             "Git won't open this folder because it belongs to a different user account. Ask IT to fix the folder's owner, or mark it as safe with `git config --global --add safe.directory <path>`."
         }
+        GitErrorKind::IdentityMissing => "Git needs your name and email before you can commit.",
         GitErrorKind::Unknown => "Git reported a problem.",
     }
 }

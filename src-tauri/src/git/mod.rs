@@ -2,9 +2,11 @@
 
 pub mod binary;
 pub mod branches;
+pub mod commit;
 pub mod diff;
 pub mod error;
 pub mod exec;
+pub mod identity;
 pub mod log;
 pub mod parse;
 pub mod repo_root;

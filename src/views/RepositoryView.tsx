@@ -4,6 +4,7 @@ import { useUiStore, type Tab } from "../stores/uiStore";
 import { getWorkingDiff } from "../api/diff";
 import { useRepoRefresh } from "../hooks/useRepoRefresh";
 import { ChangesList } from "./ChangesList";
+import { CommitBox } from "./CommitBox";
 import { CommitDetail } from "./CommitDetail";
 import { DiffPane } from "./DiffPane";
 import { HistoryList } from "./HistoryList";
@@ -38,7 +39,14 @@ export function RepositoryView({ repo }: { repo: Repository }) {
             </button>
           ))}
         </div>
-        {tab === "changes" ? <ChangesList /> : <HistoryList />}
+        {tab === "changes" ? (
+          <>
+            <ChangesList />
+            <CommitBox key={repo.id} repoId={repo.id} />
+          </>
+        ) : (
+          <HistoryList />
+        )}
       </aside>
       <section className="detail" aria-label="Details">
         {tab === "changes" && (
