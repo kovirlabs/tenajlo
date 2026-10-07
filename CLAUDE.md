@@ -14,15 +14,16 @@ pnpm typecheck               # tsc --noEmit
 pnpm lint                    # eslint + prettier --check
 pnpm test                    # vitest
 pnpm bindings                # regenerate src/bindings.ts from Rust (tauri-specta)
+node scripts/build-askpass.mjs [--release]  # build the tenajlo-askpass sidecar (tauri dev/build run this for you)
 
 cd src-tauri
 cargo fmt --all
-cargo clippy --all-targets -- -D warnings
-cargo test                   # unit + temp-repo tests (needs git >= 2.40 on PATH)
+cargo clippy --all-targets -- -D warnings   # also with --target x86_64-pc-windows-msvc when touching cfg(windows) code (needs llvm-rc, e.g. `brew install llvm`)
+cargo test --workspace       # unit + temp-repo tests + askpass crate (needs git >= 2.40 on PATH)
 cargo test --features integration   # needs Forgejo in Docker: docker compose -f dev/forgejo.yml up -d
 ```
 
-Before calling a task done, run `cargo fmt`, `cargo clippy -D warnings`, `cargo test`, `pnpm typecheck`, `pnpm lint`, and `pnpm test`. All must pass.
+Before calling a task done, run `cargo fmt`, `cargo clippy -D warnings`, `cargo test --workspace`, `pnpm typecheck`, `pnpm lint`, and `pnpm test`. All must pass.
 
 ## Layout
 

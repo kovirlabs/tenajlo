@@ -4,14 +4,20 @@
   "version": "0.1.0",
   "identifier": "com.kovirlabs.tenajlo",
   "build": {
-    "beforeDevCommand": "pnpm dev",
+    "beforeDevCommand": "node scripts/build-askpass.mjs && pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "node scripts/build-askpass.mjs --release && pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
-      { "title": "Tenajlo", "width": 1100, "height": 720, "minWidth": 800, "minHeight": 500 }
+      {
+        "title": "Tenajlo",
+        "width": 1100,
+        "height": 720,
+        "minWidth": 800,
+        "minHeight": 500
+      }
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'",
@@ -27,6 +33,9 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/tenajlo-askpass"
     ]
   }
 }

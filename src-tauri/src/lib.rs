@@ -1,8 +1,10 @@
 //! Tenajlo — desktop Git client for self-hosted Forgejo.
 
+pub mod auth;
 pub mod commands;
 pub mod error;
 pub mod git;
+pub mod operations;
 pub mod os_trash;
 pub mod redact;
 pub mod repo_manager;
@@ -36,6 +38,10 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::changes::discard_changes,
             commands::changes::ignore_file,
             commands::changes::undo_commit,
+            commands::auth::answer_auth_prompt,
+            commands::auth::cancel_operation,
+            commands::sync::get_sync_state,
+            commands::sync::sync,
             commands::branches::preview_branch_name,
             commands::branches::create_branch,
             commands::branches::switch_branch,
@@ -43,7 +49,11 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::branches::get_saved_changes,
             commands::branches::restore_saved_changes,
         ])
-        .events(collect_events![watcher::RepoChanged])
+        .events(collect_events![
+            watcher::RepoChanged,
+            auth::broker::AuthPromptRequested,
+            commands::sync::GitProgress
+        ])
 }
 
 /// Builds and runs the Tauri application.
@@ -64,7 +74,21 @@ pub fn run() {
             let bundled_git_dir = app.path().resource_dir().ok().map(|d| d.join("mingit"));
             let data_dir = app.path().app_data_dir()?;
             let repos = repo_manager::RepoManager::load(&data_dir);
-            app.manage(state::AppState::new(bundled_git_dir, repos));
+
+            let prompts = auth::broker::PromptBroker::default();
+            let prompt_fn = prompts.prompt_fn(app.handle().clone());
+            let trampoline = match tauri::async_runtime::block_on(auth::trampoline::Trampoline::start(prompt_fn)) {
+                Ok(t) => Some(t),
+                Err(e) => {
+                    tracing::error!(error = %e, "askpass trampoline failed to start; sign-in prompts unavailable");
+                    None
+                }
+            };
+            let askpass = auth::askpass_path();
+            if askpass.is_none() {
+                tracing::error!("tenajlo-askpass sidecar missing; run `node scripts/build-askpass.mjs`");
+            }
+            app.manage(state::AppState::new(bundled_git_dir, repos, prompts, trampoline, askpass));
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -85,10 +109,10 @@ mod tests {
             .unwrap();
         let committed = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
         let committed = std::fs::read_to_string(committed).unwrap_or_default();
-        assert_eq!(
-            std::fs::read_to_string(fresh).unwrap(),
-            committed,
-            "run `pnpm bindings`"
+        let fresh = std::fs::read_to_string(fresh).unwrap();
+        assert!(
+            fresh == committed,
+            "src/bindings.ts is stale: run `pnpm bindings`"
         );
     }
 }

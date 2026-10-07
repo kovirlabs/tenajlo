@@ -13,6 +13,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [[bin]]
 name = "export-bindings"
 path = "src/bin/export_bindings.rs"
+# Dev tool only; gated so `tauri build` doesn't bundle it into the app.
+required-features = ["bindings"]
+
+[features]
+bindings = []
 
 [build-dependencies]
 tauri-build = { version = "2.7", features = [] }
@@ -22,7 +27,7 @@ tauri = { version = "2.12", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["process", "time", "macros", "rt-multi-thread", "io-util", "sync"] }
+tokio = { version = "1", features = ["process", "time", "macros", "rt-multi-thread", "io-util", "sync", "net"] }
 tokio-util = "0.7"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
@@ -34,6 +39,8 @@ tauri-plugin-dialog = "2.8"
 uuid = { version = "1", features = ["v4", "serde"] }
 notify-debouncer-full = "0.7.0"
 trash = "5.2.9"
+getrandom = "0.4"
+tenajlo-askpass = { version = "0.1.0", path = "../crates/askpass" }
 
 [dev-dependencies]
 tempfile = "3"

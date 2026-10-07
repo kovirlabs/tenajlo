@@ -8,16 +8,7 @@ use super::parse::branches::{parse_branches, BranchList, BRANCH_FORMAT};
 
 /// Lists local and remote branches.
 pub async fn branches(git: &GitBinary, root: &Path) -> Result<BranchList, GitError> {
-    let remotes = GitCommand::new(["remote"], Access::ReadOnly)
-        .cwd(root)
-        .run(git)
-        .await?;
-    let remotes: Vec<String> = String::from_utf8_lossy(&remotes.stdout)
-        .lines()
-        .map(str::trim)
-        .filter(|r| !r.is_empty())
-        .map(str::to_owned)
-        .collect();
+    let remotes = super::remote::list_remotes(git, root).await?;
     let out = GitCommand::new(
         ["for-each-ref", BRANCH_FORMAT, "refs/heads", "refs/remotes"],
         Access::ReadOnly,

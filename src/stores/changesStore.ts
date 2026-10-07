@@ -4,6 +4,7 @@ import { getStatus } from "../api/status";
 import { setStaged } from "../api/changes";
 import { getSavedChanges } from "../api/branches";
 import { useBranchStore } from "./branchStore";
+import { useSyncStore } from "./syncStore";
 import { useUiStore } from "./uiStore";
 
 type ChangesState = {
@@ -66,7 +67,11 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
       return res.status === "ok";
     } finally {
       set({ busy: false });
-      await Promise.all([get().refresh(repoId), useBranchStore.getState().refresh(repoId)]);
+      await Promise.all([
+        get().refresh(repoId),
+        useBranchStore.getState().refresh(repoId),
+        useSyncStore.getState().refresh(repoId),
+      ]);
     }
   },
 

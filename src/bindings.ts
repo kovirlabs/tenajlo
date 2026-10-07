@@ -59,6 +59,20 @@ export const commands = {
 	 *  Returns the commit's message so the UI can restore it.
 	 */
 	undoCommit: (repoId: string, sha: string) => typedError<UndoneCommit, AppError>(__TAURI_INVOKE("undo_commit", { repoId, sha })),
+	/**  Delivers the user's answer to a prompt (`None` = cancelled, which stops the operation). */
+	answerAuthPrompt: (promptId: string, answer: {
+	username: string | null,
+	secret: string,
+} | null) => __TAURI_INVOKE<void>("answer_auth_prompt", { promptId, answer }),
+	/**  Cancels a running fetch, pull or push. Unknown ids are ignored. */
+	cancelOperation: (opId: string) => __TAURI_INVOKE<void>("cancel_operation", { opId }),
+	/**  The toolbar sync button state for the current branch. */
+	getSyncState: (repoId: string) => typedError<SyncState, AppError>(__TAURI_INVOKE("get_sync_state", { repoId })),
+	/**
+	 *  Runs a fetch, pull, push or publish. `op_id` (a UUID from the UI) identifies its progress
+	 *  events and lets `cancel_operation` stop it.
+	 */
+	sync: (repoId: string, opId: string, request: SyncRequest) => typedError<null, AppError>(__TAURI_INVOKE("sync", { repoId, opId, request })),
 	/**  How a typed branch name will be created (`"Fix pump"` → `"Fix-pump"`). Pure; no git call. */
 	previewBranchName: (name: string) => __TAURI_INVOKE<string>("preview_branch_name", { name }),
 	/**  Creates a branch from the current commit and switches to it. Local changes come along. */
@@ -77,6 +91,8 @@ export const commands = {
 
 /** Events */
 export const events = {
+	authPromptRequested: makeEvent<AuthPromptRequested>("auth-prompt-requested"),
+	gitProgress: makeEvent<GitProgress>("git-progress"),
 	repoChanged: makeEvent<RepoChanged>("repo-changed"),
 };
 
@@ -94,6 +110,20 @@ export type AppError = {
 
 /**  Broad category the UI uses to pick a dialog. */
 export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "UnknownRepository" | "Storage" | "InvalidInput" | "Internal";
+
+/**  The user's answer. Flows UI → Rust only (CLAUDE.md rule 2). Debug output is redacted. */
+export type AuthAnswer = {
+	username: string | null,
+	secret: string,
+};
+
+/**  Ask the user something on behalf of a running git operation. */
+export type AuthPromptRequested = {
+	promptId: string,
+	repoId: string,
+	opId: string,
+	kind: PromptKind,
+};
 
 export type Branch = {
 	/**  Short name: `main`, or `origin/main` for remote branches. */
@@ -208,6 +238,13 @@ export type GitInfo = {
 	supported: boolean,
 };
 
+/**  Progress of a running remote operation. */
+export type GitProgress = {
+	repoId: string,
+	opId: string,
+	progress: Progress,
+};
+
 /**  A git version triple. Vendor suffixes (`.windows.1`, `(Apple Git-154)`) are dropped. */
 export type GitVersion = {
 	major: number,
@@ -227,6 +264,26 @@ export type LocalChanges =
 "Bring" | 
 /**  Save them on the current branch and switch with a clean working directory. */
 "Leave";
+
+/**  One progress update, e.g. `Receiving objects: 45% (450/1000)`. */
+export type Progress = {
+	/**  `Receiving objects`, `Resolving deltas`, `Writing objects`, … */
+	phase: string,
+	percent: number | null,
+	/**  Remainder after the percentage, e.g. `(450/1000), 1.20 MiB | 2.00 MiB/s`. */
+	detail: string | null,
+	/**  Reported by the server (`remote:` prefix). */
+	remote: boolean,
+};
+
+/**  A prompt shown to the user. Never carries secrets. */
+export type PromptKind = 
+/**  Username and password/token for an HTTPS host (one dialog for git's two prompts). */
+{ type: "Credentials"; host: string } | 
+/**  Password only; the username is already known (e.g. `https://evan@host/…`). */
+{ type: "Password"; host: string; username: string } | 
+/**  Anything else git asks; shown verbatim. */
+{ type: "Other"; prompt: string };
 
 /**  Emitted (debounced) when files or git state in a watched repository change. */
 export type RepoChanged = {
@@ -257,6 +314,28 @@ export type SavedChanges = {
 
 /**  How much of a file's change is staged. */
 export type StagedState = "None" | "Partial" | "Full";
+
+/**  The sync button's action. */
+export type SyncAction = 
+/**  The repository has no remotes. */
+{ type: "NoRemote" } | 
+/**  The branch isn't on the server yet (no upstream, or it was deleted there). */
+{ type: "Publish"; remote: string } | 
+/**  The server has commits we don't (shown even if we also have new commits). */
+{ type: "Pull"; remote: string } | { type: "Push"; remote: string } | { type: "Fetch"; remote: string };
+
+/**  What the user clicked. Rust re-derives the details (remote, branch) itself. */
+export type SyncRequest = "Fetch" | "Pull" | "Push" | "Publish";
+
+/**  Sync button state for the current branch. */
+export type SyncState = {
+	action: SyncAction,
+	branch: string | null,
+	ahead: number,
+	behind: number,
+	/**  Unix seconds of the last fetch (FETCH_HEAD mtime), if any. */
+	lastFetched: number | null,
+};
 
 /**  The message of an undone commit, so the UI can put it back in the commit box. */
 export type UndoneCommit = {

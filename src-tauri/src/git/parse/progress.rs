@@ -1,9 +1,9 @@
 //! Parser for git `--progress` stderr lines (spec §5.4).
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// One progress update, e.g. `Receiving objects: 45% (450/1000)`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 pub struct Progress {
     /// `Receiving objects`, `Resolving deltas`, `Writing objects`, …
     pub phase: String,

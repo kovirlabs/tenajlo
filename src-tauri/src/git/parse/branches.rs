@@ -100,7 +100,7 @@ pub fn parse_branches(output: &[u8], remotes: &[String]) -> BranchList {
 }
 
 /// Longest configured remote that prefixes `rest` (`team/origin/feature` → `team/origin`).
-fn remote_name(rest: &str, remotes: &[String]) -> Option<String> {
+pub fn remote_name(rest: &str, remotes: &[String]) -> Option<String> {
     remotes
         .iter()
         .filter(|r| {

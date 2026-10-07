@@ -692,3 +692,31 @@ button.danger {
   width: auto;
   padding: 2px 10px;
 }
+
+.sync-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 230px;
+  padding: 0 12px;
+  height: 100%;
+  border-right: 1px solid var(--border);
+}
+
+.sync-button.running progress {
+  flex: 1;
+  min-width: 60px;
+}
+
+.sync-button.running button {
+  padding: 2px 10px;
+}
+
+.sync-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}

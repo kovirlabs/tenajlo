@@ -13,11 +13,13 @@ pub mod ignore;
 pub mod log;
 pub mod parse;
 mod process_tree;
+pub mod remote;
 pub mod repo_root;
 pub mod stage;
 pub mod stash;
 pub mod status;
 pub mod switch;
+pub mod sync_state;
 #[cfg(test)]
 pub mod test_support;
 pub mod undo;

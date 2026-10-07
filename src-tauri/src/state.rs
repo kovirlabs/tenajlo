@@ -3,8 +3,11 @@
 use std::path::PathBuf;
 use std::sync::RwLock;
 
+use crate::auth::broker::PromptBroker;
+use crate::auth::trampoline::Trampoline;
 use crate::git::error::GitError;
 use crate::git::exec::GitBinary;
+use crate::operations::Operations;
 use crate::repo_manager::RepoManager;
 use crate::watcher::RepoWatcher;
 
@@ -16,16 +19,32 @@ pub struct AppState {
     git: RwLock<Option<GitBinary>>,
     pub repos: RepoManager,
     pub watcher: RepoWatcher,
+    pub operations: Operations,
+    pub prompts: PromptBroker,
+    /// Askpass server; `None` if it couldn't start (remote ops then can't prompt).
+    pub trampoline: Option<Trampoline>,
+    /// The `tenajlo-askpass` sidecar; `None` if missing.
+    pub askpass: Option<PathBuf>,
 }
 
 impl AppState {
     /// Creates state with no git resolved yet.
-    pub fn new(bundled_git_dir: Option<PathBuf>, repos: RepoManager) -> Self {
+    pub fn new(
+        bundled_git_dir: Option<PathBuf>,
+        repos: RepoManager,
+        prompts: PromptBroker,
+        trampoline: Option<Trampoline>,
+        askpass: Option<PathBuf>,
+    ) -> Self {
         Self {
             bundled_git_dir,
             git: RwLock::new(None),
             repos,
             watcher: RepoWatcher::default(),
+            operations: Operations::default(),
+            prompts,
+            trampoline,
+            askpass,
         }
     }
 

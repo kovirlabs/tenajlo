@@ -3641,6 +3641,7 @@ name = "tenajlo"
 version = "0.1.0"
 dependencies = [
  "dunce",
+ "getrandom 0.4.3",
  "libc",
  "notify-debouncer-full",
  "serde",
@@ -3652,6 +3653,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-specta",
  "tempfile",
+ "tenajlo-askpass",
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
@@ -3660,6 +3662,14 @@ dependencies = [
  "trash",
  "uuid",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tenajlo-askpass"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

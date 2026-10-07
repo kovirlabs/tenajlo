@@ -88,7 +88,7 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 
 | Area | Choice |
 |---|---|
-| App shell | Tauri 2.x (`tauri-plugin-shell` for sidecars, `tauri-plugin-dialog`, `tauri-plugin-store` optional) |
+| App shell | Tauri 2.x (`bundle.externalBin` for the askpass sidecar, which git launches itself, so no `tauri-plugin-shell`; `tauri-plugin-dialog`) |
 | Async | `tokio` |
 | Typed IPC bindings | `specta` + `tauri-specta` (generate `src/bindings.ts`) |
 | Secrets | `keyring` (Windows Credential Manager, macOS Keychain, Secret Service) |
@@ -327,7 +327,7 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 | End-to-end (v1.1) | Tauri WebDriver smoke test: sign in, clone, commit, push |
 | Manual matrix | Windows domain machine with internal CA, Ubuntu, SSH with passphrase key, PAT with HTTPS |
 
-CI (Forgejo Actions on TMC-GIT01) runs `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`, `pnpm lint`, `pnpm typecheck`, and `pnpm test` on every push, plus Windows build artifacts on tags.
+CI (Forgejo Actions on TMC-GIT01) runs `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --workspace`, `pnpm lint`, `pnpm typecheck`, and `pnpm test` on every push, plus Windows build artifacts on tags.
 
 ---
 
