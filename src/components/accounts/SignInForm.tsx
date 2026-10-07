@@ -8,10 +8,12 @@ type Props = {
   initialServer?: string;
   onSignedIn: (account: Account) => void;
   onCancel: () => void;
+  /** Label of the first step's cancel button (the welcome screen says "Skip"). */
+  cancelLabel?: string;
 };
 
 /** Two-step Forgejo sign-in (spec §6.4): server address, then a personal access token. */
-export function SignInForm({ initialServer, onSignedIn, onCancel }: Props) {
+export function SignInForm({ initialServer, onSignedIn, onCancel, cancelLabel }: Props) {
   const [server, setServer] = useState(initialServer ?? "");
   const [info, setInfo] = useState<ServerInfo | null>(null);
   const [token, setToken] = useState("");
@@ -77,7 +79,7 @@ export function SignInForm({ initialServer, onSignedIn, onCancel }: Props) {
         {errorBox}
         <div className="dialog-actions">
           <button type="button" className="secondary" onClick={onCancel}>
-            Cancel
+            {cancelLabel ?? "Cancel"}
           </button>
           <button type="submit" disabled={!server.trim() || busy}>
             {busy ? "Checking…" : "Continue"}

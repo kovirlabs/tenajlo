@@ -941,3 +941,7 @@ label.radio {
 .toolbar-spacer {
   flex: 1;
 }
+
+.welcome {
+  width: min(480px, 90vw);
+}

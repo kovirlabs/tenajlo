@@ -49,6 +49,8 @@ async fn sign_in_flow_against_forgejo() {
     let token = new_token(&["read:user", "read:repository", "write:repository"]).await;
     let user = client.current_user(&base(), &token).await.unwrap();
     assert_eq!(user.login, USER);
+    // The welcome screen prefills the git identity from this.
+    assert_eq!(user.email, "tenajlo@example.invalid");
 }
 
 #[tokio::test]

@@ -18,6 +18,10 @@ build Tenajlo from source (see the [README](../README.md)).
 
 ## Sign in to your Forgejo server
 
+The first time you open Tenajlo, a welcome screen walks you through signing in and setting
+the name and email Git records on your commits. You can skip either step and do it later in
+**Settings**.
+
 1. Open **Settings → Accounts** (or click **Sign in to Forgejo…** on the start screen).
 2. Enter your server's address, for example `git.example.com`, and click **Continue**.
 3. Click **Open token settings in your browser**. On that page, create an access token with

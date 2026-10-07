@@ -176,6 +176,7 @@ mod tests {
             login: "evan".into(),
             full_name: String::new(),
             avatar_url: None,
+            email: String::new(),
         };
         accounts
             .sign_in(base, user, Secret::new("pat".into()))

@@ -10,12 +10,23 @@ import { Toolbar } from "../components/Toolbar";
 import { useRepoStore, useSelectedRepository } from "../stores/repoStore";
 import { MissingRepository } from "./MissingRepository";
 import { NoRepository } from "./NoRepository";
+import { useSettingsStore } from "../stores/settingsStore";
+import { Welcome } from "./Welcome";
 import { RepositoryView } from "./RepositoryView";
 
 export function AppShell() {
   const loaded = useRepoStore((s) => s.loaded);
   const load = useRepoStore((s) => s.load);
   const repo = useSelectedRepository();
+  const repoCount = useRepoStore((s) => s.repositories.length);
+  const welcomeCompleted = useSettingsStore((s) => s.settings?.welcomeCompleted ?? true);
+
+  // People who already have repositories (e.g. from an earlier version) skip the welcome.
+  useEffect(() => {
+    if (loaded && repoCount > 0 && !welcomeCompleted) {
+      void useSettingsStore.getState().update({ welcomeCompleted: true });
+    }
+  }, [loaded, repoCount, welcomeCompleted]);
 
   useEffect(() => {
     void load();
@@ -25,6 +36,7 @@ export function AppShell() {
 
   let body;
   if (!loaded) body = <main className="centered" aria-busy="true" />;
+  else if (!repo && repoCount === 0 && !welcomeCompleted) body = <Welcome />;
   else if (!repo) body = <NoRepository />;
   else if (repo.missing) body = <MissingRepository repo={repo} />;
   else body = <RepositoryView key={repo.id} repo={repo} />;

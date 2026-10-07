@@ -43,6 +43,7 @@ async fn env_with(token: Secret) -> Env {
         login: USER.into(),
         full_name: String::new(),
         avatar_url: None,
+        email: String::new(),
     });
     accounts.sign_in(BASE, user, token).await.unwrap();
     // Any prompt means the account credential wasn't used; record it and cancel.

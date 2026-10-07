@@ -253,6 +253,7 @@ mod tests {
             login: login.into(),
             full_name: String::new(),
             avatar_url: Some(String::new()),
+            email: String::new(),
         }
     }
 

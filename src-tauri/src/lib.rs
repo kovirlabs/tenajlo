@@ -52,6 +52,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::accounts::sign_in,
             commands::accounts::sign_out,
             commands::accounts::open_token_settings,
+            commands::accounts::get_account_identity,
             commands::clone::list_forgejo_repositories,
             commands::clone::suggest_clone_path,
             commands::clone::choose_clone_folder,

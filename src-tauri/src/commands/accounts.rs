@@ -8,6 +8,7 @@ use crate::auth::secrets::Secret;
 use crate::error::AppError;
 use crate::forgejo::address::{join, normalize_base_url};
 use crate::forgejo::ServerInfo;
+use crate::git::identity::Identity;
 use crate::state::AppState;
 
 /// Signed-in accounts (metadata only).
@@ -71,4 +72,35 @@ pub fn open_token_settings(app: AppHandle, server: String) -> Result<(), AppErro
                 e.to_string(),
             )
         })
+}
+
+/// Name and email from the account's Forgejo profile, to prefill the git identity on first
+/// run. Fetched live; Tenajlo doesn't store the email.
+#[tauri::command]
+#[specta::specta]
+pub async fn get_account_identity(
+    state: State<'_, AppState>,
+    account_id: String,
+) -> Result<Identity, AppError> {
+    let unknown = || AppError::from(crate::auth::accounts::AccountError::UnknownAccount);
+    let account = account_id
+        .parse()
+        .ok()
+        .and_then(|id| state.accounts.entry(id))
+        .ok_or_else(unknown)?;
+    let token = state
+        .accounts
+        .token(&account)
+        .await
+        .map_err(|e| AppError::from(crate::auth::accounts::AccountError::Secret(e)))?
+        .ok_or_else(|| AppError::sign_in_required(&account, None))?;
+    let user = state
+        .forgejo
+        .current_user(&normalize_base_url(&account.base_url)?, &token)
+        .await?;
+    let name = Some(user.full_name.trim().to_owned()).filter(|n| !n.is_empty());
+    // A hidden email is a placeholder that shouldn't end up on commits.
+    let email =
+        Some(user.email.trim().to_owned()).filter(|e| !e.is_empty() && !e.contains("noreply"));
+    Ok(Identity { name, email })
 }

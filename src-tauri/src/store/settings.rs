@@ -57,6 +57,8 @@ pub struct Settings {
     /// Git executable to use instead of the bundled/system one.
     pub git_path: Option<String>,
     pub editor: Editor,
+    /// The first-run welcome (sign in, name and email) was finished or skipped.
+    pub welcome_completed: bool,
 }
 
 impl Default for Settings {
@@ -68,6 +70,7 @@ impl Default for Settings {
             background_fetch_minutes: DEFAULT_FETCH_MINUTES,
             git_path: None,
             editor: Editor::SystemDefault,
+            welcome_completed: false,
         }
     }
 }
@@ -101,6 +104,7 @@ mod tests {
         assert_eq!(s.theme, Theme::Dark);
         assert_eq!(s.background_fetch_minutes, DEFAULT_FETCH_MINUTES);
         assert_eq!(s.editor, Editor::SystemDefault);
+        assert!(!s.welcome_completed);
     }
 
     #[test]

@@ -18,6 +18,7 @@ const settings = (minutes: number): Settings => ({
   backgroundFetchMinutes: minutes,
   gitPath: null,
   editor: { kind: "SystemDefault" },
+  welcomeCompleted: true,
 });
 
 function Probe() {

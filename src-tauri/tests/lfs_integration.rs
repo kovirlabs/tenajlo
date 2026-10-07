@@ -53,6 +53,7 @@ async fn large_files_round_trip_through_lfs_with_the_account() {
         login: USER.into(),
         full_name: String::new(),
         avatar_url: None,
+        email: String::new(),
     };
     let full = ["read:user", "read:repository", "write:repository"];
     accounts

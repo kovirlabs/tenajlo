@@ -13,6 +13,7 @@ const defaults: Settings = {
   backgroundFetchMinutes: 5,
   gitPath: null,
   editor: { kind: "SystemDefault" },
+  welcomeCompleted: true,
 };
 
 const api = vi.hoisted(() => ({

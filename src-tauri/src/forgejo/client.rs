@@ -42,6 +42,9 @@ pub struct ForgejoUser {
     pub full_name: String,
     #[serde(default)]
     pub avatar_url: Option<String>,
+    /// May be a placeholder (`…@noreply…`) when the user keeps their email private.
+    #[serde(default)]
+    pub email: String,
 }
 
 #[derive(Deserialize)]
@@ -289,6 +292,7 @@ pub(crate) mod tests {
             .unwrap();
         assert_eq!(user.login, "evan");
         assert_eq!(user.full_name, "Évan G");
+        assert_eq!(user.email, "e@x");
         let head = seen.lock().unwrap()[0].to_ascii_lowercase();
         assert!(head.contains("authorization: token pat-123"), "{head}");
     }

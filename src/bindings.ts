@@ -82,6 +82,11 @@ export const commands = {
 	signOut: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("sign_out", { id })),
 	/**  Opens the server's "Applications" settings page, where the user creates a token. */
 	openTokenSettings: (server: string) => typedError<null, AppError>(__TAURI_INVOKE("open_token_settings", { server })),
+	/**
+	 *  Name and email from the account's Forgejo profile, to prefill the git identity on first
+	 *  run. Fetched live; Tenajlo doesn't store the email.
+	 */
+	getAccountIdentity: (accountId: string) => typedError<Identity, AppError>(__TAURI_INVOKE("get_account_identity", { accountId })),
 	/**  Repositories the account can clone: its own and its organizations'. */
 	listForgejoRepositories: (accountId: string) => typedError<RemoteRepository[], AppError>(__TAURI_INVOKE("list_forgejo_repositories", { accountId })),
 	/**
@@ -519,6 +524,8 @@ export type Settings = {
 	/**  Git executable to use instead of the bundled/system one. */
 	gitPath: string | null,
 	editor: Editor,
+	/**  The first-run welcome (sign in, name and email) was finished or skipped. */
+	welcomeCompleted: boolean,
 };
 
 /**  How much of a file's change is staged. */

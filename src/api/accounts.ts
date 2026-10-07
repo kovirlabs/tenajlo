@@ -1,4 +1,4 @@
-import { commands, type Account, type ServerInfo } from "../bindings";
+import { commands, type Account, type Identity, type ServerInfo } from "../bindings";
 import type { Result } from "./result";
 
 export function listAccounts(): Promise<Account[]> {
@@ -22,4 +22,9 @@ export function signOut(id: string): Promise<Result<null>> {
 /** Opens the server's token settings page in the default browser. */
 export function openTokenSettings(server: string): Promise<Result<null>> {
   return commands.openTokenSettings(server);
+}
+
+/** Name and email from the account's Forgejo profile (to prefill the git identity). */
+export function getAccountIdentity(accountId: string): Promise<Result<Identity>> {
+  return commands.getAccountIdentity(accountId);
 }
