@@ -79,7 +79,7 @@ jobs:
       # Runs `pnpm tauri build`; beforeBuildCommand (tauri.<platform>.conf.json) builds
       # tenajlo-askpass, generates THIRD_PARTY_LICENSES.html and, on Windows, fetches the
       # pinned, checksum-verified MinGit + git-lfs.
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
