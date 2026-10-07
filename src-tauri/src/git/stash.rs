@@ -116,7 +116,10 @@ mod tests {
         let saved = find(&git, &repo, "main").await.unwrap().unwrap();
         assert_eq!(saved.stash_ref, "stash@{0}");
         restore(&git, &repo, &saved).await.unwrap();
-        assert_eq!(std::fs::read_to_string(repo.join("a.txt")).unwrap(), "2\n");
+        assert_eq!(
+            crate::git::test_support::read_text(&repo.join("a.txt")),
+            "2\n"
+        );
         assert!(repo.join("ü new.txt").exists());
         assert_eq!(find(&git, &repo, "main").await.unwrap(), None);
         let list = git_in(&repo, &["stash", "list"]).await;

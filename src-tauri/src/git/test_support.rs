@@ -41,3 +41,11 @@ pub fn write(repo: &Path, rel: &str, contents: &str) {
     }
     std::fs::write(path, contents).unwrap();
 }
+
+/// Reads a checked-out text file with `\r\n` folded to `\n`: Git for Windows checks files
+/// out with CRLF (`core.autocrlf=true` in its system config).
+pub fn read_text(path: &Path) -> String {
+    std::fs::read_to_string(path)
+        .unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
+        .replace("\r\n", "\n")
+}

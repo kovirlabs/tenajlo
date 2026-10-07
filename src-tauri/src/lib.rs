@@ -143,7 +143,10 @@ mod tests {
             .export(Typescript::default(), &fresh)
             .unwrap();
         let committed = concat!(env!("CARGO_MANIFEST_DIR"), "/../src/bindings.ts");
-        let committed = std::fs::read_to_string(committed).unwrap_or_default();
+        // Normalize line endings in case a Windows checkout converted them.
+        let committed = std::fs::read_to_string(committed)
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
         let fresh = std::fs::read_to_string(fresh).unwrap();
         assert!(
             fresh == committed,

@@ -1,0 +1,6 @@
+# Keep text files LF on every OS (Windows checkouts included), so prettier, generated
+# bindings and tests see the same bytes everywhere.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary

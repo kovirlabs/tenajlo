@@ -118,18 +118,18 @@ mod tests {
         let git = resolve(None, None).unwrap();
 
         // Unborn HEAD: staged file is shown as all-new.
-        write(&repo, "a*.txt", "first\n");
+        write(&repo, "a[b].txt", "first\n");
         write(&repo, "ab.txt", "other\n");
         git_in(&repo, &["add", "-A"]).await;
         let s = status(&git, &repo).await.unwrap();
-        let star = s.files.iter().find(|f| f.path == "a*.txt").unwrap();
+        let star = s.files.iter().find(|f| f.path == "a[b].txt").unwrap();
         assert_eq!(
             added_lines(&working_dir_diff(&git, &repo, star, false).await.unwrap()),
             vec!["first"]
         );
 
         git_in(&repo, &["commit", "-q", "-m", "init"]).await;
-        write(&repo, "a*.txt", "first\nsecond\n");
+        write(&repo, "a[b].txt", "first\nsecond\n");
         write(&repo, "ab.txt", "changed too\n");
         write(&repo, "dir/ü new.txt", "hello\n");
         write(&repo, "img.bin", "\0\x01\x02");
@@ -137,8 +137,8 @@ mod tests {
         let s = status(&git, &repo).await.unwrap();
         let get = |p: &str| s.files.iter().find(|f| f.path == p).unwrap().clone();
 
-        // Literal pathspec: "a*.txt" must not also pull in ab.txt.
-        let d = working_dir_diff(&git, &repo, &get("a*.txt"), true)
+        // Literal pathspec: "a[b].txt" must not also pull in ab.txt.
+        let d = working_dir_diff(&git, &repo, &get("a[b].txt"), true)
             .await
             .unwrap();
         assert_eq!(added_lines(&d), vec!["second"]);

@@ -88,15 +88,15 @@ mod tests {
         let git = resolve(None, None).unwrap();
 
         // Before the first commit (no HEAD): uses rm --cached to unstage.
-        write(&repo, "a*.txt", "1\n");
+        write(&repo, "a[b].txt", "1\n");
         write(&repo, "ab.txt", "1\n");
         let s = status(&git, &repo).await.unwrap();
-        let star: Vec<&FileChange> = s.files.iter().filter(|f| f.path == "a*.txt").collect();
+        let star: Vec<&FileChange> = s.files.iter().filter(|f| f.path == "a[b].txt").collect();
         stage(&git, &repo, &star).await.unwrap();
         assert_eq!(
             staged_of(&git, &repo).await,
             vec![
-                ("a*.txt".into(), StagedState::Full),
+                ("a[b].txt".into(), StagedState::Full),
                 ("ab.txt".into(), StagedState::None)
             ],
             "a literal '*' must not stage ab.txt"
@@ -115,7 +115,7 @@ mod tests {
         stage(&git, &repo, &all).await.unwrap();
         git_in(&repo, &["commit", "-q", "-m", "init"]).await;
         std::fs::remove_file(repo.join("ab.txt")).unwrap();
-        git_in(&repo, &["mv", "--", "a*.txt", "-ü moved.txt"]).await;
+        git_in(&repo, &["mv", "--", "a[b].txt", "-ü moved.txt"]).await;
         write(&repo, "-ü moved.txt", "1\n2\n");
 
         let s = status(&git, &repo).await.unwrap();

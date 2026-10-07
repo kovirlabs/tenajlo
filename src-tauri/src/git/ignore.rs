@@ -93,11 +93,16 @@ mod tests {
     async fn git_honours_written_patterns() {
         let (_tmp, repo) = init_repo().await;
         let git = resolve(None, None).unwrap();
-        for p in ["x*y.txt", "xay.txt", "sub/z.tmp", "other.tmp", "trail "] {
+        // `[a]` is a glob that would also match xay.txt; the pattern must match only the
+        // literal name. (A name with `*`, or ending in a space, isn't valid on Windows.)
+        for p in ["x[a]y.txt", "xay.txt", "sub/z.tmp", "other.tmp"] {
             write(&repo, p, "1\n");
         }
-        append(&repo, &exact_pattern("x*y.txt")).unwrap();
-        append(&repo, &exact_pattern("trail ")).unwrap();
+        append(&repo, &exact_pattern("x[a]y.txt")).unwrap();
+        if cfg!(not(windows)) {
+            write(&repo, "trail ", "1\n");
+            append(&repo, &exact_pattern("trail ")).unwrap();
+        }
         append(&repo, &extension_pattern("sub/z.tmp").unwrap()).unwrap();
         let mut left: Vec<String> = status(&git, &repo)
             .await

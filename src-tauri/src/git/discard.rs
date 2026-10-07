@@ -136,8 +136,8 @@ mod tests {
         git_in(&repo, &["add", "mod.txt"]).await;
         std::fs::remove_file(repo.join("del.txt")).unwrap();
         git_in(&repo, &["mv", "ren.txt", "ren2.txt"]).await;
-        write(&repo, "added*.txt", "new staged\n");
-        git_in(&repo, &["add", "--", "added*.txt"]).await;
+        write(&repo, "added[1].txt", "new staged\n");
+        git_in(&repo, &["add", "--", "added[1].txt"]).await;
         write(&repo, "ü untracked.txt", "scratch\n");
         write(&repo, "keep me.txt", "not selected\n");
 

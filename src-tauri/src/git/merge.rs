@@ -232,7 +232,7 @@ mod tests {
         let st = status(&git, &repo).await.unwrap();
         assert!(st.files.is_empty());
         assert_eq!(
-            std::fs::read_to_string(repo.join("a.txt")).unwrap(),
+            crate::git::test_support::read_text(&repo.join("a.txt")),
             "ours\n"
         );
         let state = operation_state(&git, &repo, &st).await.unwrap();

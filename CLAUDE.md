@@ -20,7 +20,7 @@ node scripts/third-party-licenses.mjs --out target/THIRD_PARTY_LICENSES.html  # 
 cd src-tauri
 cargo fmt --all
 cargo clippy --all-targets -- -D warnings   # also with --target x86_64-pc-windows-msvc when touching cfg(windows) code (needs llvm-rc, e.g. `brew install llvm`)
-cargo test --workspace       # unit + temp-repo tests + askpass crate (needs git >= 2.40 and git-lfs on PATH)
+cargo test --workspace       # unit + temp-repo tests + askpass crate (needs git >= 2.40 and git-lfs on PATH; on a fresh checkout run `node scripts/build-askpass.mjs` first, or tauri-build copies its empty placeholder over the askpass test binary)
 cargo test --features integration   # needs Forgejo in Docker: docker compose -f dev/forgejo.yml up -d && dev/seed-forgejo.sh
 ```
 

@@ -243,7 +243,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(
-            std::fs::read_to_string(dest.join("a.txt")).unwrap(),
+            crate::git::test_support::read_text(&dest.join("a.txt")),
             "hello\n"
         );
         assert!(!seen.lock().unwrap().is_empty(), "progress reported");
