@@ -23,3 +23,17 @@ export function getIdentity(repoId: string): Promise<Result<Identity>> {
 export function setGlobalIdentity(name: string, email: string): Promise<Result<null>> {
   return commands.setGlobalIdentity(name, email);
 }
+
+/** Discards all changes to files; current content is moved to the OS trash first. */
+export function discardChanges(repoId: string, paths: string[]): Promise<Result<null>> {
+  return commands.discardChanges(repoId, paths);
+}
+
+/** Adds an untracked file, or all files with its extension, to .gitignore. */
+export function ignoreFile(
+  repoId: string,
+  path: string,
+  byExtension: boolean,
+): Promise<Result<null>> {
+  return commands.ignoreFile(repoId, path, byExtension);
+}

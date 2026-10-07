@@ -13,9 +13,8 @@ export function Modal({ open, title, onClose, children }: Props) {
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    // jsdom lacks showModal; guard so tests can render dialogs.
-    if (open && !d.open) d.showModal?.();
-    if (!open && d.open) d.close?.();
+    if (open && !d.open) d.showModal();
+    if (!open && d.open) d.close();
   }, [open]);
   return (
     <dialog ref={ref} className="dialog" onClose={onClose} aria-label={title}>

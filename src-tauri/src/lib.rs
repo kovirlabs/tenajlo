@@ -3,6 +3,7 @@
 pub mod commands;
 pub mod error;
 pub mod git;
+pub mod os_trash;
 pub mod redact;
 pub mod repo_manager;
 pub mod state;
@@ -32,6 +33,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::changes::commit_changes,
             commands::changes::get_identity,
             commands::changes::set_global_identity,
+            commands::changes::discard_changes,
+            commands::changes::ignore_file,
         ])
         .events(collect_events![watcher::RepoChanged])
 }

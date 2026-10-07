@@ -50,6 +50,10 @@ export const commands = {
 	 *  explicitly confirms (CLAUDE.md rule 5).
 	 */
 	setGlobalIdentity: (name: string, email: string) => typedError<null, AppError>(__TAURI_INVOKE("set_global_identity", { name, email })),
+	/**  Discards all changes to the given files. Current content goes to the OS trash first. */
+	discardChanges: (repoId: string, paths: string[]) => typedError<null, AppError>(__TAURI_INVOKE("discard_changes", { repoId, paths })),
+	/**  Adds an untracked file (or all files with its extension) to the root `.gitignore`. */
+	ignoreFile: (repoId: string, path: string, byExtension: boolean) => typedError<null, AppError>(__TAURI_INVOKE("ignore_file", { repoId, path, byExtension })),
 };
 
 /** Events */

@@ -33,6 +33,15 @@ pub struct AppError {
 }
 
 impl AppError {
+    /// An error with a plain message and technical details (redacted here).
+    pub fn with_details(
+        kind: AppErrorKind,
+        message: impl Into<String>,
+        details: impl AsRef<str>,
+    ) -> Self {
+        Self::new(kind, message, Some(crate::redact::redact(details.as_ref())))
+    }
+
     /// Rejected command input (bad id, bad path).
     pub fn invalid_input(message: impl Into<String>) -> Self {
         Self::new(AppErrorKind::InvalidInput, message, None)

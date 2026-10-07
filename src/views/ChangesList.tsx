@@ -2,6 +2,7 @@ import type { FileChange, StagedState } from "../bindings";
 import { FileStatusIcon } from "../components/FileStatusIcon";
 import { StageCheckbox } from "../components/StageCheckbox";
 import { useChangesStore } from "../stores/changesStore";
+import { useFileActions } from "./FileActions";
 
 /** Aggregate stage state for the "all files" checkbox. */
 function overall(files: FileChange[]): StagedState {
@@ -16,6 +17,7 @@ export function ChangesList() {
   const selectFile = useChangesStore((s) => s.selectFile);
   const busy = useChangesStore((s) => s.busy);
   const setStaged = useChangesStore((s) => s.setStaged);
+  const actions = useFileActions();
 
   if (error) return <p className="pane-message">{error.message}</p>;
   if (!status) return <p className="pane-message muted">Loading…</p>;
@@ -53,9 +55,11 @@ export function ChangesList() {
             busy={busy}
             onSelect={() => selectFile(f.path)}
             onStage={(stage) => void setStaged([f.path], stage)}
+            onContextMenu={(e) => actions.open(f, e)}
           />
         ))}
       </ul>
+      {actions.ui}
     </div>
   );
 }
@@ -66,9 +70,10 @@ type RowProps = {
   busy: boolean;
   onSelect: () => void;
   onStage: (stage: boolean) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
 };
 
-function FileRow({ file, selected, busy, onSelect, onStage }: RowProps) {
+function FileRow({ file, selected, busy, onSelect, onStage, onContextMenu }: RowProps) {
   const title = file.oldPath ? `${file.oldPath} → ${file.path}` : file.path;
   const conflicted = file.kind === "Conflicted";
   return (
@@ -77,6 +82,7 @@ function FileRow({ file, selected, busy, onSelect, onStage }: RowProps) {
       aria-selected={selected}
       className={selected ? "file-row selected" : "file-row"}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
       title={conflicted ? `${title} — resolve the conflict first` : title}
     >
       <StageCheckbox

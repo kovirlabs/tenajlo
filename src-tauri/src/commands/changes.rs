@@ -6,9 +6,11 @@ use tauri::State;
 
 use super::repos::parse_id;
 use crate::error::AppError;
+use crate::git::discard::{self, DiscardError};
 use crate::git::identity::{self, Identity};
+use crate::git::parse::status::FileStatusKind;
 use crate::git::parse::status::{FileChange, StagedState};
-use crate::git::{commit, stage, status};
+use crate::git::{commit, ignore, stage, status};
 use crate::state::AppState;
 
 /// Picks the current status entries for `paths`. Paths that no longer have changes are ignored.
@@ -98,4 +100,82 @@ pub async fn set_global_identity(
         ));
     }
     Ok(identity::set_global(&state.git()?, &name, &email).await?)
+}
+
+/// Discards all changes to the given files. Current content goes to the OS trash first.
+#[tauri::command]
+#[specta::specta]
+pub async fn discard_changes(
+    state: State<'_, AppState>,
+    repo_id: String,
+    paths: Vec<String>,
+) -> Result<(), AppError> {
+    let (root, _guard) = state.repos.lock_repo(parse_id(&repo_id)?).await?;
+    let git = state.git()?;
+    let current = status::status(&git, &root).await?;
+    let files = select(&current.files, &paths);
+    let has_head = current.branch.tip.is_some();
+    match discard::discard(
+        &git,
+        &root,
+        &files,
+        has_head,
+        &crate::os_trash::move_to_trash,
+    )
+    .await
+    {
+        Ok(()) => Ok(()),
+        Err(DiscardError::Git(e)) => Err(e.into()),
+        Err(DiscardError::Unsupported(_)) => Err(AppError::invalid_input(
+            "Files with conflicts and submodules can't be discarded here. Nothing was changed.",
+        )),
+        Err(DiscardError::TrashFailed(failed)) => {
+            let details = failed
+                .iter()
+                .map(|(p, e)| format!("{p}: {e}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            Err(AppError::with_details(
+                crate::error::AppErrorKind::Internal,
+                "Some files couldn't be moved to the Trash, so their changes were kept. They may be open in another program.",
+                details,
+            ))
+        }
+    }
+}
+
+/// Adds an untracked file (or all files with its extension) to the root `.gitignore`.
+#[tauri::command]
+#[specta::specta]
+pub async fn ignore_file(
+    state: State<'_, AppState>,
+    repo_id: String,
+    path: String,
+    by_extension: bool,
+) -> Result<(), AppError> {
+    let (root, _guard) = state.repos.lock_repo(parse_id(&repo_id)?).await?;
+    let current = status::status(&state.git()?, &root).await?;
+    // Only untracked files: ignoring a tracked file has no effect until it's removed from git.
+    if !current
+        .files
+        .iter()
+        .any(|f| f.path == path && f.kind == FileStatusKind::Untracked)
+    {
+        return Err(AppError::invalid_input(
+            "Only new files that aren't in Git yet can be ignored.",
+        ));
+    }
+    let pattern = if by_extension {
+        ignore::extension_pattern(&path)
+            .ok_or_else(|| AppError::invalid_input("That file has no extension to ignore."))?
+    } else {
+        ignore::exact_pattern(&path)
+    };
+    ignore::append(&root, &pattern).map_err(|e| {
+        AppError::with_details(
+            crate::error::AppErrorKind::Internal,
+            "Anvil couldn't update the .gitignore file.",
+            e.to_string(),
+        )
+    })
 }

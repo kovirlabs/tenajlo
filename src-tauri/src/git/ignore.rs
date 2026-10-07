@@ -1,0 +1,112 @@
+//! Adding entries to the repository's root `.gitignore` (spec §5.3).
+
+use std::path::Path;
+
+/// Anchored `.gitignore` pattern matching exactly `path` (repo-relative, `/`-separated).
+pub fn exact_pattern(path: &str) -> String {
+    let mut out = String::from("/");
+    for c in path.chars() {
+        if matches!(c, '\\' | '*' | '?' | '[') {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    // Trailing spaces are ignored by git unless escaped.
+    let trailing = out.len() - out.trim_end_matches(' ').len();
+    out.truncate(out.len() - trailing);
+    out.push_str(&"\\ ".repeat(trailing));
+    out
+}
+
+/// `*.ext` pattern for the file's extension, if it has a simple one.
+pub fn extension_pattern(path: &str) -> Option<String> {
+    let name = path.rsplit('/').next()?;
+    let (stem, ext) = name.rsplit_once('.')?;
+    let simple = !stem.is_empty()
+        && !ext.is_empty()
+        && ext
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '_' || c == '-');
+    simple.then(|| format!("*.{ext}"))
+}
+
+/// Appends `pattern` to `<root>/.gitignore` unless an identical line exists.
+/// Preserves the file's existing line endings.
+pub fn append(root: &Path, pattern: &str) -> std::io::Result<()> {
+    let path = root.join(".gitignore");
+    let existing = match std::fs::read_to_string(&path) {
+        Ok(s) => s,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(e) => return Err(e),
+    };
+    if existing
+        .lines()
+        .any(|l| l.trim_end_matches('\r') == pattern)
+    {
+        return Ok(());
+    }
+    let eol = if existing.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let mut out = existing;
+    if !out.is_empty() && !out.ends_with('\n') {
+        out.push_str(eol);
+    }
+    out.push_str(pattern);
+    out.push_str(eol);
+    std::fs::write(&path, out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::git::binary::resolve;
+    use crate::git::status::status;
+    use crate::git::test_support::{init_repo, write};
+
+    #[test]
+    fn escapes_patterns() {
+        assert_eq!(exact_pattern("build/out.log"), "/build/out.log");
+        assert_eq!(exact_pattern("a*b?[c].txt"), "/a\\*b\\?\\[c].txt");
+        assert_eq!(exact_pattern("#notes!"), "/#notes!");
+        assert_eq!(exact_pattern("trail  "), "/trail\\ \\ ");
+        assert_eq!(extension_pattern("dir/plc.L5X"), Some("*.L5X".into()));
+        assert_eq!(extension_pattern(".env"), None);
+        assert_eq!(extension_pattern("Makefile"), None);
+    }
+
+    #[test]
+    fn appends_without_duplicates_and_keeps_crlf() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(".gitignore"), "a\r\nb").unwrap();
+        append(dir.path(), "/c").unwrap();
+        append(dir.path(), "/c").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".gitignore")).unwrap(),
+            "a\r\nb\r\n/c\r\n"
+        );
+    }
+
+    #[tokio::test]
+    async fn git_honours_written_patterns() {
+        let (_tmp, repo) = init_repo().await;
+        let git = resolve(None, None).unwrap();
+        for p in ["x*y.txt", "xay.txt", "sub/z.tmp", "other.tmp", "trail "] {
+            write(&repo, p, "1\n");
+        }
+        append(&repo, &exact_pattern("x*y.txt")).unwrap();
+        append(&repo, &exact_pattern("trail ")).unwrap();
+        append(&repo, &extension_pattern("sub/z.tmp").unwrap()).unwrap();
+        let mut left: Vec<String> = status(&git, &repo)
+            .await
+            .unwrap()
+            .files
+            .into_iter()
+            .map(|f| f.path)
+            .collect();
+        left.sort();
+        assert_eq!(left, vec![".gitignore", "xay.txt"]);
+    }
+}
