@@ -168,11 +168,30 @@ mod tests {
         write(&repo, "a.txt", "ours\n");
         git_in(&repo, &["commit", "-q", "-am", "ours"]).await;
         let git = resolve(None, None).unwrap();
-        let res = GitCommand::new(["merge", "--no-edit", "other"], Access::Mutating)
+        // CI machines have no global identity; the merge needs one to start.
+        let args = [
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=t@example.com",
+            "merge",
+            "--no-edit",
+            "other",
+        ];
+        let res = GitCommand::new(args, Access::Mutating)
             .cwd(&repo)
             .run(&git)
             .await;
-        assert!(res.is_err(), "merge should conflict");
+        assert!(
+            matches!(
+                res,
+                Err(GitError::Failed {
+                    kind: crate::git::error::GitErrorKind::MergeConflict,
+                    ..
+                })
+            ),
+            "merge should conflict: {res:?}"
+        );
         (tmp, repo)
     }
 

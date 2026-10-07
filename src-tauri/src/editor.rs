@@ -139,11 +139,12 @@ mod tests {
         assert!(opts.iter().any(|o| o.editor == Editor::VsCode));
     }
 
+    /// Unix only: a shell script stands in for the editor. Windows runs the same code path.
+    #[cfg(unix)]
     #[test]
     fn custom_editor_gets_the_file_as_its_argument() {
         let dir = tempfile::tempdir().unwrap();
         let log = dir.path().join("args.txt");
-        #[cfg(unix)]
         let program = {
             use std::os::unix::fs::PermissionsExt;
             let script = dir.path().join("fake editor.sh");
@@ -155,8 +156,6 @@ mod tests {
             std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
             script
         };
-        #[cfg(windows)]
-        let program = PathBuf::from(std::env::var("ComSpec").unwrap());
         let file = dir.path().join("ünï file.txt");
         open(
             &Editor::Custom {
@@ -165,17 +164,14 @@ mod tests {
             &file,
         )
         .unwrap();
-        #[cfg(unix)]
-        {
-            let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-            while !log.exists() && std::time::Instant::now() < deadline {
-                std::thread::sleep(std::time::Duration::from_millis(20));
-            }
-            assert_eq!(
-                std::fs::read_to_string(&log).unwrap(),
-                file.to_string_lossy()
-            );
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while !log.exists() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(20));
         }
+        assert_eq!(
+            std::fs::read_to_string(&log).unwrap(),
+            file.to_string_lossy()
+        );
     }
 
     #[test]
