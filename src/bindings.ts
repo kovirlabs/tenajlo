@@ -7,6 +7,10 @@ import * as __TAURI_EVENT from "@tauri-apps/api/event";
 export const commands = {
 	/**  Locates git and reports its version and whether it meets the minimum. */
 	checkGit: () => typedError<GitInfo, AppError>(__TAURI_INVOKE("check_git")),
+	/**  Tenajlo's version and where its logs are. */
+	getAppInfo: () => typedError<AppInfo, AppError>(__TAURI_INVOKE("get_app_info")),
+	/**  Opens the log folder in Explorer / Finder (to attach logs to a bug report). */
+	openLogsFolder: () => typedError<null, AppError>(__TAURI_INVOKE("open_logs_folder")),
 	/**  Lists added repositories, most recently opened first. */
 	listRepositories: () => __TAURI_INVOKE<RepositoryList>("list_repositories"),
 	/**  Opens a folder picker and adds the chosen repository. `None` if the user cancelled. */
@@ -183,6 +187,13 @@ export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "G
 "Server" | "UnknownAccount" | 
 /**  The account's token no longer works; `account_id` says which. UI offers "Sign in again". */
 "SignInRequired" | "Storage" | "InvalidInput" | "Internal";
+
+/**  Shown in Settings → About. */
+export type AppInfo = {
+	version: string,
+	/**  Folder with the daily log files. */
+	logsDir: string,
+};
 
 /**  The user's answer. Flows UI → Rust only (CLAUDE.md rule 2). Debug output is redacted. */
 export type AuthAnswer = {

@@ -6,6 +6,7 @@ pub mod editor;
 pub mod error;
 pub mod forgejo;
 pub mod git;
+pub mod logging;
 pub mod operations;
 pub mod os_trash;
 pub mod redact;
@@ -23,6 +24,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new()
         .commands(collect_commands![
             commands::app::check_git,
+            commands::app::get_app_info,
+            commands::app::open_logs_folder,
             commands::repos::list_repositories,
             commands::repos::add_local_repository,
             commands::repos::remove_repository,
@@ -82,13 +85,6 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
 
 /// Builds and runs the Tauri application.
 pub fn run() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("tenajlo_lib=info")),
-        )
-        .init();
-
     let builder = specta_builder();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -99,6 +95,10 @@ pub fn run() {
             builder.mount_events(app);
             let bundled_git_dir = app.path().resource_dir().ok().map(|d| d.join("mingit"));
             let data_dir = app.path().app_data_dir()?;
+            if let Some(guard) = logging::init(&data_dir.join("logs")) {
+                app.manage(guard);
+            }
+            tracing::info!(version = env!("CARGO_PKG_VERSION"), "Tenajlo starting");
             let repos = repo_manager::RepoManager::load(&data_dir);
             let accounts = auth::accounts::AccountManager::load(
                 &data_dir,

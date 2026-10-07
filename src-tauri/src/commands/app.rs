@@ -1,6 +1,8 @@
-//! App-level commands: startup checks.
+//! App-level commands: startup checks, version and log files.
 
-use tauri::State;
+use serde::Serialize;
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_opener::OpenerExt;
 
 use crate::error::AppError;
 use crate::git::{binary, version};
@@ -18,4 +20,53 @@ pub async fn check_git(state: State<'_, AppState>) -> Result<version::GitInfo, A
         state.set_git(git.with_lfs(info.lfs_version.is_some()));
     }
     Ok(info)
+}
+
+/// Shown in Settings → About.
+#[derive(Debug, Clone, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AppInfo {
+    pub version: String,
+    /// Folder with the daily log files.
+    pub logs_dir: String,
+}
+
+/// Tenajlo's version and where its logs are.
+#[tauri::command]
+#[specta::specta]
+pub fn get_app_info(app: AppHandle) -> Result<AppInfo, AppError> {
+    Ok(AppInfo {
+        version: env!("CARGO_PKG_VERSION").to_owned(),
+        logs_dir: logs_dir(&app)?.to_string_lossy().into_owned(),
+    })
+}
+
+/// Opens the log folder in Explorer / Finder (to attach logs to a bug report).
+#[tauri::command]
+#[specta::specta]
+pub fn open_logs_folder(app: AppHandle) -> Result<(), AppError> {
+    let dir = logs_dir(&app)?;
+    let _ = std::fs::create_dir_all(&dir);
+    app.opener()
+        .open_path(dir.to_string_lossy(), None::<&str>)
+        .map_err(|e| {
+            AppError::with_details(
+                crate::error::AppErrorKind::Internal,
+                "Tenajlo couldn't open the log folder.",
+                e.to_string(),
+            )
+        })
+}
+
+fn logs_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
+    app.path()
+        .app_data_dir()
+        .map(|d| d.join("logs"))
+        .map_err(|e| {
+            AppError::with_details(
+                crate::error::AppErrorKind::Internal,
+                "Tenajlo couldn't find its data folder.",
+                e.to_string(),
+            )
+        })
 }

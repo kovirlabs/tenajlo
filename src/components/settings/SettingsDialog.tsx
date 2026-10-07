@@ -1,6 +1,7 @@
 import { useUiStore, type SettingsTab } from "../../stores/uiStore";
 import { AccountsPanel } from "../accounts/AccountsPanel";
 import { Modal } from "../Modal";
+import { AboutPanel } from "./AboutPanel";
 import { GitPanel } from "./GitPanel";
 import { AppearancePanel, RepositoriesPanel } from "./PreferencePanels";
 
@@ -9,6 +10,7 @@ const TABS: { id: SettingsTab; label: string }[] = [
   { id: "git", label: "Git" },
   { id: "repositories", label: "Repositories" },
   { id: "appearance", label: "Appearance" },
+  { id: "about", label: "About" },
 ];
 
 /** Settings (spec §8.1). Every control saves as soon as it changes. */
@@ -42,6 +44,7 @@ export function SettingsDialog() {
           {tab === "git" && <GitPanel />}
           {tab === "repositories" && <RepositoriesPanel />}
           {tab === "appearance" && <AppearancePanel />}
+          {tab === "about" && <AboutPanel />}
         </div>
         {tab !== "accounts" && (
           <div className="dialog-actions">
