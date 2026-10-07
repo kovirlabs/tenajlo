@@ -237,7 +237,7 @@ When the credential helper protocol sends `erase`, delete the keychain entry. On
 |---|---|
 | Health/version | `GET /api/v1/version` |
 | Current user | `GET /api/v1/user` |
-| Repos for clone dialog | `GET /api/v1/user/repos?limit=50&page=N`, plus `GET /api/v1/orgs/{org}/repos?limit=50&page=N` for each of the user's orgs (de-duplicated) |
+| Repos for clone dialog | `GET /api/v1/user/repos?limit=50&page=N` — includes org repos reachable through teams (verified on Forgejo 11); listing orgs would need the extra `read:organization` scope |
 | User's orgs | `GET /api/v1/user/orgs` |
 | SSH keys (v1.1) | `GET/POST /api/v1/user/keys` |
 

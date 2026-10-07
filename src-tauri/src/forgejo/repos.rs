@@ -1,4 +1,8 @@
-//! Repositories the signed-in user can clone (spec §7): their own and their organizations'.
+//! Repositories the signed-in user can clone (spec §7).
+//!
+//! `/user/repos` already covers organization repositories the user can reach through a team
+//! (checked against Forgejo 11), so `/user/orgs` isn't needed — it would also require the
+//! extra `read:organization` token scope.
 
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -46,26 +50,14 @@ struct ApiOwner {
     login: String,
 }
 
-#[derive(Deserialize)]
-struct ApiOrg {
-    #[serde(alias = "username")]
-    name: String,
-}
-
-/// The user's repositories plus those of every organization they belong to, sorted by
+/// Every repository the user can access (own, collaborator, and team), sorted by
 /// `owner/name` and de-duplicated.
 pub async fn list_repositories(
     client: &ForgejoClient,
     base: &Url,
     token: &Secret,
 ) -> Result<Vec<RemoteRepository>, ForgejoError> {
-    let mut repos: Vec<ApiRepo> = all_pages(client, base, &["user", "repos"], token).await?;
-    let orgs: Vec<ApiOrg> = all_pages(client, base, &["user", "orgs"], token).await?;
-    for org in orgs {
-        repos.extend(
-            all_pages::<ApiRepo>(client, base, &["orgs", &org.name, "repos"], token).await?,
-        );
-    }
+    let repos: Vec<ApiRepo> = all_pages(client, base, &["user", "repos"], token).await?;
     let mut out: Vec<RemoteRepository> = repos
         .into_iter()
         .map(|r| RemoteRepository {
@@ -121,8 +113,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn lists_user_and_org_repos_across_pages() {
+    async fn lists_repos_across_pages() {
         let page1: Vec<String> = (0..50).map(|i| repo("evan", &format!("r{i:02}"))).collect();
+        let page2 = [repo("TMC Controls", "plc"), repo("evan", "r00")].join(",");
         let (base, seen) = fake_server(vec![
             (
                 "/api/v1/user/repos?limit=50&page=1",
@@ -132,17 +125,7 @@ mod tests {
             (
                 "/api/v1/user/repos?limit=50&page=2",
                 "200 OK",
-                format!("[{}]", repo("evan", "zz")),
-            ),
-            (
-                "/api/v1/user/orgs?limit=50&page=1",
-                "200 OK",
-                r#"[{"name":"TMC Controls"}]"#.into(),
-            ),
-            (
-                "/api/v1/orgs/TMC%20Controls/repos?limit=50&page=1",
-                "200 OK",
-                format!("[{},{}]", repo("TMC Controls", "plc"), repo("evan", "zz")),
+                format!("[{page2}]"),
             ),
         ])
         .await;
@@ -153,11 +136,11 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(repos.len(), 52, "50 + 1 + org repo; duplicate dropped");
+        assert_eq!(repos.len(), 51, "duplicate across pages dropped");
         assert_eq!(repos[0].full_name, "evan/r00");
-        assert_eq!(repos[51].full_name, "TMC Controls/plc");
+        assert_eq!(repos[50].full_name, "TMC Controls/plc");
         assert!(repos.iter().all(|r| r.private));
-        assert_eq!(seen.lock().unwrap().len(), 4);
+        assert_eq!(seen.lock().unwrap().len(), 2);
     }
 
     #[tokio::test]
