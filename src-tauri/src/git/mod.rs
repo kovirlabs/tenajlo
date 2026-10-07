@@ -1,6 +1,7 @@
 //! Git CLI integration. All process spawning goes through [`exec`].
 
 pub mod binary;
+pub mod branch_name;
 pub mod branches;
 pub mod commit;
 pub mod diff;
@@ -13,7 +14,9 @@ pub mod log;
 pub mod parse;
 pub mod repo_root;
 pub mod stage;
+pub mod stash;
 pub mod status;
+pub mod switch;
 #[cfg(test)]
 pub mod test_support;
 pub mod version;

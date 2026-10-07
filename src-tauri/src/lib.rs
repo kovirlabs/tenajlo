@@ -35,6 +35,12 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::changes::set_global_identity,
             commands::changes::discard_changes,
             commands::changes::ignore_file,
+            commands::branches::preview_branch_name,
+            commands::branches::create_branch,
+            commands::branches::switch_branch,
+            commands::branches::delete_branch,
+            commands::branches::get_saved_changes,
+            commands::branches::restore_saved_changes,
         ])
         .events(collect_events![watcher::RepoChanged])
 }

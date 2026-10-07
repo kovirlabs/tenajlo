@@ -54,6 +54,20 @@ export const commands = {
 	discardChanges: (repoId: string, paths: string[]) => typedError<null, AppError>(__TAURI_INVOKE("discard_changes", { repoId, paths })),
 	/**  Adds an untracked file (or all files with its extension) to the root `.gitignore`. */
 	ignoreFile: (repoId: string, path: string, byExtension: boolean) => typedError<null, AppError>(__TAURI_INVOKE("ignore_file", { repoId, path, byExtension })),
+	/**  How a typed branch name will be created (`"Fix pump"` → `"Fix-pump"`). Pure; no git call. */
+	previewBranchName: (name: string) => __TAURI_INVOKE<string>("preview_branch_name", { name }),
+	/**  Creates a branch from the current commit and switches to it. Local changes come along. */
+	createBranch: (repoId: string, name: string) => typedError<null, AppError>(__TAURI_INVOKE("create_branch", { repoId, name })),
+	/**  Switches to a local branch, or creates a tracking branch for a remote-only one. */
+	switchBranch: (repoId: string, name: string, localChanges: LocalChanges) => typedError<null, AppError>(__TAURI_INVOKE("switch_branch", { repoId, name, localChanges })),
+	/**  Deletes a local branch. Without `force`, fails with `BranchNotMerged` if it has unique commits. */
+	deleteBranch: (repoId: string, name: string, force: boolean) => typedError<null, AppError>(__TAURI_INVOKE("delete_branch", { repoId, name, force })),
+	/**  Changes Anvil saved when the user last left the current branch, if any. */
+	getSavedChanges: (repoId: string) => typedError<{
+	branch: string,
+} | null, AppError>(__TAURI_INVOKE("get_saved_changes", { repoId })),
+	/**  Re-applies the changes saved for the current branch. */
+	restoreSavedChanges: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_saved_changes", { repoId })),
 };
 
 /** Events */
@@ -177,7 +191,7 @@ export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | "SshKeyRejected" | 
 /**  Folder owned by another user; git's `safe.directory` check refused it. */
 "DubiousOwnership" | 
 /**  `user.name` / `user.email` not configured. */
-"IdentityMissing" | "Unknown";
+"IdentityMissing" | "BranchExists" | "BranchNotMerged" | "Unknown";
 
 /**  Result of the startup git check, sent to the UI. */
 export type GitInfo = {
@@ -202,6 +216,13 @@ export type Identity = {
 	email: string | null,
 };
 
+/**  What to do with uncommitted changes when switching (GitHub Desktop's two choices). */
+export type LocalChanges = 
+/**  Carry them to the target branch (fails if they would be overwritten). */
+"Bring" | 
+/**  Save them on the current branch and switch with a clean working directory. */
+"Leave";
+
 /**  Emitted (debounced) when files or git state in a watched repository change. */
 export type RepoChanged = {
 	repoId: string,
@@ -222,6 +243,11 @@ export type RepositoryList = {
 	/**  Most recently opened first. */
 	repositories: Repository[],
 	selectedId: string | null,
+};
+
+/**  Changes Anvil saved when the user left a branch. */
+export type SavedChanges = {
+	branch: string,
 };
 
 /**  How much of a file's change is staged. */

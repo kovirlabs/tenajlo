@@ -93,6 +93,11 @@ impl From<GitError> for AppError {
             GitError::Spawn(e) => {
                 AppError::new(AppErrorKind::Internal, "Anvil couldn't start Git.", Some(e.to_string()))
             }
+            GitError::InvalidRefName(name) => AppError::new(
+                AppErrorKind::InvalidInput,
+                format!("“{name}” can't be used as a branch name."),
+                None,
+            ),
             GitError::Parse(s) => AppError::new(
                 AppErrorKind::Internal,
                 "Git returned something Anvil didn't understand.",
@@ -139,6 +144,8 @@ fn git_message(kind: GitErrorKind) -> &'static str {
             "Git won't open this folder because it belongs to a different user account. Ask IT to fix the folder's owner, or mark it as safe with `git config --global --add safe.directory <path>`."
         }
         GitErrorKind::IdentityMissing => "Git needs your name and email before you can commit.",
+        GitErrorKind::BranchExists => "A branch with that name already exists.",
+        GitErrorKind::BranchNotMerged => "This branch has commits that aren't on any other branch.",
         GitErrorKind::Unknown => "Git reported a problem.",
     }
 }

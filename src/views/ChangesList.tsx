@@ -3,6 +3,7 @@ import { FileStatusIcon } from "../components/FileStatusIcon";
 import { StageCheckbox } from "../components/StageCheckbox";
 import { useChangesStore } from "../stores/changesStore";
 import { useFileActions } from "./FileActions";
+import { SavedChangesBanner } from "./SavedChangesBanner";
 
 /** Aggregate stage state for the "all files" checkbox. */
 function overall(files: FileChange[]): StagedState {
@@ -26,6 +27,7 @@ export function ChangesList() {
   const stageable = files.filter((f) => f.kind !== "Conflicted");
   return (
     <div className="changes-list">
+      <SavedChangesBanner />
       <div className="list-header">
         {files.length > 0 && (
           <StageCheckbox

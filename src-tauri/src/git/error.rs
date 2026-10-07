@@ -23,6 +23,8 @@ pub enum GitErrorKind {
     DubiousOwnership,
     /// `user.name` / `user.email` not configured.
     IdentityMissing,
+    BranchExists,
+    BranchNotMerged,
     Unknown,
 }
 
@@ -61,6 +63,8 @@ const PATTERNS: &[(&str, GitErrorKind)] = &[
     ("Could not resolve hostname", GitErrorKind::HostUnreachable),
     ("CONFLICT", GitErrorKind::MergeConflict),
     ("detected dubious ownership", GitErrorKind::DubiousOwnership),
+    ("is not fully merged", GitErrorKind::BranchNotMerged),
+    ("a branch named", GitErrorKind::BranchExists),
     ("Please tell me who you are", GitErrorKind::IdentityMissing),
     ("Author identity unknown", GitErrorKind::IdentityMissing),
     ("empty ident name", GitErrorKind::IdentityMissing),
@@ -95,6 +99,8 @@ pub enum GitError {
         exit_code: Option<i32>,
         stderr: String,
     },
+    #[error("invalid branch name: {0}")]
+    InvalidRefName(String),
     #[error("unrecognized git output: {0}")]
     Parse(String),
     #[error("git {found} is older than the minimum {minimum}")]
@@ -157,6 +163,9 @@ mod tests {
                 GitErrorKind::NotARepository,
             ),
             ("fatal: detected dubious ownership in repository at 'C:/Shared/repo'", GitErrorKind::DubiousOwnership),
+            ("error: the branch 'x' is not fully merged", GitErrorKind::BranchNotMerged),
+            ("fatal: a branch named 'x' already exists", GitErrorKind::BranchExists),
+            ("fatal: destination path 'r' already exists and is not an empty directory.", GitErrorKind::Unknown),
             ("", GitErrorKind::Unknown),
             ("something else entirely", GitErrorKind::Unknown),
         ];

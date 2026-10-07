@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import { ErrorDialog } from "../components/ErrorDialog";
+import { NewBranchDialog } from "../components/branches/NewBranchDialog";
+import { useShortcuts } from "../hooks/useShortcuts";
 import { Toolbar } from "../components/Toolbar";
 import { useRepoStore, useSelectedRepository } from "../stores/repoStore";
 import { MissingRepository } from "./MissingRepository";
@@ -15,6 +17,8 @@ export function AppShell() {
     void load();
   }, [load]);
 
+  useShortcuts(repo !== null && !repo.missing);
+
   let body;
   if (!loaded) body = <main className="centered" aria-busy="true" />;
   else if (!repo) body = <NoRepository />;
@@ -25,6 +29,7 @@ export function AppShell() {
     <div className="shell">
       <Toolbar />
       {body}
+      {repo && !repo.missing && <NewBranchDialog key={repo.id} />}
       <ErrorDialog />
     </div>
   );

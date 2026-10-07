@@ -1,7 +1,9 @@
 import { create } from "zustand";
-import type { AppError, WorkingDirectoryStatus } from "../bindings";
+import type { AppError, SavedChanges, WorkingDirectoryStatus } from "../bindings";
 import { getStatus } from "../api/status";
 import { setStaged } from "../api/changes";
+import { getSavedChanges } from "../api/branches";
+import { useBranchStore } from "./branchStore";
 import { useUiStore } from "./uiStore";
 
 type ChangesState = {
@@ -9,6 +11,8 @@ type ChangesState = {
   status: WorkingDirectoryStatus | null;
   error: AppError | null;
   selectedPath: string | null;
+  /** Changes Anvil saved when the user last left this branch. */
+  saved: SavedChanges | null;
   /** A mutating operation is running; disable controls. */
   busy: boolean;
   refresh: (repoId: string) => Promise<void>;
@@ -21,14 +25,21 @@ type ChangesState = {
   reset: () => void;
 };
 
-const initial = { repoId: null, status: null, error: null, selectedPath: null, busy: false };
+const initial = {
+  repoId: null,
+  status: null,
+  error: null,
+  selectedPath: null,
+  saved: null,
+  busy: false,
+};
 
 export const useChangesStore = create<ChangesState>((set, get) => ({
   ...initial,
 
   refresh: async (repoId) => {
     if (get().repoId !== repoId) set({ ...initial, repoId });
-    const res = await getStatus(repoId);
+    const [res, saved] = await Promise.all([getStatus(repoId), getSavedChanges(repoId)]);
     // Ignore results for a repository the user has since switched away from.
     if (get().repoId !== repoId) return;
     if (res.status === "error") return set({ error: res.error });
@@ -37,6 +48,7 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
     const keep = selected !== null && files.some((f) => f.path === selected);
     set({
       status: res.data,
+      saved: saved.status === "ok" ? saved.data : null,
       error: null,
       selectedPath: keep ? selected : (files[0]?.path ?? null),
     });
@@ -54,7 +66,7 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
       return res.status === "ok";
     } finally {
       set({ busy: false });
-      await get().refresh(repoId);
+      await Promise.all([get().refresh(repoId), useBranchStore.getState().refresh(repoId)]);
     }
   },
 

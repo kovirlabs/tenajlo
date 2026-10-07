@@ -643,3 +643,33 @@ button.danger {
   border-color: var(--danger);
   color: #fff;
 }
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--diff-hunk-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.banner span {
+  flex: 1;
+}
+
+.choice {
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: 8px !important;
+  font-weight: 400 !important;
+}
+
+.choice span {
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-item:disabled {
+  opacity: 0.5;
+}
