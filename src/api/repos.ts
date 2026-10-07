@@ -17,3 +17,17 @@ export function removeRepository(id: string): Promise<Result<null>> {
 export function selectRepository(id: string): Promise<Result<Repository>> {
   return commands.selectRepository(id);
 }
+
+/** Where new repositories go by default (Settings, else Documents/Tenajlo). */
+export function defaultRepositoryFolder(): Promise<Result<string>> {
+  return commands.defaultRepositoryFolder();
+}
+
+/** Creates `parent/name` as a new repository on `main`, then adds and selects it. */
+export function createRepository(
+  parent: string,
+  name: string,
+  readme: boolean,
+): Promise<Result<Repository>> {
+  return commands.createRepository(parent, name, readme);
+}

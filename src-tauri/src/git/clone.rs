@@ -82,13 +82,26 @@ pub fn folder_name(url: &str) -> Option<String> {
     };
     let last = path.rsplit('/').find(|s| !s.is_empty())?;
     let name = last.strip_suffix(".git").unwrap_or(last);
+    valid_folder_name(name).then(|| name.to_owned())
+}
+
+/// A folder name that works on Windows, macOS and Linux: no path separators or reserved
+/// characters, no trailing dot or space, not a reserved Windows device name.
+pub fn valid_folder_name(name: &str) -> bool {
+    const RESERVED: [&str; 22] = [
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ];
     let invalid = |c: char| c.is_control() || r#"<>:"/\|?*%"#.contains(c);
-    let usable = !name.is_empty()
+    let stem = name.split('.').next().unwrap_or(name);
+    !name.is_empty()
+        && name.len() <= 255
         && name != "."
         && name != ".."
+        && !name.starts_with(' ')
         && !name.ends_with(['.', ' '])
-        && !name.chars().any(invalid);
-    usable.then(|| name.to_owned())
+        && !name.chars().any(invalid)
+        && !RESERVED.iter().any(|r| stem.eq_ignore_ascii_case(r))
 }
 
 /// Clones `url` into `dest`, which must not exist yet (its parent is created if needed).
@@ -184,6 +197,19 @@ mod tests {
         assert_eq!(folder_name("https://h/team/..").as_deref(), None);
         assert_eq!(folder_name("https://h/team/.git"), None);
         assert_eq!(folder_name("git@h:team/plc.git").as_deref(), Some("plc"));
+        assert_eq!(
+            folder_name("https://h/team/con.git"),
+            None,
+            "Windows device name"
+        );
+        for ok in ["Pump Station 3", "plc.v2", "ünï"] {
+            assert!(valid_folder_name(ok), "{ok}");
+        }
+        for bad in [
+            "", " x", "x ", "x.", "a/b", "a\\b", "c:x", "NUL", "com1.txt", "..",
+        ] {
+            assert!(!valid_folder_name(bad), "{bad:?}");
+        }
         assert_eq!(folder_name("git@h:plc.git").as_deref(), Some("plc"));
         assert_eq!(
             folder_name("ssh://git@h:2222/team/plc.git").as_deref(),

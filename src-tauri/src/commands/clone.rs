@@ -62,16 +62,21 @@ pub fn suggest_clone_path(
     state: State<'_, AppState>,
     url: String,
 ) -> Result<String, AppError> {
-    let parent = match state.settings.get().default_clone_folder {
-        Some(folder) => PathBuf::from(folder),
-        None => app
+    let parent = default_parent(&app, &state)?;
+    Ok(display(&unique_child(&parent, &name_for(&url))))
+}
+
+/// Where new repositories go: the Settings folder, else `Documents/Tenajlo`.
+pub(crate) fn default_parent(app: &AppHandle, state: &AppState) -> Result<PathBuf, AppError> {
+    match state.settings.get().default_clone_folder {
+        Some(folder) => Ok(PathBuf::from(folder)),
+        None => Ok(app
             .path()
             .document_dir()
             .or_else(|_| app.path().home_dir())
             .map_err(|_| AppError::invalid_input("Tenajlo couldn't find your Documents folder."))?
-            .join(DEFAULT_PARENT),
-    };
-    Ok(display(&unique_child(&parent, &name_for(&url))))
+            .join(DEFAULT_PARENT)),
+    }
 }
 
 /// Lets the user pick a parent folder; returns `<picked>/<name>`, or `None` if cancelled.

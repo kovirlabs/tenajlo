@@ -22,6 +22,13 @@ export const commands = {
 	/**  The folder no longer exists (moved or deleted). */
 	missing: boolean,
 } | null, AppError>(__TAURI_INVOKE("add_local_repository")),
+	/**  Folder that new repositories go in by default (shown in "New repository"). */
+	defaultRepositoryFolder: () => typedError<string, AppError>(__TAURI_INVOKE("default_repository_folder")),
+	/**
+	 *  Creates `parent/name` as a new repository on `main` (optionally with a README), then adds
+	 *  and selects it.
+	 */
+	createRepository: (parent: string, name: string, readme: boolean) => typedError<Repository, AppError>(__TAURI_INVOKE("create_repository", { parent, name, readme })),
 	/**  Removes a repository from the list. Files on disk are not touched. */
 	removeRepository: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("remove_repository", { id })),
 	/**  Selects a repository and marks it recently opened. */

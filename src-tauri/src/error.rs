@@ -7,6 +7,7 @@ use crate::editor::EditorError;
 use crate::forgejo::ForgejoError;
 use crate::git::clone::CloneError;
 use crate::git::error::{GitError, GitErrorKind};
+use crate::git::init::InitError;
 use crate::repo_manager::RepoError;
 use crate::settings::SettingsError;
 use crate::store::accounts::AccountEntry;
@@ -248,6 +249,32 @@ impl From<SettingsError> for AppError {
                 e.to_string(),
             ),
         }
+    }
+}
+
+impl From<InitError> for AppError {
+    fn from(err: InitError) -> Self {
+        match err {
+            InitError::Git(e) => e.into(),
+            other => AppError::with_details(
+                AppErrorKind::InvalidInput,
+                init_message(&other),
+                other.to_string(),
+            ),
+        }
+    }
+}
+
+fn init_message(err: &InitError) -> String {
+    match err {
+        InitError::InvalidName => "That name can't be used for a folder. Avoid characters like / \\ : * ? \" < > | and a dot or space at the end.".to_owned(),
+        InitError::InvalidLocation(_) => "Choose a folder for the new repository.".to_owned(),
+        InitError::NotEmpty(path) => format!(
+            "{} already has files in it. To use them, choose Add local… instead, or pick another name.",
+            path.display()
+        ),
+        InitError::Io { .. } => "Tenajlo couldn't create the folder for the repository.".to_owned(),
+        InitError::Git(_) => git_message(GitErrorKind::Unknown).to_owned(),
     }
 }
 

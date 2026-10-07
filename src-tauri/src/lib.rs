@@ -28,6 +28,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::app::open_logs_folder,
             commands::repos::list_repositories,
             commands::repos::add_local_repository,
+            commands::repos::default_repository_folder,
+            commands::repos::create_repository,
             commands::repos::remove_repository,
             commands::repos::select_repository,
             commands::repo::get_status,

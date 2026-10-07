@@ -11,6 +11,7 @@ pub mod error;
 pub mod exec;
 pub mod identity;
 pub mod ignore;
+pub mod init;
 pub mod lfs;
 pub mod log;
 pub mod merge;

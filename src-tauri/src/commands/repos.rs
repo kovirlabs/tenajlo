@@ -5,6 +5,7 @@ use tauri_plugin_dialog::DialogExt;
 use uuid::Uuid;
 
 use crate::error::AppError;
+use crate::git::init;
 use crate::repo_manager::{Repository, RepositoryList};
 use crate::state::AppState;
 
@@ -57,4 +58,31 @@ pub fn remove_repository(state: State<'_, AppState>, id: String) -> Result<(), A
 #[specta::specta]
 pub fn select_repository(state: State<'_, AppState>, id: String) -> Result<Repository, AppError> {
     Ok(state.repos.select(parse_id(&id)?)?)
+}
+
+/// Folder that new repositories go in by default (shown in "New repository").
+#[tauri::command]
+#[specta::specta]
+pub fn default_repository_folder(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<String, AppError> {
+    Ok(super::clone::default_parent(&app, &state)?
+        .to_string_lossy()
+        .into_owned())
+}
+
+/// Creates `parent/name` as a new repository on `main` (optionally with a README), then adds
+/// and selects it.
+#[tauri::command]
+#[specta::specta]
+pub async fn create_repository(
+    state: State<'_, AppState>,
+    parent: String,
+    name: String,
+    readme: bool,
+) -> Result<Repository, AppError> {
+    let git = state.git()?;
+    let dir = init::init(&git, std::path::Path::new(parent.trim()), &name, readme).await?;
+    Ok(state.repos.add(&git, &dir).await?)
 }
