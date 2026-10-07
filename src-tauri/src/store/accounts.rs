@@ -29,6 +29,10 @@ pub struct AccountEntry {
     pub token_scopes: Option<Vec<String>>,
     /// SSH host override, e.g. `tmc-git01.tmus.local:2222` (M5).
     pub ssh_host: Option<String>,
+    /// The server rejected the token (401); the user must paste a new one. Defaults to
+    /// `false` so files written before this field existed still load.
+    #[serde(default)]
+    pub needs_sign_in: bool,
 }
 
 impl AccountEntry {
@@ -47,4 +51,19 @@ pub struct AccountsFile {
 
 impl Versioned for AccountsFile {
     const VERSION: u64 = 1;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn files_without_needs_sign_in_still_load() {
+        let raw = r#"{"schemaVersion":1,"accounts":[{"id":"6f9619ff-8b86-d011-b42d-00cf4fc964ff","kind":"forgejo","baseUrl":"https://h","login":"evan","displayName":"Evan","avatarUrl":null,"tokenScopes":null,"sshHost":null}]}"#;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(FILE_NAME);
+        std::fs::write(&path, raw).unwrap();
+        let file: AccountsFile = crate::store::load(&path).unwrap();
+        assert!(!file.accounts[0].needs_sign_in);
+    }
 }

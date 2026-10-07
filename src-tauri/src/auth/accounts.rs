@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use reqwest::Url;
 use serde::Serialize;
 use uuid::Uuid;
 
@@ -23,6 +24,8 @@ pub struct Account {
     pub login: String,
     pub display_name: String,
     pub avatar_url: Option<String>,
+    /// The server stopped accepting the saved token; show "Sign in again".
+    pub needs_sign_in: bool,
 }
 
 /// Errors changing accounts.
@@ -105,6 +108,7 @@ impl AccountManager {
             avatar_url: user.avatar_url.filter(|u| !u.is_empty()),
             token_scopes: None,
             ssh_host: previous.as_ref().and_then(|p| p.ssh_host.clone()),
+            needs_sign_in: false,
         };
 
         let key = entry.keychain_key();
@@ -155,6 +159,42 @@ impl AccountManager {
         Ok(())
     }
 
+    /// The account whose server hosts `remote_url`, if any (spec §6.2 step 1).
+    pub fn for_remote(&self, remote_url: &str) -> Option<AccountEntry> {
+        self.data()
+            .accounts
+            .iter()
+            .find(|a| hosts_remote(&a.base_url, remote_url))
+            .cloned()
+    }
+
+    /// The account's token from the keychain; `None` if the entry is gone.
+    pub async fn token(&self, account: &AccountEntry) -> Result<Option<Secret>, SecretError> {
+        let key = account.keychain_key();
+        self.blocking(move |s| s.get(&key)).await
+    }
+
+    /// Records that the server rejected the account's token. The token is kept until the
+    /// user signs in again or signs out.
+    pub fn mark_needs_sign_in(&self, id: Uuid) -> Result<(), AccountError> {
+        let mut next = self.data().clone();
+        let entry = next
+            .accounts
+            .iter_mut()
+            .find(|a| a.id == id)
+            .ok_or(AccountError::UnknownAccount)?;
+        if entry.needs_sign_in {
+            return Ok(());
+        }
+        entry.needs_sign_in = true;
+        tracing::info!(server = %crate::redact::redact(&entry.base_url), "token rejected; sign-in required");
+        if !self.read_only {
+            store::save(&self.path, &next)?;
+        }
+        *self.data() = next;
+        Ok(())
+    }
+
     /// Runs a keychain call off the async runtime (the OS store may block or show UI).
     async fn blocking<T: Send + 'static>(
         &self,
@@ -179,7 +219,22 @@ fn to_dto(e: &AccountEntry) -> Account {
         login: e.login.clone(),
         display_name: e.display_name.clone(),
         avatar_url: e.avatar_url.clone(),
+        needs_sign_in: e.needs_sign_in,
     }
+}
+
+/// True if `remote_url` is on the server at `base_url`: same scheme, host and port, and
+/// under the server's sub-path. SSH and scp-style URLs never match (M5).
+pub fn hosts_remote(base_url: &str, remote_url: &str) -> bool {
+    let (Ok(base), Ok(remote)) = (Url::parse(base_url), Url::parse(remote_url)) else {
+        return false;
+    };
+    let prefix = base.path().trim_end_matches('/');
+    base.scheme() == remote.scheme()
+        && base.host_str().is_some()
+        && base.host_str() == remote.host_str()
+        && base.port_or_known_default() == remote.port_or_known_default()
+        && (prefix.is_empty() || remote.path().starts_with(&format!("{prefix}/")))
 }
 
 #[cfg(test)]
@@ -277,6 +332,48 @@ mod tests {
         ));
         assert!(m.list().is_empty());
         assert!(!dir.path().join(FILE_NAME).exists());
+    }
+
+    #[test]
+    fn remote_matching() {
+        let m = |b, r| hosts_remote(b, r);
+        assert!(m(BASE, "https://TMC-GIT01.tmus.local/team/plc.git"));
+        assert!(m(BASE, "https://evan@tmc-git01.tmus.local:443/team/plc"));
+        assert!(!m(BASE, "https://tmc-git01.tmus.local:3000/team/plc.git"));
+        assert!(!m(BASE, "http://tmc-git01.tmus.local/team/plc.git"));
+        assert!(!m(BASE, "https://evil.tmus.local/team/plc.git"));
+        assert!(!m(BASE, "git@tmc-git01.tmus.local:team/plc.git"));
+        assert!(!m(BASE, "ssh://git@tmc-git01.tmus.local/team/plc.git"));
+        assert!(m("https://h/forgejo", "https://h/forgejo/team/x.git"));
+        assert!(!m("https://h/forgejo", "https://h/forgejoish/team/x.git"));
+        assert!(!m("https://h/forgejo", "https://h/team/x.git"));
+    }
+
+    #[tokio::test]
+    async fn needs_sign_in_persists_and_clears_on_sign_in() {
+        let (dir, secrets, m) = setup();
+        let acct = m
+            .sign_in(BASE, user("evan"), Secret::new("a".into()))
+            .await
+            .unwrap();
+        let entry = m.for_remote(&format!("{BASE}/team/plc.git")).unwrap();
+        assert_eq!(m.token(&entry).await.unwrap().unwrap().expose(), "a");
+
+        m.mark_needs_sign_in(entry.id).unwrap();
+        let reloaded = AccountManager::load(dir.path(), secrets.clone());
+        assert!(reloaded.list()[0].needs_sign_in);
+        assert_eq!(
+            reloaded.token(&entry).await.unwrap().unwrap().expose(),
+            "a",
+            "token is kept"
+        );
+
+        let again = reloaded
+            .sign_in(BASE, user("evan"), Secret::new("b".into()))
+            .await
+            .unwrap();
+        assert_eq!(again.id, acct.id);
+        assert!(!again.needs_sign_in);
     }
 
     #[tokio::test]

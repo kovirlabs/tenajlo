@@ -6,6 +6,7 @@ use crate::auth::accounts::AccountError;
 use crate::forgejo::ForgejoError;
 use crate::git::error::{GitError, GitErrorKind};
 use crate::repo_manager::RepoError;
+use crate::store::accounts::AccountEntry;
 
 /// Broad category the UI uses to pick a dialog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
@@ -19,6 +20,8 @@ pub enum AppErrorKind {
     /// A Forgejo server request failed (sign-in, repository list).
     Server,
     UnknownAccount,
+    /// The account's token no longer works; `account_id` says which. UI offers "Sign in again".
+    SignInRequired,
     Storage,
     InvalidInput,
     Internal,
@@ -35,6 +38,8 @@ pub struct AppError {
     pub message: String,
     /// Technical details shown behind "Details".
     pub details: Option<String>,
+    /// The account this error is about (`SignInRequired`, account permission problems).
+    pub account_id: Option<String>,
 }
 
 impl AppError {
@@ -52,12 +57,40 @@ impl AppError {
         Self::new(AppErrorKind::InvalidInput, message, None)
     }
 
+    /// The account's token was rejected (or is gone); the user must paste a new one.
+    pub fn sign_in_required(account: &AccountEntry, details: Option<String>) -> Self {
+        Self {
+            account_id: Some(account.id.to_string()),
+            ..Self::new(
+                AppErrorKind::SignInRequired,
+                format!(
+                    "Your sign-in for {} has stopped working. The access token may have expired or been deleted. Sign in again with a new token.",
+                    account.base_url
+                ),
+                details,
+            )
+        }
+    }
+
+    /// git's auth failed although the account's token is valid: a permission problem.
+    pub fn account_lacks_access(account: &AccountEntry, git_error: AppError) -> Self {
+        Self {
+            account_id: Some(account.id.to_string()),
+            message: format!(
+                "{} didn't allow this as {}. You may not have access to this repository, or your access token may be missing the write:repository permission needed to push.",
+                account.base_url, account.login
+            ),
+            ..git_error
+        }
+    }
+
     fn new(kind: AppErrorKind, message: impl Into<String>, details: Option<String>) -> Self {
         Self {
             kind,
             git_kind: None,
             message: message.into(),
             details,
+            account_id: None,
         }
     }
 }
@@ -94,6 +127,7 @@ impl From<GitError> for AppError {
                 git_kind: Some(kind),
                 message: git_message(kind).into(),
                 details: Some(stderr),
+                account_id: None,
             },
             GitError::Spawn(e) => {
                 AppError::new(AppErrorKind::Internal, "Tenajlo couldn't start Git.", Some(e.to_string()))

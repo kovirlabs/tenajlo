@@ -27,6 +27,28 @@ pub async fn list_remotes(git: &GitBinary, root: &Path) -> Result<Vec<String>, G
         .collect())
 }
 
+/// URL of `remote` (its push URL with `push`), or `None` if it has none.
+/// `remote` must be a configured remote name.
+pub async fn remote_url(
+    git: &GitBinary,
+    root: &Path,
+    remote: &str,
+    push: bool,
+) -> Result<Option<String>, GitError> {
+    let mut args = vec!["remote", "get-url"];
+    if push {
+        args.push("--push");
+    }
+    args.extend(["--", remote]);
+    let out = GitCommand::new(args, Access::ReadOnly)
+        .cwd(root)
+        .ok_exit_codes(&[0, 2])
+        .run(git)
+        .await?;
+    let url = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+    Ok((!url.is_empty()).then_some(url))
+}
+
 /// Unix seconds of the last fetch, from FETCH_HEAD's mtime.
 pub async fn last_fetched(git: &GitBinary, root: &Path) -> Result<Option<u32>, GitError> {
     let out = GitCommand::new(["rev-parse", "--git-path", "FETCH_HEAD"], Access::ReadOnly)
@@ -49,6 +71,8 @@ pub async fn last_fetched(git: &GitBinary, root: &Path) -> Result<Option<u32>, G
 pub struct RemoteRun {
     /// Askpass trampoline environment for this operation.
     pub env: Vec<(OsString, OsString)>,
+    /// Per-invocation `-c` flags (the account credential helper).
+    pub config: Vec<String>,
     pub cancel: CancellationToken,
     pub on_progress: Box<dyn FnMut(Progress) + Send>,
 }
@@ -58,6 +82,7 @@ impl RemoteRun {
     pub fn quiet() -> Self {
         Self {
             env: Vec::new(),
+            config: Vec::new(),
             cancel: CancellationToken::new(),
             on_progress: Box::new(|_| {}),
         }
@@ -72,6 +97,7 @@ async fn run(
 ) -> Result<(), GitError> {
     let RemoteRun {
         env,
+        config,
         cancel,
         mut on_progress,
     } = r;
@@ -86,6 +112,9 @@ async fn run(
         });
     for (k, v) in env {
         cmd = cmd.env(k, v);
+    }
+    for kv in config {
+        cmd = cmd.config(kv);
     }
     cmd.run(git).await?;
     Ok(())

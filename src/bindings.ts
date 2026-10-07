@@ -115,6 +115,8 @@ export type Account = {
 	login: string,
 	displayName: string,
 	avatarUrl: string | null,
+	/**  The server stopped accepting the saved token; show "Sign in again". */
+	needsSignIn: boolean,
 };
 
 /**  Kind of account. Only Forgejo for v1. */
@@ -129,12 +131,16 @@ export type AppError = {
 	message: string,
 	/**  Technical details shown behind "Details". */
 	details: string | null,
+	/**  The account this error is about (`SignInRequired`, account permission problems). */
+	accountId: string | null,
 };
 
 /**  Broad category the UI uses to pick a dialog. */
 export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "UnknownRepository" | 
 /**  A Forgejo server request failed (sign-in, repository list). */
-"Server" | "UnknownAccount" | "Storage" | "InvalidInput" | "Internal";
+"Server" | "UnknownAccount" | 
+/**  The account's token no longer works; `account_id` says which. UI offers "Sign in again". */
+"SignInRequired" | "Storage" | "InvalidInput" | "Internal";
 
 /**  The user's answer. Flows UI → Rust only (CLAUDE.md rule 2). Debug output is redacted. */
 export type AuthAnswer = {

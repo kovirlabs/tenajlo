@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Account, AppError, ServerInfo } from "../../bindings";
 import { checkServer, openTokenSettings, signIn } from "../../api/accounts";
 import { ErrorDetails } from "../ErrorDetails";
 
 type Props = {
+  /** Known server (signing in again): skips straight to checking it. */
+  initialServer?: string;
   onSignedIn: (account: Account) => void;
   onCancel: () => void;
 };
 
 /** Two-step Forgejo sign-in (spec §6.4): server address, then a personal access token. */
-export function SignInForm({ onSignedIn, onCancel }: Props) {
-  const [server, setServer] = useState("");
+export function SignInForm({ initialServer, onSignedIn, onCancel }: Props) {
+  const [server, setServer] = useState(initialServer ?? "");
   const [info, setInfo] = useState<ServerInfo | null>(null);
   const [token, setToken] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(Boolean(initialServer));
   const [error, setError] = useState<AppError | null>(null);
 
   const run = async (work: () => Promise<void>) => {
@@ -29,6 +31,20 @@ export function SignInForm({ onSignedIn, onCancel }: Props) {
       if (res.status === "error") return setError(res.error);
       setInfo(res.data);
     });
+
+  useEffect(() => {
+    if (!initialServer) return;
+    let live = true;
+    void checkServer(initialServer).then((res) => {
+      if (!live) return;
+      setBusy(false);
+      if (res.status === "error") setError(res.error);
+      else setInfo(res.data);
+    });
+    return () => {
+      live = false;
+    };
+  }, [initialServer]);
 
   const submit = (srv: ServerInfo) =>
     run(async () => {

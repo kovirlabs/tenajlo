@@ -2,6 +2,10 @@
 //!
 //! Each git operation registers a random 32-byte token, valid only while its [`OpToken`]
 //! lives. Requests with unknown tokens are rejected and logged without the token.
+//!
+//! Operations on an account's server also get an [`AccountCredential`]: in credential-helper
+//! mode the trampoline answers git's `get` with the account's login and PAT, only for that
+//! server's protocol and host.
 
 use std::collections::HashMap;
 use std::ffi::OsString;
@@ -12,11 +16,14 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use tenajlo_askpass::{Request, Response, ENV_PORT, ENV_TOKEN, MAX_LINE};
+use tenajlo_askpass::{
+    credential_helper_config, Fields, Mode, Request, Response, ENV_PORT, ENV_TOKEN, MAX_LINE,
+};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_util::sync::CancellationToken;
 
+use super::credential_helper::{self, AccountCredential};
 use super::prompt::{parse_prompt, AuthAnswer, PromptKind};
 
 /// How long the user has to answer a prompt before the operation is cancelled.
@@ -41,6 +48,9 @@ struct OpEntry {
     repo_id: String,
     op_id: String,
     cancel: CancellationToken,
+    account: Option<AccountCredential>,
+    /// git asked for and received the account's credential.
+    account_used: bool,
     /// Password from a combined username+password dialog, handed to git's next
     /// `Password for …` prompt and then forgotten.
     cached_password: Option<String>,
@@ -95,11 +105,13 @@ impl Trampoline {
     }
 
     /// Registers an operation. Prompts for it may cancel `cancel` (which kills git).
+    /// With `account`, git's credential helper requests for that server are answered from it.
     pub fn register(
         &self,
         repo_id: &str,
         op_id: &str,
         cancel: CancellationToken,
+        account: Option<AccountCredential>,
     ) -> std::io::Result<OpToken> {
         let mut bytes = [0u8; 32];
         getrandom::fill(&mut bytes).map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -108,6 +120,8 @@ impl Trampoline {
             repo_id: repo_id.to_owned(),
             op_id: op_id.to_owned(),
             cancel,
+            account,
+            account_used: false,
             cached_password: None,
         };
         self.inner.lock().insert(token.clone(), entry);
@@ -141,6 +155,34 @@ impl OpToken {
     }
 }
 
+impl OpToken {
+    /// `-c` flags that make git ask this operation's account credential first. Empty when
+    /// the operation has no account, leaving the user's own helpers alone (spec §6.2).
+    pub fn config(&self, askpass: &Path) -> Vec<String> {
+        let has_account = self
+            .inner
+            .lock()
+            .get(&self.token)
+            .is_some_and(|e| e.account.is_some());
+        if !has_account {
+            return Vec::new();
+        }
+        vec![
+            // An empty value clears every helper configured so far, including URL-specific ones.
+            "credential.helper=".into(),
+            format!("credential.helper={}", credential_helper_config(askpass)),
+        ]
+    }
+
+    /// True if git used the account credential during this operation.
+    pub fn account_used(&self) -> bool {
+        self.inner
+            .lock()
+            .get(&self.token)
+            .is_some_and(|e| e.account_used)
+    }
+}
+
 impl Drop for OpToken {
     fn drop(&mut self) {
         self.inner.lock().remove(&self.token);
@@ -154,12 +196,21 @@ impl std::fmt::Debug for OpToken {
 }
 
 async fn handle(inner: &Inner, mut stream: TcpStream) {
-    let answer = match read_request(&mut stream).await {
-        Some(req) => answer(inner, req).await,
-        None => None,
+    let response = match read_request(&mut stream).await {
+        Some(req) if req.mode == Mode::Credential => Response {
+            answer: None,
+            fields: credential(inner, &req),
+        },
+        Some(req) => Response {
+            answer: answer(inner, req).await,
+            fields: Vec::new(),
+        },
+        None => Response {
+            answer: None,
+            fields: Vec::new(),
+        },
     };
-    let mut line =
-        serde_json::to_vec(&Response { answer }).unwrap_or_else(|_| b"{\"answer\":null}".to_vec());
+    let mut line = serde_json::to_vec(&response).unwrap_or_else(|_| b"{\"answer\":null}".to_vec());
     line.push(b'\n');
     let _ = stream.write_all(&line).await;
 }
@@ -171,6 +222,26 @@ async fn read_request(stream: &mut TcpStream) -> Option<Request> {
     match read {
         Ok(Ok(n)) if n > 0 => serde_json::from_str(&line).ok(),
         _ => None,
+    }
+}
+
+/// Credential-helper request: answered from the operation's account, if it matches.
+/// `store` and `erase` are ignored (see [`credential_helper::answer`]).
+fn credential(inner: &Inner, req: &Request) -> Fields {
+    let mut ops = inner.lock();
+    let Some(entry) = ops.get_mut(&req.token) else {
+        tracing::warn!("rejected trampoline request: unknown or expired token");
+        return Vec::new();
+    };
+    let Some(account) = &entry.account else {
+        return Vec::new();
+    };
+    match credential_helper::answer(account, req.op, &req.fields) {
+        Some(fields) => {
+            entry.account_used = true;
+            fields
+        }
+        None => Vec::new(),
     }
 }
 
@@ -216,8 +287,9 @@ async fn answer(inner: &Inner, req: Request) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::secrets::Secret;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use tenajlo_askpass::Mode;
+    use tenajlo_askpass::CredentialOp;
 
     /// Fake user: answers with `answer`, counting prompts.
     fn user(
@@ -243,6 +315,8 @@ mod tests {
             token: token.into(),
             mode: Mode::Askpass,
             prompt: Some(prompt.into()),
+            op: None,
+            fields: Vec::new(),
         };
         let mut line = serde_json::to_vec(&req).unwrap();
         line.push(b'\n');
@@ -264,7 +338,9 @@ mod tests {
         };
         let (prompt, count, seen) = user(Some(answer));
         let t = Trampoline::start(prompt).await.unwrap();
-        let op = t.register("repo", "op1", CancellationToken::new()).unwrap();
+        let op = t
+            .register("repo", "op1", CancellationToken::new(), None)
+            .unwrap();
         let tok = token_of(&op);
         assert_eq!(tok.len(), 64);
 
@@ -302,7 +378,9 @@ mod tests {
         let t = Trampoline::start(prompt).await.unwrap();
         assert_eq!(ask(&t, "nope", "Password: ").await, None);
 
-        let op = t.register("repo", "op1", CancellationToken::new()).unwrap();
+        let op = t
+            .register("repo", "op1", CancellationToken::new(), None)
+            .unwrap();
         let tok = token_of(&op);
         drop(op);
         assert_eq!(
@@ -326,7 +404,7 @@ mod tests {
         let (prompt, _, _) = user(None);
         let t = Trampoline::start(prompt).await.unwrap();
         let cancel = CancellationToken::new();
-        let op = t.register("repo", "op1", cancel.clone()).unwrap();
+        let op = t.register("repo", "op1", cancel.clone(), None).unwrap();
         assert_eq!(
             ask(&t, &token_of(&op), "Username for 'https://h': ").await,
             None
@@ -338,8 +416,89 @@ mod tests {
             .await
             .unwrap();
         let cancel = CancellationToken::new();
-        let op = t.register("repo", "op2", cancel.clone()).unwrap();
+        let op = t.register("repo", "op2", cancel.clone(), None).unwrap();
         assert_eq!(ask(&t, &token_of(&op), "Password: ").await, None);
         assert!(cancel.is_cancelled(), "timeout kills git");
+    }
+
+    async fn ask_credential(
+        t: &Trampoline,
+        token: &str,
+        op: CredentialOp,
+        fields: &[(&str, &str)],
+    ) -> Fields {
+        let mut s = TcpStream::connect((Ipv4Addr::LOCALHOST, t.inner.port))
+            .await
+            .unwrap();
+        let req = Request {
+            token: token.into(),
+            mode: Mode::Credential,
+            prompt: None,
+            op: Some(op),
+            fields: fields
+                .iter()
+                .map(|(k, v)| ((*k).into(), (*v).into()))
+                .collect(),
+        };
+        let mut line = serde_json::to_vec(&req).unwrap();
+        line.push(b'\n');
+        s.write_all(&line).await.unwrap();
+        let mut reply = String::new();
+        BufReader::new(s).read_line(&mut reply).await.unwrap();
+        serde_json::from_str::<Response>(&reply).unwrap().fields
+    }
+
+    fn account() -> AccountCredential {
+        AccountCredential {
+            protocol: "https".into(),
+            host: "tmc-git01.tmus.local".into(),
+            login: "evan".into(),
+            token: Secret::new("pat-123".into()),
+        }
+    }
+
+    #[tokio::test]
+    async fn credential_requests_use_the_operations_account() {
+        let (prompt, count, _) = user(None);
+        let t = Trampoline::start(prompt).await.unwrap();
+        let op = t
+            .register("repo", "op1", CancellationToken::new(), Some(account()))
+            .unwrap();
+        let tok = token_of(&op);
+        assert_eq!(
+            op.config(Path::new("/opt/tenajlo-askpass"))[0],
+            "credential.helper="
+        );
+
+        let wrong = [("protocol", "https"), ("host", "evil.example")];
+        assert!(ask_credential(&t, &tok, CredentialOp::Get, &wrong)
+            .await
+            .is_empty());
+        assert!(!op.account_used());
+
+        let right = [("protocol", "https"), ("host", "tmc-git01.tmus.local")];
+        assert!(ask_credential(&t, "nope", CredentialOp::Get, &right)
+            .await
+            .is_empty());
+        let got = ask_credential(&t, &tok, CredentialOp::Get, &right).await;
+        assert_eq!(got[1], ("password".into(), "pat-123".into()));
+        assert!(op.account_used());
+        assert_eq!(count.load(Ordering::SeqCst), 0, "user never prompted");
+    }
+
+    #[tokio::test]
+    async fn no_account_means_no_helper_override() {
+        let (prompt, _, _) = user(None);
+        let t = Trampoline::start(prompt).await.unwrap();
+        let op = t
+            .register("repo", "op1", CancellationToken::new(), None)
+            .unwrap();
+        assert!(op.config(Path::new("/x")).is_empty());
+        let fields = [("protocol", "https"), ("host", "tmc-git01.tmus.local")];
+        assert!(
+            ask_credential(&t, &token_of(&op), CredentialOp::Get, &fields)
+                .await
+                .is_empty()
+        );
     }
 }

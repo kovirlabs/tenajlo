@@ -7,8 +7,11 @@ use tauri::{AppHandle, State};
 use tauri_specta::Event;
 
 use super::repos::parse_id;
-use crate::error::AppError;
+use crate::auth::remote_auth::{self, AuthDiagnosis, PrepareError, RemoteAuth};
+use crate::error::{AppError, AppErrorKind};
+use crate::git::error::{GitError, GitErrorKind};
 use crate::git::parse::progress::Progress;
+use crate::git::parse::status::WorkingDirectoryStatus;
 use crate::git::remote::{self, RemoteRun};
 use crate::git::sync_state::{self, split_upstream, SyncAction, SyncState};
 use crate::git::{branch_name, status};
@@ -69,76 +72,169 @@ pub async fn sync(
     let git = state.git()?;
     let (cancel, _op) = state.operations.start(&op_id);
 
-    // Route credential prompts for this operation through the UI.
-    let token = match (&state.trampoline, &state.askpass) {
-        (Some(t), Some(_)) => Some(t.register(&repo_id, &op_id, cancel.clone()).map_err(|e| {
-            AppError::with_details(
-                crate::error::AppErrorKind::Internal,
-                "Couldn't prepare sign-in prompts.",
-                e.to_string(),
-            )
-        })?),
-        _ => None,
-    };
-    let env = match (&token, &state.askpass) {
-        (Some(t), Some(askpass)) => t.env(askpass),
-        _ => Vec::new(),
-    };
+    let current = status::status(&git, &root).await?;
+    let remotes = remote::list_remotes(&git, &root).await?;
+    let plan = plan(request, &current, &remotes)?;
+    if let Plan::Push { remote_branch, .. } = &plan {
+        branch_name::validate(&git, &root, remote_branch).await?;
+    }
+
+    // Credentials: the account for this remote's server, else the user's helpers + prompt.
+    let url = remote::remote_url(&git, &root, plan.remote(), plan.is_push()).await?;
+    let auth = remote_auth::prepare(
+        &state.accounts,
+        state.trampoline.as_ref(),
+        state.askpass.as_deref(),
+        &repo_id,
+        &op_id,
+        cancel.clone(),
+        url.as_deref(),
+    )
+    .await
+    .map_err(prepare_error)?;
     let run = RemoteRun {
-        env,
+        env: auth.env.clone(),
+        config: auth.config.clone(),
         cancel,
         on_progress: progress_emitter(app, repo_id.clone(), op_id.clone()),
     };
 
-    let current = status::status(&git, &root).await?;
-    let remotes = remote::list_remotes(&git, &root).await?;
-    let sync = sync_state::sync_state(&current, &remotes, None);
-    let branch = current.branch.name.clone();
-
-    match request {
-        SyncRequest::Fetch => {
-            let remote = match sync.action {
-                SyncAction::NoRemote => return Err(no_remote()),
-                SyncAction::Fetch { remote }
-                | SyncAction::Pull { remote }
-                | SyncAction::Push { remote }
-                | SyncAction::Publish { remote } => remote,
-            };
-            remote::fetch(&git, &root, &remote, run).await?;
+    let result = match plan {
+        Plan::Fetch { remote } => remote::fetch(&git, &root, &remote, run).await,
+        Plan::Pull { .. } => remote::pull(&git, &root, run).await,
+        Plan::Push {
+            remote,
+            branch,
+            remote_branch,
+        } => remote::push(&git, &root, &remote, &branch, &remote_branch, false, run).await,
+        Plan::Publish { remote, branch } => {
+            remote::push(&git, &root, &remote, &branch, &branch, true, run).await
         }
+    };
+    match result {
+        Ok(()) => Ok(()),
+        Err(e) => Err(explain_failure(&state, &auth, e).await),
+    }
+}
+
+/// What `sync` will run, decided by Rust from the repository state.
+enum Plan {
+    Fetch {
+        remote: String,
+    },
+    Pull {
+        remote: String,
+    },
+    Push {
+        remote: String,
+        branch: String,
+        remote_branch: String,
+    },
+    Publish {
+        remote: String,
+        branch: String,
+    },
+}
+
+impl Plan {
+    fn remote(&self) -> &str {
+        match self {
+            Plan::Fetch { remote }
+            | Plan::Pull { remote }
+            | Plan::Push { remote, .. }
+            | Plan::Publish { remote, .. } => remote,
+        }
+    }
+
+    fn is_push(&self) -> bool {
+        matches!(self, Plan::Push { .. } | Plan::Publish { .. })
+    }
+}
+
+fn plan(
+    request: SyncRequest,
+    current: &WorkingDirectoryStatus,
+    remotes: &[String],
+) -> Result<Plan, AppError> {
+    let branch = current.branch.name.clone();
+    let not_published =
+        || AppError::invalid_input("This branch isn't on the server yet. Publish it first.");
+    let upstream = || {
+        current
+            .branch
+            .upstream
+            .as_deref()
+            .filter(|_| !current.branch.upstream_gone)
+            .and_then(|u| split_upstream(u, remotes))
+    };
+    Ok(match request {
+        SyncRequest::Fetch => match sync_state::sync_state(current, remotes, None).action {
+            SyncAction::NoRemote => return Err(no_remote()),
+            SyncAction::Fetch { remote }
+            | SyncAction::Pull { remote }
+            | SyncAction::Push { remote }
+            | SyncAction::Publish { remote } => Plan::Fetch { remote },
+        },
         SyncRequest::Pull => {
-            if current.branch.upstream.is_none() {
-                return Err(AppError::invalid_input(
-                    "This branch isn't on the server yet. Publish it first.",
-                ));
-            }
-            remote::pull(&git, &root, run).await?;
+            let (remote, _) = upstream().ok_or_else(not_published)?;
+            Plan::Pull { remote }
         }
         SyncRequest::Push => {
             let branch = branch.ok_or_else(detached)?;
-            let (remote, remote_branch) = current
-                .branch
-                .upstream
-                .as_deref()
-                .filter(|_| !current.branch.upstream_gone)
-                .and_then(|u| split_upstream(u, &remotes))
-                .ok_or_else(|| {
-                    AppError::invalid_input(
-                        "This branch isn't on the server yet. Publish it first.",
-                    )
-                })?;
-            branch_name::validate(&git, &root, &remote_branch).await?;
-            remote::push(&git, &root, &remote, &branch, &remote_branch, false, run).await?;
+            let (remote, remote_branch) = upstream().ok_or_else(not_published)?;
+            Plan::Push {
+                remote,
+                branch,
+                remote_branch,
+            }
         }
-        SyncRequest::Publish => {
-            let branch = branch.ok_or_else(detached)?;
-            let remote = sync_state::default_remote(&remotes)
+        SyncRequest::Publish => Plan::Publish {
+            branch: branch.ok_or_else(detached)?,
+            remote: sync_state::default_remote(remotes)
                 .ok_or_else(no_remote)?
-                .to_owned();
-            remote::push(&git, &root, &remote, &branch, &branch, true, run).await?;
+                .to_owned(),
+        },
+    })
+}
+
+/// Maps a failed remote operation to an error. When git rejected the account's token,
+/// checks the token to tell "sign in again" from "no access" (spec §6.2).
+pub(crate) async fn explain_failure(
+    state: &AppState,
+    auth: &RemoteAuth,
+    err: GitError,
+) -> AppError {
+    let auth_failed = matches!(
+        err,
+        GitError::Failed {
+            kind: GitErrorKind::AuthFailed,
+            ..
         }
+    );
+    let Some(account) = auth
+        .account
+        .as_ref()
+        .filter(|_| auth_failed && auth.account_used())
+    else {
+        return err.into();
+    };
+    let git_error: AppError = err.into();
+    match remote_auth::diagnose(&state.accounts, &state.forgejo, account).await {
+        AuthDiagnosis::TokenRejected => AppError::sign_in_required(account, git_error.details),
+        AuthDiagnosis::NoAccess => AppError::account_lacks_access(account, git_error),
+        AuthDiagnosis::Unknown => git_error,
     }
-    Ok(())
+}
+
+pub(crate) fn prepare_error(err: PrepareError) -> AppError {
+    match err {
+        PrepareError::SignInRequired(account) => AppError::sign_in_required(&account, None),
+        PrepareError::Trampoline(e) => AppError::with_details(
+            AppErrorKind::Internal,
+            "Couldn't prepare sign-in prompts.",
+            e.to_string(),
+        ),
+    }
 }
 
 fn no_remote() -> AppError {

@@ -68,6 +68,8 @@ pub struct GitCommand {
     ok_exit_codes: &'static [i32],
     literal_pathspecs: bool,
     extra_env: Vec<(OsString, OsString)>,
+    /// Per-invocation `-c key=value` flags, after the base flags.
+    extra_config: Vec<OsString>,
     on_stderr_line: Option<StderrCallback>,
 }
 
@@ -90,6 +92,7 @@ impl GitCommand {
             cancel: None,
             literal_pathspecs: false,
             extra_env: Vec::new(),
+            extra_config: Vec::new(),
             on_stderr_line: None,
             ok_exit_codes: &[0],
         }
@@ -137,6 +140,12 @@ impl GitCommand {
         self.stdin(buf).literal_pathspecs()
     }
 
+    /// Adds a `-c key=value` flag for this invocation only (never written to config).
+    pub fn config(mut self, key_value: impl Into<OsString>) -> Self {
+        self.extra_config.push(key_value.into());
+        self
+    }
+
     /// Adds an environment variable for this invocation (e.g. the askpass trampoline).
     pub fn env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
         self.extra_env.push((key.into(), value.into()));
@@ -162,6 +171,10 @@ impl GitCommand {
         for flag in base_config_flags() {
             out.push("-c".into());
             out.push(flag.into());
+        }
+        for flag in &self.extra_config {
+            out.push("-c".into());
+            out.push(flag.clone());
         }
         out.extend(self.args.iter().cloned());
         out
@@ -315,7 +328,7 @@ async fn read_stderr_lines(
 
 /// `-c` flags applied to every invocation. Never written to the user's config.
 fn base_config_flags() -> Vec<&'static str> {
-    // TODO(M3/M4): credential.helper handling per spec §5.2 / §6.2.
+    // credential.helper is overridden per operation, only for account hosts (auth/remote_auth.rs).
     #[allow(unused_mut)]
     let mut flags = vec!["core.quotepath=false"];
     #[cfg(windows)]
@@ -361,6 +374,12 @@ mod tests {
         assert_eq!(args[0], "-c");
         assert_eq!(args[1], "core.quotepath=false");
         assert_eq!(args[args.len() - 1], "-weird-file");
+
+        let args = GitCommand::new(["fetch"], Access::Mutating)
+            .config("credential.helper=")
+            .full_args();
+        let n = args.len();
+        assert_eq!(&args[n - 3..], ["-c", "credential.helper=", "fetch"]);
     }
 
     #[tokio::test]

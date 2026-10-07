@@ -24,10 +24,33 @@ function AccountsBody({ onClose }: { onClose: () => void }) {
   const signOut = useAccountStore((s) => s.signOut);
   const [signingIn, setSigningIn] = useState(false);
   const [confirming, setConfirming] = useState<string | null>(null);
+  const initialReauth = useUiStore((s) => s.signInAgainId);
+  const [reauthId, setReauthId] = useState(initialReauth);
+  const reauth = accounts.find((a) => a.id === reauthId) ?? null;
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  if (reauth) {
+    return (
+      <>
+        <p>
+          Your sign-in for <strong>{reauth.baseUrl}</strong> ({reauth.login}) has stopped working.
+          Create a new access token and paste it below.
+        </p>
+        <SignInForm
+          initialServer={reauth.baseUrl}
+          onSignedIn={() => {
+            void load().then(() => setReauthId(null));
+          }}
+          onCancel={() => setReauthId(null)}
+        />
+      </>
+    );
+  }
+  // Waiting for the list before deciding between "sign in again" and the list.
+  if (reauthId && !loaded) return null;
 
   if (signingIn || (loaded && accounts.length === 0)) {
     return (
@@ -56,6 +79,7 @@ function AccountsBody({ onClose }: { onClose: () => void }) {
             account={a}
             confirming={confirming === a.id}
             onSignOut={() => setConfirming(a.id)}
+            onSignInAgain={() => setReauthId(a.id)}
             onCancel={() => setConfirming(null)}
             onConfirm={() => {
               setConfirming(null);
@@ -80,17 +104,26 @@ type RowProps = {
   account: Account;
   confirming: boolean;
   onSignOut: () => void;
+  onSignInAgain: () => void;
   onCancel: () => void;
   onConfirm: () => void;
 };
 
-function AccountRow({ account, confirming, onSignOut, onCancel, onConfirm }: RowProps) {
+function AccountRow({
+  account,
+  confirming,
+  onSignOut,
+  onSignInAgain,
+  onCancel,
+  onConfirm,
+}: RowProps) {
   return (
     <li className="account-row">
       <div>
         <strong>{account.displayName}</strong>
         {account.displayName !== account.login && <span className="muted"> ({account.login})</span>}
         <div className="muted">{account.baseUrl}</div>
+        {account.needsSignIn && <div className="form-error">Sign-in has stopped working</div>}
       </div>
       {confirming ? (
         <div className="account-confirm">
@@ -103,9 +136,16 @@ function AccountRow({ account, confirming, onSignOut, onCancel, onConfirm }: Row
           </button>
         </div>
       ) : (
-        <button type="button" className="secondary" onClick={onSignOut}>
-          Sign out
-        </button>
+        <div className="account-actions">
+          {account.needsSignIn && (
+            <button type="button" onClick={onSignInAgain}>
+              Sign in again
+            </button>
+          )}
+          <button type="button" className="secondary" onClick={onSignOut}>
+            Sign out
+          </button>
+        </div>
       )}
     </li>
   );

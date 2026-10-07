@@ -12,6 +12,7 @@ const account: Account = {
   login: "evan",
   displayName: "Evan G",
   avatarUrl: null,
+  needsSignIn: false,
 };
 const info: ServerInfo = {
   baseUrl: "https://tmc-git01.tmus.local",
@@ -35,7 +36,7 @@ describe("AccountsDialog", () => {
     stored = [];
     api.listAccounts.mockImplementation(async () => stored);
     useAccountStore.setState({ accounts: [], loaded: false });
-    useUiStore.setState({ dialog: "accounts" });
+    useUiStore.setState({ dialog: "accounts", signInAgainId: null });
   });
 
   afterEach(() => {
@@ -77,6 +78,7 @@ describe("AccountsDialog", () => {
       error: {
         kind: "Server",
         gitKind: null,
+        accountId: null,
         message: "Couldn't reach the server.",
         details: "dns error",
       },
@@ -104,5 +106,35 @@ describe("AccountsDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
     await waitFor(() => expect(api.signOut).toHaveBeenCalledWith("a1"));
     expect(await screen.findByLabelText("Server address")).toBeTruthy();
+  });
+
+  it("goes straight to a new token when signing in again", async () => {
+    stored = [{ ...account, needsSignIn: true }];
+    api.checkServer.mockResolvedValue({ status: "ok", data: info });
+    api.signIn.mockImplementation(async () => {
+      stored = [account];
+      return { status: "ok", data: account };
+    });
+    useUiStore.setState({ dialog: "accounts", signInAgainId: "a1" });
+    render(<AccountsDialog />);
+
+    expect(await screen.findByText(/has stopped working/)).toBeTruthy();
+    expect(api.checkServer).toHaveBeenCalledWith(account.baseUrl);
+    fireEvent.change(await screen.findByLabelText("Access token"), {
+      target: { value: "new-pat" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(api.signIn).toHaveBeenCalledWith(info.baseUrl, "new-pat");
+    expect(await screen.findByText("Evan G")).toBeTruthy();
+    expect(screen.queryByText("Sign-in has stopped working")).toBeNull();
+  });
+
+  it("flags accounts whose token stopped working", async () => {
+    stored = [{ ...account, needsSignIn: true }];
+    api.checkServer.mockResolvedValue({ status: "ok", data: info });
+    render(<AccountsDialog />);
+    expect(await screen.findByText("Sign-in has stopped working")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Sign in again" }));
+    expect(await screen.findByLabelText("Access token")).toBeTruthy();
   });
 });

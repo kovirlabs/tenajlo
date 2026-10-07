@@ -2,7 +2,9 @@
 
 pub mod accounts;
 pub mod broker;
+pub mod credential_helper;
 pub mod prompt;
+pub mod remote_auth;
 pub mod secrets;
 pub mod trampoline;
 

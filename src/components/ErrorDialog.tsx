@@ -6,6 +6,8 @@ import { Modal } from "./Modal";
 export function ErrorDialog() {
   const error = useUiStore((s) => s.error);
   const dismiss = useUiStore((s) => s.dismissError);
+  const signInAgain = useUiStore((s) => s.signInAgain);
+  const reauthId = error?.kind === "SignInRequired" ? error.accountId : null;
   return (
     <Modal open={error !== null} title="Something went wrong" onClose={dismiss}>
       {error && (
@@ -13,9 +15,20 @@ export function ErrorDialog() {
           <p>{error.message}</p>
           <ErrorDetails details={error.details} />
           <div className="dialog-actions">
-            <button type="button" onClick={dismiss} autoFocus>
-              OK
-            </button>
+            {reauthId ? (
+              <>
+                <button type="button" className="secondary" onClick={dismiss}>
+                  Not now
+                </button>
+                <button type="button" onClick={() => signInAgain(reauthId)} autoFocus>
+                  Sign in again
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={dismiss} autoFocus>
+                OK
+              </button>
+            )}
           </div>
         </>
       )}

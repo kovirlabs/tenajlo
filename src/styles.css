@@ -752,6 +752,11 @@ button.danger {
   border-bottom: 1px solid var(--border);
 }
 
+.account-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .account-confirm {
   display: flex;
   align-items: center;
