@@ -22,7 +22,7 @@ describe("ErrorDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign in again" }));
     const ui = useUiStore.getState();
     expect(ui.error).toBeNull();
-    expect(ui.dialog).toBe("accounts");
+    expect(ui.dialog).toBe("settings");
     expect(ui.signInAgainId).toBe("a1");
   });
 

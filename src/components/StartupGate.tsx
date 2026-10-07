@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import type { GitVersion } from "../bindings";
 import { useAppStore } from "../stores/appStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { ErrorDetails } from "./ErrorDetails";
 
 const formatVersion = (v: GitVersion) => `${v.major}.${v.minor}.${v.patch}`;
@@ -10,9 +11,12 @@ export function StartupGate({ children }: { children: ReactNode }) {
   const gitCheck = useAppStore((s) => s.gitCheck);
   const runGitCheck = useAppStore((s) => s.runGitCheck);
 
+  const loadSettings = useSettingsStore((s) => s.load);
+
   useEffect(() => {
-    void runGitCheck();
-  }, [runGitCheck]);
+    // Settings first: they may name a different git program.
+    void loadSettings().then(runGitCheck);
+  }, [loadSettings, runGitCheck]);
 
   switch (gitCheck.phase) {
     case "checking":
@@ -61,7 +65,24 @@ function Blocker({ title, message, details, onRetry }: BlockerProps) {
         <button type="button" onClick={onRetry}>
           Try again
         </button>
+        <UseDefaultGit onDone={onRetry} />
       </div>
     </main>
+  );
+}
+
+/** Escape hatch when Settings points at a git program that doesn't work. */
+function UseDefaultGit({ onDone }: { onDone: () => void }) {
+  const gitPath = useSettingsStore((s) => s.settings?.gitPath ?? null);
+  const update = useSettingsStore((s) => s.update);
+  if (!gitPath) return null;
+  return (
+    <button
+      type="button"
+      className="secondary"
+      onClick={() => void update({ gitPath: null }).then(onDone)}
+    >
+      Use the default Git
+    </button>
   );
 }

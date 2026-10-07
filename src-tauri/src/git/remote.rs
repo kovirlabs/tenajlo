@@ -178,6 +178,18 @@ pub async fn pull_merge(git: &GitBinary, root: &Path, mut r: RemoteRun) -> Resul
     .await
 }
 
+/// Pull that rebases local commits onto the server's (Settings → Pull: rebase). A conflict
+/// leaves the rebase in progress; Tenajlo only offers to abort it.
+pub async fn pull_rebase(git: &GitBinary, root: &Path, r: RemoteRun) -> Result<(), GitError> {
+    run_remote(
+        git,
+        root,
+        vec!["pull".into(), "--progress".into(), "--rebase".into()],
+        r,
+    )
+    .await
+}
+
 /// Pushes `local` to `remote_branch` on `remote`. With `set_upstream`, also starts tracking
 /// it (publish). Names must be validated by the caller.
 pub async fn push(
@@ -457,5 +469,19 @@ mod tests {
             "{err:?}"
         );
         assert!(status(&git, &repo).await.unwrap().has_conflicts);
+    }
+
+    #[tokio::test]
+    async fn rebase_pull_replays_local_commits() {
+        let (_tmp, repo) = diverged("mine.txt", "theirs.txt").await;
+        let git = resolve(None, None).unwrap();
+        pull_rebase(&git, &repo, RemoteRun::quiet()).await.unwrap();
+        let st = status(&git, &repo).await.unwrap();
+        assert_eq!(
+            (st.branch.ahead, st.branch.behind),
+            (1, 0),
+            "no merge commit"
+        );
+        assert!(repo.join("theirs.txt").exists());
     }
 }

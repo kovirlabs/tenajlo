@@ -7,6 +7,7 @@ use crate::forgejo::ForgejoError;
 use crate::git::clone::CloneError;
 use crate::git::error::{GitError, GitErrorKind};
 use crate::repo_manager::RepoError;
+use crate::settings::SettingsError;
 use crate::store::accounts::AccountEntry;
 
 /// Broad category the UI uses to pick a dialog.
@@ -233,6 +234,19 @@ fn clone_message(err: &CloneError) -> String {
         CloneError::InvalidDestination(_) => "Choose a folder for the repository.".to_owned(),
         CloneError::Io { .. } => "Tenajlo couldn't create the folder for the repository.".to_owned(),
         CloneError::Git(_) => git_message(GitErrorKind::Unknown).to_owned(),
+    }
+}
+
+impl From<SettingsError> for AppError {
+    fn from(err: SettingsError) -> Self {
+        match err {
+            SettingsError::Invalid(message) => AppError::invalid_input(message),
+            SettingsError::Store(e) => AppError::with_details(
+                AppErrorKind::Storage,
+                "Tenajlo couldn't save your settings.",
+                e.to_string(),
+            ),
+        }
     }
 }
 

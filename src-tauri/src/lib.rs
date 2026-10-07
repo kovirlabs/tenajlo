@@ -9,6 +9,7 @@ pub mod operations;
 pub mod os_trash;
 pub mod redact;
 pub mod repo_manager;
+pub mod settings;
 pub mod state;
 pub mod store;
 pub mod watcher;
@@ -52,6 +53,11 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::merge::mark_resolved,
             commands::merge::abort_operation,
             commands::merge::open_repo_file,
+            commands::settings::get_settings,
+            commands::settings::save_settings,
+            commands::settings::choose_folder,
+            commands::settings::choose_file,
+            commands::settings::get_global_identity,
             commands::auth::answer_auth_prompt,
             commands::auth::cancel_operation,
             commands::sync::get_sync_state,
@@ -94,6 +100,7 @@ pub fn run() {
                 &data_dir,
                 std::sync::Arc::new(auth::secrets::KeyringStore),
             );
+            let settings = settings::SettingsManager::load(&data_dir);
             let forgejo = forgejo::ForgejoClient::new()?;
 
             let prompts = auth::broker::PromptBroker::default();
@@ -109,7 +116,7 @@ pub fn run() {
             if askpass.is_none() {
                 tracing::error!("tenajlo-askpass sidecar missing; run `node scripts/build-askpass.mjs`");
             }
-            app.manage(state::AppState::new(bundled_git_dir, repos, accounts, forgejo, prompts, trampoline, askpass));
+            app.manage(state::AppState::new(bundled_git_dir, repos, accounts, settings, forgejo, prompts, trampoline, askpass));
             Ok(())
         })
         .run(tauri::generate_context!())

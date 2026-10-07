@@ -11,6 +11,7 @@ use crate::git::error::GitError;
 use crate::git::exec::GitBinary;
 use crate::operations::Operations;
 use crate::repo_manager::RepoManager;
+use crate::settings::SettingsManager;
 use crate::watcher::RepoWatcher;
 
 /// Shared state injected into commands via `tauri::State`.
@@ -21,6 +22,7 @@ pub struct AppState {
     git: RwLock<Option<GitBinary>>,
     pub repos: RepoManager,
     pub accounts: AccountManager,
+    pub settings: SettingsManager,
     pub forgejo: ForgejoClient,
     pub watcher: RepoWatcher,
     pub operations: Operations,
@@ -38,6 +40,7 @@ impl AppState {
         bundled_git_dir: Option<PathBuf>,
         repos: RepoManager,
         accounts: AccountManager,
+        settings: SettingsManager,
         forgejo: ForgejoClient,
         prompts: PromptBroker,
         trampoline: Option<Trampoline>,
@@ -48,6 +51,7 @@ impl AppState {
             git: RwLock::new(None),
             repos,
             accounts,
+            settings,
             forgejo,
             watcher: RepoWatcher::default(),
             operations: Operations::default(),

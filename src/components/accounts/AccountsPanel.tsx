@@ -2,25 +2,10 @@ import { useEffect, useState } from "react";
 import type { Account } from "../../bindings";
 import { useAccountStore } from "../../stores/accountStore";
 import { useUiStore } from "../../stores/uiStore";
-import { Modal } from "../Modal";
 import { SignInForm } from "./SignInForm";
 
-/** Lists Forgejo accounts, with sign in and sign out. Settings (M6) will absorb this. */
-export function AccountsDialog() {
-  const open = useUiStore((s) => s.dialog === "accounts");
-  const close = () => {
-    // Also fires when another dialog replaced this one; keep that one open.
-    if (useUiStore.getState().dialog === "accounts") useUiStore.getState().openDialog(null);
-  };
-  return (
-    <Modal open={open} title="Forgejo accounts" onClose={close}>
-      <AccountsBody onClose={close} />
-    </Modal>
-  );
-}
-
-/** Mounted only while the dialog is open, so its state resets on close. */
-function AccountsBody({ onClose }: { onClose: () => void }) {
+/** Settings → Accounts: list, sign in, sign out, sign in again. Mounted only while shown. */
+export function AccountsPanel({ onClose }: { onClose: () => void }) {
   const accounts = useAccountStore((s) => s.accounts);
   const loaded = useAccountStore((s) => s.loaded);
   const load = useAccountStore((s) => s.load);

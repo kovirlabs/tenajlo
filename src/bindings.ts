@@ -71,7 +71,10 @@ export const commands = {
 	openTokenSettings: (server: string) => typedError<null, AppError>(__TAURI_INVOKE("open_token_settings", { server })),
 	/**  Repositories the account can clone: its own and its organizations'. */
 	listForgejoRepositories: (accountId: string) => typedError<RemoteRepository[], AppError>(__TAURI_INVOKE("list_forgejo_repositories", { accountId })),
-	/**  Default destination for `url`: `Documents/Tenajlo/<name>`, made unique if taken. */
+	/**
+	 *  Default destination for `url`: `<default clone folder>/<name>` (Settings, else
+	 *  `Documents/Tenajlo`), made unique if taken.
+	 */
 	suggestClonePath: (url: string) => typedError<string, AppError>(__TAURI_INVOKE("suggest_clone_path", { url })),
 	/**  Lets the user pick a parent folder; returns `<picked>/<name>`, or `None` if cancelled. */
 	chooseCloneFolder: (url: string) => typedError<string | null, AppError>(__TAURI_INVOKE("choose_clone_folder", { url })),
@@ -88,6 +91,19 @@ export const commands = {
 	abortOperation: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("abort_operation", { repoId })),
 	/**  Opens a file from the repository in its default app (e.g. to resolve conflicts). */
 	openRepoFile: (repoId: string, path: string) => typedError<null, AppError>(__TAURI_INVOKE("open_repo_file", { repoId, path })),
+	/**  Current settings. */
+	getSettings: () => __TAURI_INVOKE<Settings>("get_settings"),
+	/**
+	 *  Validates and saves settings; returns what was stored. After changing `gitPath`, the UI
+	 *  re-runs `check_git`.
+	 */
+	saveSettings: (settings: Settings) => typedError<Settings, AppError>(__TAURI_INVOKE("save_settings", { settings })),
+	/**  Folder picker for settings. `None` if cancelled. */
+	chooseFolder: (title: string) => __TAURI_INVOKE<string | null>("choose_folder", { title }),
+	/**  File picker for settings (git or editor program). `None` if cancelled. */
+	chooseFile: (title: string) => __TAURI_INVOKE<string | null>("choose_file", { title }),
+	/**  Name and email from the user's global git config. */
+	getGlobalIdentity: () => typedError<Identity, AppError>(__TAURI_INVOKE("get_global_identity")),
 	/**  Delivers the user's answer to a prompt (`None` = cancelled, which stops the operation). */
 	answerAuthPrompt: (promptId: string, answer: {
 	username: string | null,
@@ -258,6 +274,11 @@ export type DiffLine = {
 
 export type DiffLineKind = "Context" | "Add" | "Delete";
 
+/**  Program used for "Open in editor". */
+export type Editor = 
+/**  The file's default app. */
+{ kind: "SystemDefault" } | { kind: "VsCode" } | { kind: "NotepadPlusPlus" } | { kind: "Custom"; path: string };
+
 /**  One changed path. */
 export type FileChange = {
 	/**  Repo-relative path, `/`-separated. */
@@ -364,6 +385,13 @@ export type PromptKind =
 /**  Anything else git asks; shown verbatim. */
 { type: "Other"; prompt: string };
 
+/**  What Pull does (spec §13.5: fast-forward only unless the user chooses otherwise). */
+export type PullStrategy = 
+/**  Fast-forward only; on divergence, offer a merge. */
+"FastForwardOnly" | "Merge" | 
+/**  No guided conflict UI: a conflicted rebase can only be aborted. */
+"Rebase";
+
 /**  A repository shown in the clone dialog. */
 export type RemoteRepository = {
 	/**  `owner/name`, unique per server. */
@@ -419,6 +447,22 @@ export type ServerInfo = {
 	requiredScopes: string[],
 };
 
+/**
+ *  Contents of `settings.json`. Missing fields take their defaults (see `normalize`), so
+ *  files written before a setting existed keep loading.
+ */
+export type Settings = {
+	theme: Theme,
+	/**  Where clones go by default; `None` = `Documents/Tenajlo`. */
+	defaultCloneFolder: string | null,
+	pullStrategy: PullStrategy,
+	/**  0 = off. */
+	backgroundFetchMinutes: number,
+	/**  Git executable to use instead of the bundled/system one. */
+	gitPath: string | null,
+	editor: Editor,
+};
+
 /**  How much of a file's change is staged. */
 export type StagedState = "None" | "Partial" | "Full";
 
@@ -445,6 +489,8 @@ export type SyncState = {
 	/**  Unix seconds of the last fetch (FETCH_HEAD mtime), if any. */
 	lastFetched: number | null,
 };
+
+export type Theme = "System" | "Light" | "Dark";
 
 /**  The message of an undone commit, so the UI can put it back in the commit box. */
 export type UndoneCommit = {

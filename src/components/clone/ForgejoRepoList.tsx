@@ -29,7 +29,7 @@ export function ForgejoRepoList({ accounts, selected, onSelect }: Props) {
     return (
       <div className="clone-empty">
         <p>Sign in to your Forgejo server to see the repositories you can clone.</p>
-        <button type="button" onClick={() => useUiStore.getState().openDialog("accounts")}>
+        <button type="button" onClick={() => useUiStore.getState().openSettings("accounts")}>
           Sign in to Forgejo…
         </button>
       </div>

@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import type { Account, ServerInfo } from "../../bindings";
 import { useAccountStore } from "../../stores/accountStore";
 import { useUiStore } from "../../stores/uiStore";
-import { AccountsDialog } from "./AccountsDialog";
+import { AccountsPanel } from "./AccountsPanel";
 
 const account: Account = {
   id: "a1",
@@ -31,12 +31,12 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("../../api/accounts", () => api);
 
-describe("AccountsDialog", () => {
+describe("AccountsPanel", () => {
   beforeEach(() => {
     stored = [];
     api.listAccounts.mockImplementation(async () => stored);
     useAccountStore.setState({ accounts: [], loaded: false });
-    useUiStore.setState({ dialog: "accounts", signInAgainId: null });
+    useUiStore.setState({ dialog: "settings", signInAgainId: null });
   });
 
   afterEach(() => {
@@ -50,7 +50,7 @@ describe("AccountsDialog", () => {
       stored = [account];
       return { status: "ok", data: account };
     });
-    render(<AccountsDialog />);
+    render(<AccountsPanel onClose={() => {}} />);
 
     fireEvent.change(await screen.findByLabelText("Server address"), {
       target: { value: "TMC-GIT01.tmus.local" },
@@ -83,7 +83,7 @@ describe("AccountsDialog", () => {
         details: "dns error",
       },
     });
-    render(<AccountsDialog />);
+    render(<AccountsPanel onClose={() => {}} />);
     fireEvent.change(await screen.findByLabelText("Server address"), {
       target: { value: "nope" },
     });
@@ -98,7 +98,7 @@ describe("AccountsDialog", () => {
       stored = [];
       return { status: "ok", data: null };
     });
-    render(<AccountsDialog />);
+    render(<AccountsPanel onClose={() => {}} />);
     fireEvent.click(await screen.findByRole("button", { name: "Sign out" }));
     expect(api.signOut).not.toHaveBeenCalled();
     expect(screen.getByText(/saved token will be removed/)).toBeTruthy();
@@ -115,8 +115,8 @@ describe("AccountsDialog", () => {
       stored = [account];
       return { status: "ok", data: account };
     });
-    useUiStore.setState({ dialog: "accounts", signInAgainId: "a1" });
-    render(<AccountsDialog />);
+    useUiStore.setState({ dialog: "settings", signInAgainId: "a1" });
+    render(<AccountsPanel onClose={() => {}} />);
 
     expect(await screen.findByText(/has stopped working/)).toBeTruthy();
     expect(api.checkServer).toHaveBeenCalledWith(account.baseUrl);
@@ -132,7 +132,7 @@ describe("AccountsDialog", () => {
   it("flags accounts whose token stopped working", async () => {
     stored = [{ ...account, needsSignIn: true }];
     api.checkServer.mockResolvedValue({ status: "ok", data: info });
-    render(<AccountsDialog />);
+    render(<AccountsPanel onClose={() => {}} />);
     expect(await screen.findByText("Sign-in has stopped working")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Sign in again" }));
     expect(await screen.findByLabelText("Access token")).toBeTruthy();

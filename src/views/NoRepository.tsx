@@ -18,7 +18,7 @@ export function NoRepository() {
           <button
             type="button"
             className="secondary"
-            onClick={() => useUiStore.getState().openDialog("accounts")}
+            onClick={() => useUiStore.getState().openSettings("accounts")}
           >
             Sign in to Forgejo…
           </button>

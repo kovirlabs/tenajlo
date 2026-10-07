@@ -33,6 +33,23 @@ async fn get(git: &GitBinary, root: &Path, key: &str) -> Result<Option<String>, 
     Ok((!value.is_empty()).then_some(value))
 }
 
+/// Reads the identity from the user's global git config (Settings).
+pub async fn global(git: &GitBinary) -> Result<Identity, GitError> {
+    Ok(Identity {
+        name: get_global(git, "user.name").await?,
+        email: get_global(git, "user.email").await?,
+    })
+}
+
+async fn get_global(git: &GitBinary, key: &str) -> Result<Option<String>, GitError> {
+    let out = GitCommand::new(["config", "--global", "--get", key], Access::ReadOnly)
+        .ok_exit_codes(&[0, 1])
+        .run(git)
+        .await?;
+    let value = String::from_utf8_lossy(&out.stdout).trim().to_owned();
+    Ok((!value.is_empty()).then_some(value))
+}
+
 /// Validates an identity field: non-empty, single line, reasonable length.
 pub fn valid_field(value: &str) -> bool {
     let v = value.trim();

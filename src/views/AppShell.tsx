@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { AccountsDialog } from "../components/accounts/AccountsDialog";
+import { SettingsDialog } from "../components/settings/SettingsDialog";
 import { AuthPromptDialog } from "../components/AuthPromptDialog";
 import { CloneDialog } from "../components/clone/CloneDialog";
 import { ErrorDialog } from "../components/ErrorDialog";
@@ -34,7 +34,7 @@ export function AppShell() {
       {body}
       {repo && !repo.missing && <NewBranchDialog key={repo.id} />}
       <CloneDialog />
-      <AccountsDialog />
+      <SettingsDialog />
       <AuthPromptDialog />
       <ErrorDialog />
     </div>

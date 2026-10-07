@@ -9,4 +9,5 @@ pub mod clone;
 pub mod merge;
 pub mod repo;
 pub mod repos;
+pub mod settings;
 pub mod sync;

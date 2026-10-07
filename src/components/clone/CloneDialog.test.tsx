@@ -147,7 +147,7 @@ describe("CloneDialog", () => {
     accounts = [];
     render(<CloneDialog />);
     fireEvent.click(await screen.findByRole("button", { name: "Sign in to Forgejo…" }));
-    expect(useUiStore.getState().dialog).toBe("accounts");
+    expect(useUiStore.getState().dialog).toBe("settings");
   });
 
   it("offers to sign in again when the token stopped working", async () => {

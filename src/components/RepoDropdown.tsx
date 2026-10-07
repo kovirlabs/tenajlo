@@ -59,7 +59,7 @@ export function RepoDropdown() {
               className="secondary"
               onClick={() => {
                 close();
-                useUiStore.getState().openDialog("accounts");
+                useUiStore.getState().openSettings("accounts");
               }}
             >
               Accounts…

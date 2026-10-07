@@ -18,8 +18,9 @@
   font-size: 14px;
 }
 
+/* Dark: follows the OS unless Settings → Appearance picks a theme (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #161b22;
     --bg-subtle: #0d1117;
     --fg: #e6edf3;
@@ -35,6 +36,28 @@
     --diff-del-bg: #2d1416;
     --diff-hunk-bg: #121d2f;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #161b22;
+  --bg-subtle: #0d1117;
+  --fg: #e6edf3;
+  --fg-muted: #9aa5b1;
+  --border: #30363d;
+  --accent: #f08a3c;
+  --accent-fg: #161b22;
+  --danger: #ff7b72;
+  --added: #3fb950;
+  --modified: #d29922;
+  --selection: #1f3a5f;
+  --diff-add-bg: #12261e;
+  --diff-del-bg: #2d1416;
+  --diff-hunk-bg: #121d2f;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 * {
@@ -877,4 +900,44 @@ button.danger {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.settings {
+  width: min(600px, 80vw);
+}
+
+.settings-panel {
+  min-height: 320px;
+  padding: 12px 0;
+}
+
+.settings-group {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.settings-group legend,
+.settings-group h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.form label.radio,
+label.radio {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-weight: 400;
+}
+
+.settings-help {
+  display: block;
+  font-size: 0.85rem;
+}
+
+.toolbar-spacer {
+  flex: 1;
 }

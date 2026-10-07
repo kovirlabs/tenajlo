@@ -6,6 +6,7 @@
 
 pub mod accounts;
 pub mod repositories;
+pub mod settings;
 
 use std::fs;
 use std::io::Write;
@@ -47,6 +48,12 @@ pub trait Versioned: Serialize + DeserializeOwned + Default {
         let _ = from;
         doc
     }
+
+    /// Adjusts the current-version document before it's parsed, e.g. filling in fields
+    /// added since it was written. The default leaves it unchanged.
+    fn normalize(doc: Value) -> Value {
+        doc
+    }
 }
 
 /// Loads `path`, migrating as needed. Missing → default. Corrupt → moved aside, default.
@@ -81,7 +88,7 @@ pub fn load<T: Versioned>(path: &Path) -> Result<T, StoreError> {
         doc = T::migrate(doc, version);
         version += 1;
     }
-    match serde_json::from_value(doc) {
+    match serde_json::from_value(T::normalize(doc)) {
         Ok(v) => Ok(v),
         Err(e) => quarantine(path, &e.to_string()),
     }

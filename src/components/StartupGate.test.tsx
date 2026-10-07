@@ -1,12 +1,30 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { AppError, GitInfo } from "../bindings";
+import type { AppError, GitInfo, Settings } from "../bindings";
 import type { Result } from "../api/result";
 import { useAppStore } from "../stores/appStore";
 import { StartupGate } from "./StartupGate";
 
 const checkGit = vi.fn<() => Promise<Result<GitInfo>>>();
 vi.mock("../api/git", () => ({ checkGit: () => checkGit() }));
+
+const defaults: Settings = {
+  theme: "System",
+  defaultCloneFolder: null,
+  pullStrategy: "FastForwardOnly",
+  backgroundFetchMinutes: 5,
+  gitPath: null,
+  editor: { kind: "SystemDefault" },
+};
+let stored: Settings = defaults;
+const saveSettings = vi.fn(async (s: Settings) => {
+  stored = s;
+  return { status: "ok" as const, data: s };
+});
+vi.mock("../api/settings", () => ({
+  getSettings: vi.fn(async () => stored),
+  saveSettings: (s: Settings) => saveSettings(s),
+}));
 
 const info = (minor: number): GitInfo => ({
   path: "/usr/bin/git",
@@ -23,7 +41,10 @@ const renderGate = () =>
   );
 
 describe("StartupGate", () => {
-  beforeEach(() => useAppStore.setState({ gitCheck: { phase: "checking" } }));
+  beforeEach(() => {
+    stored = defaults;
+    useAppStore.setState({ gitCheck: { phase: "checking" } });
+  });
   afterEach(() => {
     cleanup();
     checkGit.mockReset();
@@ -58,5 +79,22 @@ describe("StartupGate", () => {
     checkGit.mockResolvedValueOnce({ status: "ok", data: info(45) });
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText("app content")).toBeTruthy();
+  });
+
+  it("offers the default Git when a chosen git program doesn't work", async () => {
+    stored = { ...defaults, gitPath: "/opt/broken/git" };
+    const error: AppError = {
+      kind: "GitNotFound",
+      gitKind: null,
+      message: "Tenajlo couldn't find Git.",
+      details: null,
+      accountId: null,
+    };
+    checkGit.mockResolvedValueOnce({ status: "error", error });
+    checkGit.mockResolvedValueOnce({ status: "ok", data: info(45) });
+    renderGate();
+    fireEvent.click(await screen.findByRole("button", { name: "Use the default Git" }));
+    expect(await screen.findByText("app content")).toBeTruthy();
+    expect(saveSettings).toHaveBeenCalledWith({ ...defaults, gitPath: null });
   });
 });

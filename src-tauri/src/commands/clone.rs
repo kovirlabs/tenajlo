@@ -53,19 +53,25 @@ pub async fn list_forgejo_repositories(
     }
 }
 
-/// Default destination for `url`: `Documents/Tenajlo/<name>`, made unique if taken.
+/// Default destination for `url`: `<default clone folder>/<name>` (Settings, else
+/// `Documents/Tenajlo`), made unique if taken.
 #[tauri::command]
 #[specta::specta]
-pub fn suggest_clone_path(app: AppHandle, url: String) -> Result<String, AppError> {
-    let documents = app
-        .path()
-        .document_dir()
-        .or_else(|_| app.path().home_dir())
-        .map_err(|_| AppError::invalid_input("Tenajlo couldn't find your Documents folder."))?;
-    Ok(display(&unique_child(
-        &documents.join(DEFAULT_PARENT),
-        &name_for(&url),
-    )))
+pub fn suggest_clone_path(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    url: String,
+) -> Result<String, AppError> {
+    let parent = match state.settings.get().default_clone_folder {
+        Some(folder) => PathBuf::from(folder),
+        None => app
+            .path()
+            .document_dir()
+            .or_else(|_| app.path().home_dir())
+            .map_err(|_| AppError::invalid_input("Tenajlo couldn't find your Documents folder."))?
+            .join(DEFAULT_PARENT),
+    };
+    Ok(display(&unique_child(&parent, &name_for(&url))))
 }
 
 /// Lets the user pick a parent folder; returns `<picked>/<name>`, or `None` if cancelled.

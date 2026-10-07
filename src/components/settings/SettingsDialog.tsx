@@ -1,0 +1,56 @@
+import { useUiStore, type SettingsTab } from "../../stores/uiStore";
+import { AccountsPanel } from "../accounts/AccountsPanel";
+import { Modal } from "../Modal";
+import { GitPanel } from "./GitPanel";
+import { AppearancePanel, RepositoriesPanel } from "./PreferencePanels";
+
+const TABS: { id: SettingsTab; label: string }[] = [
+  { id: "accounts", label: "Accounts" },
+  { id: "git", label: "Git" },
+  { id: "repositories", label: "Repositories" },
+  { id: "appearance", label: "Appearance" },
+];
+
+/** Settings (spec §8.1). Every control saves as soon as it changes. */
+export function SettingsDialog() {
+  const open = useUiStore((s) => s.dialog === "settings");
+  const tab = useUiStore((s) => s.settingsTab);
+  const setTab = useUiStore((s) => s.setSettingsTab);
+  const close = () => {
+    // Also fires when another dialog replaced this one; keep that one open.
+    if (useUiStore.getState().dialog === "settings") useUiStore.getState().openDialog(null);
+  };
+  return (
+    <Modal open={open} title="Settings" onClose={close}>
+      <div className="settings">
+        <div role="tablist" className="tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className="tab"
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="settings-panel" role="tabpanel">
+          {tab === "accounts" && <AccountsPanel onClose={close} />}
+          {tab === "git" && <GitPanel />}
+          {tab === "repositories" && <RepositoriesPanel />}
+          {tab === "appearance" && <AppearancePanel />}
+        </div>
+        {tab !== "accounts" && (
+          <div className="dialog-actions">
+            <button type="button" onClick={close}>
+              Done
+            </button>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}

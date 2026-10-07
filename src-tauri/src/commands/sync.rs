@@ -16,6 +16,7 @@ use crate::git::remote::{self, RemoteRun};
 use crate::git::sync_state::{self, split_upstream, SyncAction, SyncState};
 use crate::git::{branch_name, status};
 use crate::state::AppState;
+use crate::store::settings::PullStrategy;
 
 /// Minimum spacing between progress events (spec §5.4: ~10 Hz).
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
@@ -103,8 +104,12 @@ pub async fn sync(
 
     let result = match plan {
         Plan::Fetch { remote } => remote::fetch(&git, &root, &remote, run).await,
-        Plan::Pull { merge: false, .. } => remote::pull(&git, &root, run).await,
         Plan::Pull { merge: true, .. } => remote::pull_merge(&git, &root, run).await,
+        Plan::Pull { merge: false, .. } => match state.settings.get().pull_strategy {
+            PullStrategy::FastForwardOnly => remote::pull(&git, &root, run).await,
+            PullStrategy::Merge => remote::pull_merge(&git, &root, run).await,
+            PullStrategy::Rebase => remote::pull_rebase(&git, &root, run).await,
+        },
         Plan::Push {
             remote,
             branch,

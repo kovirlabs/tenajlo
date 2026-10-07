@@ -10,8 +10,8 @@ use crate::state::AppState;
 #[tauri::command]
 #[specta::specta]
 pub async fn check_git(state: State<'_, AppState>) -> Result<version::GitInfo, AppError> {
-    // TODO(M6): pass the Settings git-binary override here.
-    let git = binary::resolve(None, state.bundled_git_dir.as_deref())?;
+    let override_path = state.settings.get().git_path.map(std::path::PathBuf::from);
+    let git = binary::resolve(override_path.as_deref(), state.bundled_git_dir.as_deref())?;
     let info = version::detect(&git).await?;
     tracing::info!(version = %info.version, supported = info.supported, "git detected");
     if info.supported {
