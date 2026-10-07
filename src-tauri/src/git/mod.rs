@@ -12,6 +12,7 @@ pub mod identity;
 pub mod ignore;
 pub mod log;
 pub mod parse;
+mod process_tree;
 pub mod repo_root;
 pub mod stage;
 pub mod stash;
