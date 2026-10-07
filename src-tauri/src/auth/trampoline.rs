@@ -56,6 +56,8 @@ struct OpEntry {
     cached_password: Option<String>,
     /// Keys whose passphrase was already asked for: asking again means it was wrong.
     passphrase_keys: Vec<String>,
+    /// Background operations never show prompts; git just gets no answer.
+    interactive: bool,
 }
 
 struct Inner {
@@ -126,6 +128,7 @@ impl Trampoline {
             account_used: false,
             cached_password: None,
             passphrase_keys: Vec::new(),
+            interactive: true,
         };
         self.inner.lock().insert(token.clone(), entry);
         Ok(OpToken {
@@ -184,6 +187,14 @@ impl OpToken {
             "credential.helper=".into(),
             format!("credential.helper={}", credential_helper_config(askpass)),
         ]
+    }
+
+    /// Stops prompts for this operation (background fetch): askpass gets no answer, so git
+    /// fails instead of showing a dialog. The account credential helper still works.
+    pub fn set_interactive(&self, interactive: bool) {
+        if let Some(entry) = self.inner.lock().get_mut(&self.token) {
+            entry.interactive = interactive;
+        }
     }
 
     /// True if git used the account credential during this operation.
@@ -265,6 +276,9 @@ async fn answer(inner: &Inner, req: Request) -> Option<String> {
             tracing::warn!("rejected trampoline request: unknown or expired token");
             return None;
         };
+        if !entry.interactive {
+            return None;
+        }
         if let (PromptKind::Password { .. }, Some(pw)) = (&kind, entry.cached_password.take()) {
             return Some(pw);
         }
@@ -437,6 +451,24 @@ mod tests {
         assert_eq!(get("SSH_ASKPASS"), Some("/opt/tenajlo-askpass".into()));
         assert_eq!(get("SSH_ASKPASS_REQUIRE"), Some("force".into()));
         assert_eq!(get(ENV_TOKEN), Some(token_of(&op).into()));
+    }
+
+    #[tokio::test]
+    async fn non_interactive_ops_never_prompt_or_cancel() {
+        let (prompt, count, _) = user(Some(AuthAnswer {
+            username: Some("u".into()),
+            secret: "s".into(),
+        }));
+        let t = Trampoline::start(prompt).await.unwrap();
+        let cancel = CancellationToken::new();
+        let op = t.register("repo", "op1", cancel.clone(), None).unwrap();
+        op.set_interactive(false);
+        assert_eq!(
+            ask(&t, &token_of(&op), "Username for 'https://h': ").await,
+            None
+        );
+        assert_eq!(count.load(Ordering::SeqCst), 0);
+        assert!(!cancel.is_cancelled());
     }
 
     #[tokio::test]

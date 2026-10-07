@@ -15,7 +15,12 @@ export function abortOperation(repoId: string): Promise<Result<null>> {
   return commands.abortOperation(repoId);
 }
 
-/** Opens a repository file in its default app. */
+/** Opens a repository file in the editor chosen in Settings. */
 export function openRepoFile(repoId: string, path: string): Promise<Result<null>> {
   return commands.openRepoFile(repoId, path);
+}
+
+/** Shows a repository file in Explorer / Finder. */
+export function revealRepoFile(repoId: string, path: string): Promise<Result<null>> {
+  return commands.revealRepoFile(repoId, path);
 }

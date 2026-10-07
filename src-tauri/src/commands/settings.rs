@@ -3,6 +3,7 @@
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
+use crate::editor::{self, EditorOption};
 use crate::error::AppError;
 use crate::git::identity::{self, Identity};
 use crate::state::AppState;
@@ -51,6 +52,13 @@ pub async fn choose_file(app: AppHandle, title: String) -> Option<String> {
         .into_path()
         .ok()
         .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Editors Settings can offer, and whether each is installed.
+#[tauri::command]
+#[specta::specta]
+pub fn list_editors() -> Vec<EditorOption> {
+    editor::options()
 }
 
 /// Name and email from the user's global git config.

@@ -57,7 +57,8 @@ pub async fn get_sync_state(
 }
 
 /// Runs a fetch, pull, push or publish. `op_id` (a UUID from the UI) identifies its progress
-/// events and lets `cancel_operation` stop it.
+/// events and lets `cancel_operation` stop it. `background` (the periodic fetch) never shows
+/// sign-in prompts: without an account token or the user's own helper, it just fails.
 #[tauri::command]
 #[specta::specta]
 pub async fn sync(
@@ -66,7 +67,13 @@ pub async fn sync(
     repo_id: String,
     op_id: String,
     request: SyncRequest,
+    background: bool,
 ) -> Result<(), AppError> {
+    if background && request != SyncRequest::Fetch {
+        return Err(AppError::invalid_input(
+            "Only fetching runs in the background.",
+        ));
+    }
     let id = parse_id(&repo_id)?;
     if uuid::Uuid::parse_str(&op_id).is_err() {
         return Err(AppError::invalid_input("Invalid operation id."));
@@ -92,6 +99,7 @@ pub async fn sync(
         &op_id,
         cancel.clone(),
         url.as_deref(),
+        !background,
     )
     .await
     .map_err(prepare_error)?;

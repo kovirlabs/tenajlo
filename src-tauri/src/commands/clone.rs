@@ -122,6 +122,7 @@ pub async fn clone_repository(
         &op_id,
         cancel.clone(),
         Some(&url),
+        true,
     )
     .await
     .map_err(prepare_error)?;

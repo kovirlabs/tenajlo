@@ -7,11 +7,13 @@ use tauri_plugin_opener::OpenerExt;
 
 use super::changes::select;
 use super::repos::parse_id;
+use crate::editor;
 use crate::error::{AppError, AppErrorKind};
 use crate::git::merge::{self, OperationState};
 use crate::git::parse::status::FileStatusKind;
 use crate::git::status;
 use crate::state::AppState;
+use crate::store::settings::Editor;
 
 /// The merge (or rebase…) in progress and its conflicted files.
 #[tauri::command]
@@ -61,7 +63,7 @@ pub async fn abort_operation(state: State<'_, AppState>, repo_id: String) -> Res
     Ok(merge::abort(&git, &root, kind).await?)
 }
 
-/// Opens a file from the repository in its default app (e.g. to resolve conflicts).
+/// Opens a repository file in the editor chosen in Settings (default: its default app).
 #[tauri::command]
 #[specta::specta]
 pub fn open_repo_file(
@@ -70,18 +72,49 @@ pub fn open_repo_file(
     repo_id: String,
     path: String,
 ) -> Result<(), AppError> {
-    let root = state.repos.root(parse_id(&repo_id)?)?;
-    let file = inside_repo(&root, &path)
-        .ok_or_else(|| AppError::invalid_input("That file isn't in this repository."))?;
+    let file = repo_file(&state, &repo_id, &path)?;
+    match state.settings.get().editor {
+        Editor::SystemDefault => app
+            .opener()
+            .open_path(file.to_string_lossy(), None::<&str>)
+            .map_err(|e| open_failed(e.to_string())),
+        editor => Ok(editor::open(&editor, &file)?),
+    }
+}
+
+/// Shows a repository file in Explorer / Finder / the file manager.
+#[tauri::command]
+#[specta::specta]
+pub fn reveal_repo_file(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    repo_id: String,
+    path: String,
+) -> Result<(), AppError> {
+    let file = repo_file(&state, &repo_id, &path)?;
+    // A deleted file can't be selected; show its folder instead.
+    let target = if file.exists() {
+        file
+    } else {
+        file.parent().map(Path::to_path_buf).unwrap_or(file)
+    };
     app.opener()
-        .open_path(file.to_string_lossy(), None::<&str>)
-        .map_err(|e| {
-            AppError::with_details(
-                AppErrorKind::Internal,
-                "Tenajlo couldn't open that file.",
-                e.to_string(),
-            )
-        })
+        .reveal_item_in_dir(&target)
+        .map_err(|e| open_failed(e.to_string()))
+}
+
+fn repo_file(state: &AppState, repo_id: &str, path: &str) -> Result<PathBuf, AppError> {
+    let root = state.repos.root(parse_id(repo_id)?)?;
+    inside_repo(&root, path)
+        .ok_or_else(|| AppError::invalid_input("That file isn't in this repository."))
+}
+
+fn open_failed(details: String) -> AppError {
+    AppError::with_details(
+        AppErrorKind::Internal,
+        "Tenajlo couldn't open that file.",
+        details,
+    )
 }
 
 /// `root/rel` if `rel` is a plain relative path that stays inside `root` (spec §10.9).

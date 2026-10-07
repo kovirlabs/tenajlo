@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { FileChange } from "../bindings";
 import { discardChanges, ignoreFile } from "../api/changes";
+import { openRepoFile, revealRepoFile } from "../api/merge";
+import { useUiStore } from "../stores/uiStore";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ContextMenu, type MenuItem } from "../components/ContextMenu";
 import { useChangesStore } from "../stores/changesStore";
@@ -21,7 +23,20 @@ export function useFileActions() {
 
   const items = (file: FileChange): MenuItem[] => {
     const blocked = busy || file.kind === "Conflicted" || file.submodule;
+    const repoId = useChangesStore.getState().repoId;
+    const run = (action: typeof openRepoFile) => {
+      if (!repoId) return;
+      void action(repoId, file.path).then((res) => {
+        if (res.status === "error") useUiStore.getState().showError(res.error);
+      });
+    };
     const list: MenuItem[] = [
+      {
+        label: "Open in editor",
+        onSelect: () => run(openRepoFile),
+        disabled: file.kind === "Deleted",
+      },
+      { label: "Show in folder", onSelect: () => run(revealRepoFile) },
       { label: "Discard changes…", onSelect: () => setConfirm(file), disabled: blocked },
     ];
     if (file.kind === "Untracked") {

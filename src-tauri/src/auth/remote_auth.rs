@@ -70,6 +70,7 @@ pub async fn prepare(
     op_id: &str,
     cancel: CancellationToken,
     remote_url: Option<&str>,
+    interactive: bool,
 ) -> Result<RemoteAuth, PrepareError> {
     let account = remote_url.and_then(|u| accounts.for_remote(u));
     let (Some(trampoline), Some(askpass)) = (trampoline, askpass) else {
@@ -99,6 +100,7 @@ pub async fn prepare(
     };
     let has_credential = credential.is_some();
     let token = trampoline.register(repo_id, op_id, cancel, credential)?;
+    token.set_interactive(interactive);
     Ok(RemoteAuth {
         env: token.env(askpass),
         config: token.config(askpass),
@@ -198,6 +200,7 @@ mod tests {
             "op",
             CancellationToken::new(),
             Some(url),
+            true,
         )
         .await
     }

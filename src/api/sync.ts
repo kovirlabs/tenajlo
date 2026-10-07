@@ -15,7 +15,12 @@ export function getSyncState(repoId: string): Promise<Result<SyncState>> {
 
 /** Runs fetch/pull/push/publish; `opId` identifies progress events and cancellation. */
 export function sync(repoId: string, opId: string, request: SyncRequest): Promise<Result<null>> {
-  return commands.sync(repoId, opId, request);
+  return commands.sync(repoId, opId, request, false);
+}
+
+/** Periodic fetch: never shows sign-in prompts, fails quietly instead. */
+export function backgroundFetch(repoId: string): Promise<Result<null>> {
+  return commands.sync(repoId, crypto.randomUUID(), "Fetch", true);
 }
 
 export function cancelOperation(opId: string): Promise<void> {

@@ -21,6 +21,10 @@ const api = vi.hoisted(() => ({
   chooseFolder: vi.fn(),
   chooseFile: vi.fn(),
   getGlobalIdentity: vi.fn(),
+  listEditors: vi.fn(async () => [
+    { editor: { kind: "SystemDefault" }, label: "The file's default app", available: true },
+    { editor: { kind: "VsCode" }, label: "Visual Studio Code", available: false },
+  ]),
 }));
 vi.mock("../../api/settings", () => api);
 vi.mock("../../api/changes", () => ({ setGlobalIdentity: vi.fn() }));
@@ -84,5 +88,22 @@ describe("SettingsDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Choose another Git…" }));
     await waitFor(() => expect(recheckGit).toHaveBeenCalled());
     expect(api.saveSettings).toHaveBeenCalledWith({ ...defaults, gitPath: "/opt/git/bin/git" });
+  });
+
+  it("offers installed editors and a custom program", async () => {
+    open("repositories");
+    const select = (await screen.findByLabelText("Open files in")) as HTMLSelectElement;
+    await screen.findByText("Visual Studio Code (not installed)");
+    expect(
+      (screen.getByText("Visual Studio Code (not installed)") as HTMLOptionElement).disabled,
+    ).toBe(true);
+    api.chooseFile.mockResolvedValue("/usr/local/bin/subl");
+    fireEvent.change(select, { target: { value: "Custom" } });
+    await waitFor(() =>
+      expect(api.saveSettings).toHaveBeenCalledWith({
+        ...defaults,
+        editor: { kind: "Custom", path: "/usr/local/bin/subl" },
+      }),
+    );
   });
 });

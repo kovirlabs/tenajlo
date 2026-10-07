@@ -3,6 +3,7 @@ import { useChangesStore } from "../stores/changesStore";
 import { useUiStore, type Tab } from "../stores/uiStore";
 import { getWorkingDiff } from "../api/diff";
 import { useRepoRefresh } from "../hooks/useRepoRefresh";
+import { useBackgroundFetch } from "../hooks/useBackgroundFetch";
 import { ConflictBanner } from "../components/conflicts/ConflictBanner";
 import { ChangesList } from "./ChangesList";
 import { CommitBox } from "./CommitBox";
@@ -22,6 +23,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   const selectedPath = useChangesStore((s) => s.selectedPath);
   const status = useChangesStore((s) => s.status);
   useRepoRefresh(repo.id);
+  useBackgroundFetch(repo.id);
 
   return (
     <div className="repo-view">

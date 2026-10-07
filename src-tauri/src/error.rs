@@ -3,6 +3,7 @@
 use serde::Serialize;
 
 use crate::auth::accounts::AccountError;
+use crate::editor::EditorError;
 use crate::forgejo::ForgejoError;
 use crate::git::clone::CloneError;
 use crate::git::error::{GitError, GitErrorKind};
@@ -247,6 +248,21 @@ impl From<SettingsError> for AppError {
                 e.to_string(),
             ),
         }
+    }
+}
+
+impl From<EditorError> for AppError {
+    fn from(err: EditorError) -> Self {
+        let message = match &err {
+            EditorError::NotFound(name) => {
+                format!("{name} isn't installed. Choose another editor in Settings → Repositories.")
+            }
+            EditorError::Spawn { .. } => {
+                "Tenajlo couldn't start your editor. Check the editor in Settings → Repositories."
+                    .to_owned()
+            }
+        };
+        AppError::with_details(AppErrorKind::InvalidInput, message, err.to_string())
     }
 }
 

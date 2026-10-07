@@ -89,8 +89,10 @@ export const commands = {
 	markResolved: (repoId: string, paths: string[]) => typedError<null, AppError>(__TAURI_INVOKE("mark_resolved", { repoId, paths })),
 	/**  Aborts the merge, rebase, cherry-pick or revert in progress. */
 	abortOperation: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("abort_operation", { repoId })),
-	/**  Opens a file from the repository in its default app (e.g. to resolve conflicts). */
+	/**  Opens a repository file in the editor chosen in Settings (default: its default app). */
 	openRepoFile: (repoId: string, path: string) => typedError<null, AppError>(__TAURI_INVOKE("open_repo_file", { repoId, path })),
+	/**  Shows a repository file in Explorer / Finder / the file manager. */
+	revealRepoFile: (repoId: string, path: string) => typedError<null, AppError>(__TAURI_INVOKE("reveal_repo_file", { repoId, path })),
 	/**  Current settings. */
 	getSettings: () => __TAURI_INVOKE<Settings>("get_settings"),
 	/**
@@ -104,6 +106,8 @@ export const commands = {
 	chooseFile: (title: string) => __TAURI_INVOKE<string | null>("choose_file", { title }),
 	/**  Name and email from the user's global git config. */
 	getGlobalIdentity: () => typedError<Identity, AppError>(__TAURI_INVOKE("get_global_identity")),
+	/**  Editors Settings can offer, and whether each is installed. */
+	listEditors: () => __TAURI_INVOKE<EditorOption[]>("list_editors"),
 	/**  Delivers the user's answer to a prompt (`None` = cancelled, which stops the operation). */
 	answerAuthPrompt: (promptId: string, answer: {
 	username: string | null,
@@ -115,9 +119,10 @@ export const commands = {
 	getSyncState: (repoId: string) => typedError<SyncState, AppError>(__TAURI_INVOKE("get_sync_state", { repoId })),
 	/**
 	 *  Runs a fetch, pull, push or publish. `op_id` (a UUID from the UI) identifies its progress
-	 *  events and lets `cancel_operation` stop it.
+	 *  events and lets `cancel_operation` stop it. `background` (the periodic fetch) never shows
+	 *  sign-in prompts: without an account token or the user's own helper, it just fails.
 	 */
-	sync: (repoId: string, opId: string, request: SyncRequest) => typedError<null, AppError>(__TAURI_INVOKE("sync", { repoId, opId, request })),
+	sync: (repoId: string, opId: string, request: SyncRequest, background: boolean) => typedError<null, AppError>(__TAURI_INVOKE("sync", { repoId, opId, request, background })),
 	/**  How a typed branch name will be created (`"Fix pump"` → `"Fix-pump"`). Pure; no git call. */
 	previewBranchName: (name: string) => __TAURI_INVOKE<string>("preview_branch_name", { name }),
 	/**  Creates a branch from the current commit and switches to it. Local changes come along. */
@@ -278,6 +283,14 @@ export type DiffLineKind = "Context" | "Add" | "Delete";
 export type Editor = 
 /**  The file's default app. */
 { kind: "SystemDefault" } | { kind: "VsCode" } | { kind: "NotepadPlusPlus" } | { kind: "Custom"; path: string };
+
+/**  An editor choice for the Settings list. */
+export type EditorOption = {
+	editor: Editor,
+	label: string,
+	/**  Found on this computer (always true for the system default and custom programs). */
+	available: boolean,
+};
 
 /**  One changed path. */
 export type FileChange = {

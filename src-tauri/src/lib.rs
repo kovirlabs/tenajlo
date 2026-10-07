@@ -2,6 +2,7 @@
 
 pub mod auth;
 pub mod commands;
+pub mod editor;
 pub mod error;
 pub mod forgejo;
 pub mod git;
@@ -53,11 +54,13 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::merge::mark_resolved,
             commands::merge::abort_operation,
             commands::merge::open_repo_file,
+            commands::merge::reveal_repo_file,
             commands::settings::get_settings,
             commands::settings::save_settings,
             commands::settings::choose_folder,
             commands::settings::choose_file,
             commands::settings::get_global_identity,
+            commands::settings::list_editors,
             commands::auth::answer_auth_prompt,
             commands::auth::cancel_operation,
             commands::sync::get_sync_state,

@@ -6,6 +6,12 @@ import { ChangesList } from "./ChangesList";
 
 const discardChanges = vi.fn();
 const ignoreFile = vi.fn();
+const openRepoFile = vi.fn(async () => ({ status: "ok", data: null }));
+const revealRepoFile = vi.fn(async () => ({ status: "ok", data: null }));
+vi.mock("../api/merge", () => ({
+  openRepoFile: (...a: unknown[]) => (openRepoFile as (...x: unknown[]) => unknown)(...a),
+  revealRepoFile: (...a: unknown[]) => (revealRepoFile as (...x: unknown[]) => unknown)(...a),
+}));
 vi.mock("../api/changes", () => ({
   discardChanges: (...a: unknown[]) => discardChanges(...a),
   ignoreFile: (...a: unknown[]) => ignoreFile(...a),
@@ -69,5 +75,15 @@ describe("file context menu", () => {
     fireEvent.contextMenu(screen.getByText("c.txt"));
     const item = screen.getByRole("menuitem", { name: "Discard changes…" }) as HTMLButtonElement;
     expect(item.disabled).toBe(true);
+  });
+
+  it("opens the file in the editor or shows it in its folder", async () => {
+    setup([file("plc/main.st", "Modified")]);
+    fireEvent.contextMenu(screen.getByText("plc/main.st"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open in editor" }));
+    expect(openRepoFile).toHaveBeenCalledWith("r1", "plc/main.st");
+    fireEvent.contextMenu(screen.getByText("plc/main.st"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Show in folder" }));
+    expect(revealRepoFile).toHaveBeenCalledWith("r1", "plc/main.st");
   });
 });

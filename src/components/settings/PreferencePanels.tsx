@@ -1,6 +1,6 @@
-import { useState } from "react";
-import type { AppError, PullStrategy, Theme } from "../../bindings";
-import { chooseFolder } from "../../api/settings";
+import { useEffect, useState } from "react";
+import type { AppError, Editor, EditorOption, PullStrategy, Theme } from "../../bindings";
+import { chooseFile, chooseFolder, listEditors } from "../../api/settings";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { InlineError } from "../InlineError";
 
@@ -117,7 +117,63 @@ export function RepositoriesPanel() {
           ))}
         </select>
       </label>
+      <EditorChoice onError={setError} />
       <InlineError error={error} />
     </div>
+  );
+}
+
+/** "Open files in": detected editors, plus a custom program. */
+function EditorChoice({ onError }: { onError: (e: AppError | null) => void }) {
+  const editor = useSettingsStore((s) => s.settings?.editor ?? null);
+  const update = useSettingsStore((s) => s.update);
+  const [options, setOptions] = useState<EditorOption[]>([]);
+
+  useEffect(() => {
+    let live = true;
+    void listEditors().then((o) => {
+      if (live) setOptions(o);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const save = async (next: Editor) => onError(await update({ editor: next }));
+  const chooseCustom = async () => {
+    const path = await chooseFile("Choose your editor program");
+    if (path) await save({ kind: "Custom", path });
+  };
+
+  return (
+    <label>
+      Open files in
+      <span className="clone-path">
+        <select
+          value={editor?.kind ?? "SystemDefault"}
+          onChange={(e) => {
+            const kind = e.target.value;
+            if (kind === "Custom") void chooseCustom();
+            else if (kind === "SystemDefault" || kind === "VsCode" || kind === "NotepadPlusPlus")
+              void save({ kind });
+          }}
+        >
+          {options.map((o) => (
+            <option key={o.editor.kind} value={o.editor.kind} disabled={!o.available}>
+              {o.label}
+              {o.available ? "" : " (not installed)"}
+            </option>
+          ))}
+          <option value="Custom">
+            {editor?.kind === "Custom" ? `Other: ${editor.path}` : "Other program…"}
+          </option>
+        </select>
+        {editor?.kind === "Custom" && (
+          <button type="button" className="secondary" onClick={() => void chooseCustom()}>
+            Change…
+          </button>
+        )}
+      </span>
+    </label>
   );
 }
