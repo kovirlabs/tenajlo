@@ -2,7 +2,19 @@ use std::path::PathBuf;
 
 fn main() {
     ensure_askpass_placeholder();
+    ensure_mingit_placeholder();
     tauri_build::build();
+}
+
+/// Windows builds bundle `resources/mingit` (tauri.windows.conf.json), which must exist for
+/// this build script. `scripts/fetch-mingit.mjs` (run by `pnpm tauri dev/build` on Windows)
+/// fills it; an empty folder keeps plain cargo commands working, and debug builds then fall
+/// back to git on PATH.
+fn ensure_mingit_placeholder() {
+    let target = std::env::var("TARGET").unwrap_or_default();
+    if target.contains("windows") {
+        let _ = std::fs::create_dir_all("resources/mingit");
+    }
 }
 
 /// Tauri requires every `externalBin` to exist whenever this build script runs, including

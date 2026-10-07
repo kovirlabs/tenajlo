@@ -26,7 +26,7 @@ pub const REQUIRED_SCOPES: [&str; 3] = ["read:user", "read:repository", "write:r
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerInfo {
-    /// Normalized address, e.g. `https://tmc-git01.tmus.local`.
+    /// Normalized address, e.g. `https://git.example.com`.
     pub base_url: String,
     pub version: String,
     /// Where the user creates a personal access token.

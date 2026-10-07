@@ -158,7 +158,7 @@ function CloneBody({ onClose }: { onClose: () => void }) {
           <input
             value={typedUrl}
             onChange={(e) => setTypedUrl(e.target.value)}
-            placeholder="https://… or git@TMC-GIT01.tmus.local:team/project.git"
+            placeholder="https://… or git@git.example.com:team/project.git"
             spellCheck={false}
             autoFocus
           />

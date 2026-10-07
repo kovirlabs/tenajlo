@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "build": {
+    "beforeDevCommand": "node scripts/build-askpass.mjs && node scripts/fetch-mingit.mjs && pnpm dev",
+    "beforeBuildCommand": "node scripts/build-askpass.mjs --release && node scripts/fetch-mingit.mjs && pnpm build"
+  },
+  "bundle": {
+    "targets": [
+      "nsis"
+    ],
+    "publisher": "Kovir Labs",
+    "resources": {
+      "resources/mingit/": "mingit/",
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

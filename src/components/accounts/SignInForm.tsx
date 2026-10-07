@@ -69,7 +69,7 @@ export function SignInForm({ initialServer, onSignedIn, onCancel }: Props) {
           <input
             value={server}
             onChange={(e) => setServer(e.target.value)}
-            placeholder="e.g. TMC-GIT01.tmus.local"
+            placeholder="e.g. git.example.com"
             autoFocus
             spellCheck={false}
           />
