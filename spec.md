@@ -311,7 +311,7 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 5. Never pass a shell. Use argument arrays only, with `--` before paths, and validate refs (§5.2).
 6. The trampoline listener binds to loopback only, uses per-operation random tokens, and rejects everything else.
 7. Never auto-accept SSH host keys. Never set `http.sslVerify=false`, and offer no UI toggle for it. Untrusted certs are fixed in the OS trust store.
-8. Updates (v1.1) use Tauri updater with signature verification, from an internal update endpoint.
+8. Updates (v1.1) use Tauri updater with signature verification, from the public GitHub Releases endpoint.
 9. Repository paths opened by the user are canonicalized. Tenajlo operates only inside the selected repo root.
 
 ---
@@ -328,7 +328,7 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 | End-to-end (v1.1) | Tauri WebDriver smoke test: sign in, clone, commit, push |
 | Manual matrix | Windows domain machine with internal CA, Ubuntu, SSH with passphrase key, PAT with HTTPS |
 
-CI (Forgejo Actions on TMC-GIT01) runs `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --workspace`, `pnpm lint`, `pnpm typecheck`, and `pnpm test` on every push, plus Windows build artifacts on tags.
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace` on Windows, Linux and macOS, `pnpm lint`, `pnpm typecheck` and `pnpm test`, and the Forgejo integration suite in Docker, on every push. Version tags build the Windows installer into a draft GitHub Release (`release.yml`).
 
 ---
 
@@ -342,7 +342,7 @@ CI (Forgejo Actions on TMC-GIT01) runs `cargo fmt --check`, `cargo clippy -D war
 | M3 | Remotes over HTTPS | Fetch, pull (ff-only), push, publish, ahead/behind, progress UI. Trampoline with credential prompts and user's helper passthrough. |
 | M4 | Forgejo accounts | Sign-in with PAT, keychain storage, clone dialog listing repos, automatic HTTPS auth for account hosts |
 | M5 | SSH | System OpenSSH, passphrase prompt, host-key confirmation, clone via SSH URL |
-| M6 | Polish and ship v1.0 | Merge on pull divergence + conflict banner, settings screen, Git LFS (bundled git-lfs, progress, auth), error mapping, signed Windows NSIS installer, user docs |
+| M6 | Polish and ship v1.0 | Merge on pull divergence + conflict banner, settings screen, Git LFS (bundled git-lfs, progress, auth), error mapping, Windows NSIS installer (unsigned at first; signing added once a certificate is chosen), user docs |
 | v1.1 | Nice-to-haves | Hunk/line staging, SSH key generate + upload, auto-update, background fetch notifications, remembered SSH passphrases, saving prompt credentials |
 | v2 | Forgejo native | OAuth2 PKCE sign-in, open PR in browser from branch, PR status badge |
 
@@ -353,5 +353,5 @@ CI (Forgejo Actions on TMC-GIT01) runs `cargo fmt --check`, `cargo clippy -D war
 1. ~~**LFS:**~~ **Answered:** yes, TMC repos will hold large binaries. Full LFS support is part of M6.
 2. ~~**SSH port:**~~ **Answered:** TMC-GIT01 serves SSH on **2222**. The clone dialog uses the `ssh_url` Forgejo reports (`ssh://git@host:2222/…`), so no `sshHost` override is needed unless that URL is misconfigured.
 3. **Internal CA:** Is TMC-GIT01's certificate issued by a domain CA pushed via GPO? If so, schannel handles Windows. Linux machines need the CA installed manually.
-4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs: signed NSIS installer, public docs, no TMC-specific defaults in the UI.
+4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs, Apache-2.0: NSIS installer built by GitHub Actions (unsigned until a certificate is chosen), public docs, no TMC-specific defaults in the UI.
 5. ~~**Pull default:**~~ **Answered:** ff-only by default. On divergence, offer "Merge the server's changes" (a merge commit); conflicts go to the conflict banner. Rebase is a Settings option without guided conflict UI.

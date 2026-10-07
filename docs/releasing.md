@@ -1,0 +1,61 @@
+# Releasing Tenajlo
+
+Releases are built by GitHub Actions (`.github/workflows/release.yml`) from a version tag and
+land in a **draft** GitHub Release, so a person checks them before anyone can download them.
+
+## 1. Prepare
+
+1. Make sure `main` is green in CI (Windows, Linux, macOS, and the Forgejo integration job).
+2. Set the new version in all three places (they must match):
+   - `src-tauri/tauri.conf.json` → `version`
+   - `src-tauri/Cargo.toml` → `[package] version`
+   - `package.json` → `version`
+3. Regenerate the dependency license list and check it for anything that isn't permissive.
+   Rust: `cargo about generate` (with an `about.hbs` template); npm:
+   `pnpm licenses list --prod`. Attach the result to the release as
+   `THIRD_PARTY_LICENSES.html`. _(Not automated yet: do this by hand until it is.)_
+4. Commit: `Release v1.2.3`.
+
+## 2. Build
+
+```bash
+git tag v1.2.3
+git push origin main v1.2.3
+```
+
+The release workflow checks the tag matches `tauri.conf.json`, builds `tenajlo-askpass`,
+downloads the pinned MinGit and git-lfs (`scripts/fetch-mingit.mjs` verifies their SHA-256),
+and builds the NSIS installer. It then creates a draft release with the installer attached.
+
+## 3. Check on Windows before publishing
+
+Install the draft's installer on a clean Windows 10 or 11 machine (no Git installed) and run
+through the manual matrix from spec §11:
+
+- [ ] The installer runs without administrator rights; SmartScreen's "unknown publisher"
+      warning is expected while builds are unsigned.
+- [ ] Tenajlo starts and Settings → Git shows the bundled Git and Git LFS versions.
+- [ ] Sign in with a PAT; clone a private repository over HTTPS with no password prompt.
+- [ ] Commit and push; pull a teammate's change; merge a divergence; resolve a conflict.
+- [ ] Clone over SSH (port 2222) with a passphrase-protected key: the host-key dialog and
+      passphrase dialog appear in Tenajlo, not in a console window.
+- [ ] A repository with LFS files clones with real content, and pushes new large files.
+- [ ] On a domain-joined machine: the internal CA is trusted (schannel), and a path longer
+      than 260 characters clones.
+- [ ] Uninstall removes the app; reinstalling keeps accounts and settings.
+
+Then publish the draft release.
+
+## Updating bundled Git or Git LFS
+
+Edit the `MINGIT` / `GIT_LFS` constants in `scripts/fetch-mingit.mjs`: version, URL and the
+SHA-256 from the release's published digest (GitHub shows it on the release asset; the
+GitHub API returns it as `digest`). Update the versions in `THIRD_PARTY_NOTICES.md`. Run
+`node scripts/fetch-mingit.mjs --force` to check the download and layout.
+
+## Code signing (not set up yet)
+
+Builds are unsigned for now. When a certificate is chosen, set
+`bundle.windows.signCommand` in `src-tauri/tauri.windows.conf.json` (or
+`certificateThumbprint` for a local certificate) and pass its secrets to the release job.
+See Tauri's Windows code-signing guide.

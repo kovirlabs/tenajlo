@@ -36,6 +36,10 @@
     ],
     "externalBin": [
       "binaries/tenajlo-askpass"
-    ]
+    ],
+    "license": "Apache-2.0",
+    "licenseFile": "../LICENSE",
+    "copyright": "Copyright 2026 Kovir Labs",
+    "publisher": "Kovir Labs"
   }
 }

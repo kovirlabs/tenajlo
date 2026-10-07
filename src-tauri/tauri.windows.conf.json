@@ -8,10 +8,11 @@
     "targets": [
       "nsis"
     ],
-    "publisher": "Kovir Labs",
     "resources": {
       "resources/mingit/": "mingit/",
-      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md"
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
+      "../LICENSE": "LICENSE",
+      "../NOTICE": "NOTICE"
     },
     "windows": {
       "nsis": {
