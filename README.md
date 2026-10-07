@@ -1,8 +1,16 @@
 # Tenajlo
 
+[![CI](https://github.com/kovirlabs/tenajlo/actions/workflows/ci.yml/badge.svg)](https://github.com/kovirlabs/tenajlo/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Platform: Windows | Linux | macOS](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#build-from-source)
+
 A desktop Git client for self-hosted [Forgejo](https://forgejo.org), in the spirit of GitHub
 Desktop. It's made for engineers who work with code, PLC exports, CAD files and documentation
 and would rather not learn the Git command line.
+
+**Website:** <https://kovirlabs.github.io/tenajlo/>
+
+![Tenajlo's Changes view: changed files including a PLC program and a CAD part, the highlighted changes, and a commit box](site/assets/screenshots/changes.png)
 
 - **Clone** your Forgejo repositories from a list, over HTTPS or SSH.
 - **Commit, push, pull and branch** with one context-aware sync button.
@@ -18,6 +26,12 @@ and would rather not learn the Git command line.
   and Windows long paths.
 
 Windows 10/11 is the main platform; Linux and macOS work too.
+
+| History                                                                                             | Clone                                                                           | Conflicts                                                                                         |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| ![History view with commits and the selected commit's changes](site/assets/screenshots/history.png) | ![Clone dialog listing Forgejo repositories](site/assets/screenshots/clone.png) | ![Conflict banner with Open, Mark resolved and Abort merge](site/assets/screenshots/conflict.png) |
+
+<sub>Screenshots show invented demo data; regenerate them with `node scripts/screenshots.mjs`.</sub>
 
 ## Documentation
 
@@ -50,6 +64,13 @@ Integration tests run against Forgejo in Docker:
 docker compose -f dev/forgejo.yml up -d && dev/seed-forgejo.sh
 cd src-tauri && cargo test --features integration
 ```
+
+## Contributing
+
+Questions and ideas go to [Discussions](https://github.com/kovirlabs/tenajlo/discussions), bugs
+to [Issues](https://github.com/kovirlabs/tenajlo/issues). See [CONTRIBUTING.md](CONTRIBUTING.md)
+and the [Code of Conduct](CODE_OF_CONDUCT.md). Please report security problems privately
+([SECURITY.md](SECURITY.md)).
 
 ## Privacy
 

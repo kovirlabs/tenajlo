@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tenajlo: a desktop Git client for Forgejo</title>
+    <meta
+      name="description"
+      content="Tenajlo is a free, open-source desktop Git client for self-hosted Forgejo. Clone, commit, push and branch without the command line. Windows-first, with Git LFS for CAD and PLC files built in."
+    />
+    <link rel="canonical" href="https://kovirlabs.github.io/tenajlo/" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="assets/icon-128.png" />
+    <meta name="theme-color" content="#2b3a4a" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Tenajlo" />
+    <meta property="og:title" content="Tenajlo: a desktop Git client for Forgejo" />
+    <meta
+      property="og:description"
+      content="Clone, commit, push and branch on your self-hosted Forgejo without the command line. Free and open source."
+    />
+    <meta property="og:url" content="https://kovirlabs.github.io/tenajlo/" />
+    <meta
+      property="og:image"
+      content="https://kovirlabs.github.io/tenajlo/assets/social-card.png"
+    />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta
+      property="og:image:alt"
+      content="Tenajlo showing a change to a PLC program, ready to commit"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Tenajlo",
+        "description": "Desktop Git client for self-hosted Forgejo: clone, commit, push and branch without the command line.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Windows 10, Windows 11, Linux, macOS",
+        "url": "https://kovirlabs.github.io/tenajlo/",
+        "downloadUrl": "https://github.com/kovirlabs/tenajlo/releases",
+        "license": "https://www.apache.org/licenses/LICENSE-2.0",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "author": { "@type": "Organization", "name": "Kovir Labs" },
+        "codeRepository": "https://github.com/kovirlabs/tenajlo"
+      }
+    </script>
+    <link rel="stylesheet" href="assets/site.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="./">
+        <img src="assets/icon.svg" alt="" width="32" height="32" />
+        Tenajlo
+      </a>
+      <nav aria-label="Main">
+        <a href="#features">Features</a>
+        <a href="#networks">Company networks</a>
+        <a href="#get">Get Tenajlo</a>
+        <a href="https://github.com/kovirlabs/tenajlo">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <h1>Git for engineers, not Git experts.</h1>
+          <p class="lead">
+            Tenajlo is a free desktop app for working with repositories on your own
+            <a href="https://forgejo.org">Forgejo</a> server. Get a copy of a project, save your
+            changes and share them with your team, without learning the command line.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#get">Get Tenajlo</a>
+            <a class="button" href="https://github.com/kovirlabs/tenajlo">View on GitHub</a>
+          </div>
+          <p class="fineprint">Windows 10/11 first; also runs on Linux and macOS. Apache 2.0.</p>
+        </div>
+        <figure class="window hero-shot">
+          <picture>
+            <source
+              srcset="assets/screenshots/changes-dark.png"
+              media="(prefers-color-scheme: dark)"
+            />
+            <img
+              src="assets/screenshots/changes.png"
+              width="1200"
+              height="760"
+              alt="Tenajlo's Changes view: a list of changed files, including a PLC program and a CAD part, next to the highlighted changes in the PLC program and a commit box"
+            />
+          </picture>
+        </figure>
+      </section>
+
+      <section id="features" class="features">
+        <h2>Everything a day with Git needs, in plain language</h2>
+        <div class="grid">
+          <article>
+            <h3>Sign in once</h3>
+            <p>
+              Paste a Forgejo access token and you're done. It's kept in Windows Credential Manager,
+              the macOS Keychain or the Linux Secret Service, and HTTPS just works from then on.
+            </p>
+          </article>
+          <article>
+            <h3>Clone from a list</h3>
+            <p>
+              See every repository you can reach, including your teams', and clone it over HTTPS or
+              SSH in two clicks.
+            </p>
+          </article>
+          <article>
+            <h3>Commit with confidence</h3>
+            <p>
+              Tick the files to include, read exactly what changed, write a summary, commit. Made a
+              mistake? Undo it. Discarded files go to the Recycle Bin.
+            </p>
+          </article>
+          <article>
+            <h3>One button to sync</h3>
+            <p>
+              The toolbar always shows the next step: publish, pull or push, with progress. When you
+              and a teammate both changed a branch, Tenajlo offers to merge.
+            </p>
+          </article>
+          <article>
+            <h3>Large files included</h3>
+            <p>
+              CAD models, PLC archives and drawings go through Git LFS automatically. Git and Git
+              LFS come with the Windows installer.
+            </p>
+          </article>
+          <article>
+            <h3>Conflicts, explained</h3>
+            <p>
+              See which files clash, open them in your editor, mark them resolved, or undo the merge
+              entirely. No cryptic messages.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="gallery" aria-label="Screenshots">
+        <figure class="window">
+          <img
+            src="assets/screenshots/history.png"
+            width="1200"
+            height="760"
+            loading="lazy"
+            alt="History view: a list of commits with authors and dates, and the changes in the selected commit"
+          />
+          <figcaption>See who changed what, and when.</figcaption>
+        </figure>
+        <figure class="window">
+          <img
+            src="assets/screenshots/clone.png"
+            width="1200"
+            height="760"
+            loading="lazy"
+            alt="Clone dialog listing Forgejo repositories, with a choice of HTTPS or SSH and the local folder"
+          />
+          <figcaption>Clone any repository you have access to.</figcaption>
+        </figure>
+        <figure class="window">
+          <img
+            src="assets/screenshots/conflict.png"
+            width="1200"
+            height="760"
+            loading="lazy"
+            alt="Conflict banner naming the conflicted file, with Open, Mark resolved and Abort merge buttons"
+          />
+          <figcaption>Resolve conflicts step by step.</figcaption>
+        </figure>
+      </section>
+
+      <section id="networks" class="networks">
+        <h2>Made for company networks</h2>
+        <ul class="checks">
+          <li>
+            <strong>Your internal certificates just work.</strong> Tenajlo trusts what your
+            operating system trusts, including company CAs deployed by IT, and never turns
+            certificate checks off.
+          </li>
+          <li>
+            <strong>SSH on any port.</strong> Uses your system's OpenSSH and ssh-agent; passphrase
+            and new-server prompts appear in the app, and a host key is never accepted without you.
+          </li>
+          <li>
+            <strong>Your credentials stay yours.</strong> Tokens never leave the OS password store
+            except to talk to your server, and your existing Git credential helpers keep working for
+            other servers.
+          </li>
+          <li>
+            <strong>No telemetry.</strong> Tenajlo only connects to the Git and Forgejo servers you
+            use. No accounts, no analytics.
+          </li>
+          <li>
+            <strong>Deep folder trees, long paths, Windows line endings</strong> are handled,
+            because that's what real engineering projects look like.
+          </li>
+        </ul>
+      </section>
+
+      <section id="get" class="get">
+        <h2>Get Tenajlo</h2>
+        <p>
+          Tenajlo 1.0 is in final testing. The Windows installer will appear on the
+          <a href="https://github.com/kovirlabs/tenajlo/releases">releases page</a>. Until then, you
+          can build it from source.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/kovirlabs/tenajlo/releases"
+            >Releases</a
+          >
+          <a class="button" href="https://github.com/kovirlabs/tenajlo#build-from-source"
+            >Build from source</a
+          >
+          <a class="button" href="https://github.com/kovirlabs/tenajlo/blob/main/docs/user-guide.md"
+            >User guide</a
+          >
+        </div>
+        <p class="fineprint">
+          Built and tested for Forgejo; Gitea servers use the same API and may work too. Needs Git
+          2.40+ and Git LFS on Linux and macOS; Windows includes both.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Tenajlo is open source under the
+        <a href="https://github.com/kovirlabs/tenajlo/blob/main/LICENSE">Apache License 2.0</a>
+        · Made by Kovir Labs ·
+        <a href="https://github.com/kovirlabs/tenajlo/discussions">Discussions</a> ·
+        <a href="https://github.com/kovirlabs/tenajlo/security/policy">Security</a>
+      </p>
+      <p class="fineprint">
+        Screenshots show invented demo data. Forgejo is a trademark of its respective owners;
+        Tenajlo is an independent project.
+      </p>
+    </footer>
+  </body>
+</html>

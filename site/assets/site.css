@@ -1,0 +1,245 @@
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f4f6f8;
+  --fg: #1b232c;
+  --fg-muted: #57606a;
+  --border: #d0d7de;
+  --accent: #b5551a;
+  --accent-fg: #ffffff;
+  --brand: #2b3a4a;
+  color-scheme: light dark;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --bg-subtle: #161b22;
+    --fg: #e6edf3;
+    --fg-muted: #9aa5b1;
+    --border: #30363d;
+    --accent: #f08a3c;
+    --accent-fg: #161b22;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+a {
+  color: var(--accent);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.nav nav {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.nav nav a {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.nav nav a:hover {
+  color: var(--fg);
+}
+
+main > section {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 3rem;
+  align-items: center;
+}
+
+h1 {
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  line-height: 1.1;
+  margin: 0 0 1rem;
+}
+
+h2 {
+  font-size: 1.8rem;
+  line-height: 1.2;
+  margin: 0 0 1.5rem;
+}
+
+h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+}
+
+.lead {
+  font-size: 1.15rem;
+  color: var(--fg-muted);
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.65rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.fineprint {
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+}
+
+.window {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 18%);
+  background: var(--bg-subtle);
+}
+
+.window::before {
+  /* A plain title bar, so the screenshots read as an app window. */
+  content: "";
+  display: block;
+  height: 26px;
+  background:
+    radial-gradient(circle at 16px 13px, #ff5f57 5px, transparent 6px),
+    radial-gradient(circle at 34px 13px, #febc2e 5px, transparent 6px),
+    radial-gradient(circle at 52px 13px, #28c840 5px, transparent 6px) var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.window figcaption {
+  padding: 0.6rem 0.9rem;
+  font-size: 0.9rem;
+  color: var(--fg-muted);
+}
+
+.features {
+  border-top: 1px solid var(--border);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.grid article {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-subtle);
+}
+
+.grid p {
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.checks {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.checks li {
+  padding-left: 1.8rem;
+  position: relative;
+}
+
+.checks li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.get {
+  border-top: 1px solid var(--border);
+}
+
+footer {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+  border-top: 1px solid var(--border);
+  color: var(--fg-muted);
+}
+
+@media (max-width: 860px) {
+  .hero,
+  .grid,
+  .gallery {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero {
+    gap: 2rem;
+  }
+}

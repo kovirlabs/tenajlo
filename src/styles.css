@@ -258,7 +258,8 @@ button:focus-visible {
 }
 
 .dialog {
-  max-width: 520px;
+  /* Wide enough for the clone and settings dialogs; small dialogs size to their content. */
+  max-width: min(680px, 94vw);
   color: var(--fg);
   background: var(--bg);
   border: 1px solid var(--border);
@@ -889,17 +890,24 @@ button.danger {
 
 .conflict-list li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  padding: 2px 0;
+  gap: 4px 6px;
+  padding: 4px 0;
 }
 
+/* The file name gets its own line so it's never squeezed out by the buttons. */
 .conflict-path {
-  flex: 1;
+  flex: 1 0 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 600;
+}
+
+.conflict-list .muted {
+  flex: 1;
 }
 
 .settings {

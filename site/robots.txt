@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://kovirlabs.github.io/tenajlo/sitemap.xml
