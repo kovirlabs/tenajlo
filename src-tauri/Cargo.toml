@@ -1,13 +1,13 @@
 [package]
-name = "anvil"
+name = "tenajlo"
 version = "0.1.0"
 description = "Desktop Git client for self-hosted Forgejo"
 edition.workspace = true
 license.workspace = true
-default-run = "anvil"
+default-run = "tenajlo"
 
 [lib]
-name = "anvil_lib"
+name = "tenajlo_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]

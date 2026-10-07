@@ -13,7 +13,7 @@ pub struct GitVersion {
 }
 
 impl GitVersion {
-    /// Minimum git version Anvil supports (spec §5.1).
+    /// Minimum git version Tenajlo supports (spec §5.1).
     pub const MINIMUM: GitVersion = GitVersion {
         major: 2,
         minor: 40,

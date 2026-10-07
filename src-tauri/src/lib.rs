@@ -1,4 +1,4 @@
-//! Anvil — desktop Git client for self-hosted Forgejo.
+//! Tenajlo — desktop Git client for self-hosted Forgejo.
 
 pub mod commands;
 pub mod error;
@@ -50,7 +50,7 @@ pub fn run() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("anvil_lib=info")),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("tenajlo_lib=info")),
         )
         .init();
 
@@ -67,7 +67,7 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running Anvil");
+        .expect("error while running Tenajlo");
 }
 
 #[cfg(test)]

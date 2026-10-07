@@ -1,7 +1,7 @@
 //! JSON persistence with `schemaVersion` and migrations (spec §9).
 //!
 //! Each persisted file implements [`Versioned`]. Loading migrates older
-//! versions forward, refuses files written by a newer Anvil, and moves corrupt
+//! versions forward, refuses files written by a newer Tenajlo, and moves corrupt
 //! files aside instead of silently discarding them. Writes are atomic.
 
 pub mod repositories;
@@ -24,7 +24,7 @@ pub enum StoreError {
         source: std::io::Error,
     },
     #[error(
-        "{path} was written by a newer version of Anvil (schema {found}, supported {supported})"
+        "{path} was written by a newer version of Tenajlo (schema {found}, supported {supported})"
     )]
     TooNew {
         path: PathBuf,

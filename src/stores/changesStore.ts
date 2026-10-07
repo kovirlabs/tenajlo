@@ -11,7 +11,7 @@ type ChangesState = {
   status: WorkingDirectoryStatus | null;
   error: AppError | null;
   selectedPath: string | null;
-  /** Changes Anvil saved when the user last left this branch. */
+  /** Changes Tenajlo saved when the user last left this branch. */
   saved: SavedChanges | null;
   /** A mutating operation is running; disable controls. */
   busy: boolean;

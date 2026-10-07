@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Anvil",
+  "productName": "Tenajlo",
   "version": "0.1.0",
   "identifier": "com.kovirlabs.tenajlo",
   "build": {
@@ -11,7 +11,7 @@
   },
   "app": {
     "windows": [
-      { "title": "Anvil", "width": 1100, "height": 720, "minWidth": 800, "minHeight": 500 }
+      { "title": "Tenajlo", "width": 1100, "height": 720, "minWidth": 800, "minHeight": 500 }
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; form-action 'none'",

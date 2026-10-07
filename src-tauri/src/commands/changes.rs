@@ -174,7 +174,7 @@ pub async fn ignore_file(
     ignore::append(&root, &pattern).map_err(|e| {
         AppError::with_details(
             crate::error::AppErrorKind::Internal,
-            "Anvil couldn't update the .gitignore file.",
+            "Tenajlo couldn't update the .gitignore file.",
             e.to_string(),
         )
     })

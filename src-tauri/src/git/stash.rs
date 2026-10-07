@@ -1,6 +1,6 @@
 //! Stash-on-switch (spec §8.1, GitHub Desktop behavior). Callers hold the mutation lock.
 //!
-//! Anvil stashes are tagged `!!Anvil<branch>` so we only ever restore our own, onto the
+//! Tenajlo stashes are tagged `!!Tenajlo<branch>` so we only ever restore our own, onto the
 //! branch they came from.
 
 use std::path::Path;
@@ -11,10 +11,10 @@ use super::error::GitError;
 use super::exec::{Access, GitBinary, GitCommand};
 
 fn marker(branch: &str) -> String {
-    format!("!!Anvil<{branch}>")
+    format!("!!Tenajlo<{branch}>")
 }
 
-/// Changes Anvil saved when the user left a branch.
+/// Changes Tenajlo saved when the user left a branch.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SavedChanges {
@@ -43,7 +43,7 @@ pub async fn save(git: &GitBinary, root: &Path, branch: &str) -> Result<(), GitE
     Ok(())
 }
 
-/// The most recent Anvil stash for `branch`, if any.
+/// The most recent Tenajlo stash for `branch`, if any.
 pub async fn find(
     git: &GitBinary,
     root: &Path,

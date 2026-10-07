@@ -59,7 +59,7 @@ pub struct RepoManager {
 
 impl RepoManager {
     /// Loads the repository list from `data_dir`. Never fails: a file that can't be
-    /// loaded (e.g. written by a newer Anvil) yields an empty, read-only list.
+    /// loaded (e.g. written by a newer Tenajlo) yields an empty, read-only list.
     pub fn load(data_dir: &Path) -> Self {
         let path = data_dir.join(FILE_NAME);
         let (file, read_only) = match store::load::<RepositoriesFile>(&path) {

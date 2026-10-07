@@ -41,7 +41,7 @@ pub fn valid_field(value: &str) -> bool {
 
 /// Writes `user.name` and `user.email` to the user's **global** git config.
 ///
-/// This is the only global config Anvil ever writes (CLAUDE.md rule 5), and only after the
+/// This is the only global config Tenajlo ever writes (CLAUDE.md rule 5), and only after the
 /// user explicitly confirms in the UI. Callers must validate with [`valid_field`].
 pub async fn set_global(git: &GitBinary, name: &str, email: &str) -> Result<(), GitError> {
     for (key, value) in [("user.name", name.trim()), ("user.email", email.trim())] {

@@ -62,7 +62,7 @@ export const commands = {
 	switchBranch: (repoId: string, name: string, localChanges: LocalChanges) => typedError<null, AppError>(__TAURI_INVOKE("switch_branch", { repoId, name, localChanges })),
 	/**  Deletes a local branch. Without `force`, fails with `BranchNotMerged` if it has unique commits. */
 	deleteBranch: (repoId: string, name: string, force: boolean) => typedError<null, AppError>(__TAURI_INVOKE("delete_branch", { repoId, name, force })),
-	/**  Changes Anvil saved when the user last left the current branch, if any. */
+	/**  Changes Tenajlo saved when the user last left the current branch, if any. */
 	getSavedChanges: (repoId: string) => typedError<{
 	branch: string,
 } | null, AppError>(__TAURI_INVOKE("get_saved_changes", { repoId })),
@@ -245,7 +245,7 @@ export type RepositoryList = {
 	selectedId: string | null,
 };
 
-/**  Changes Anvil saved when the user left a branch. */
+/**  Changes Tenajlo saved when the user left a branch. */
 export type SavedChanges = {
 	branch: string,
 };

@@ -1,6 +1,6 @@
-# Anvil — Desktop Git Client for Forgejo
+# Tenajlo — Desktop Git Client for Forgejo
 
-**Status:** Draft v0.1 · **Owner:** Evan · **Working name:** Anvil (placeholder, rename freely)
+**Status:** Draft v0.1 · **Owner:** Evan · **Name:** Tenajlo · **Bundle identifier:** `com.kovirlabs.tenajlo`
 
 A cross-platform desktop Git client in the spirit of GitHub Desktop, built for self-hosted Forgejo instances (first target: `TMC-GIT01.tmus.local`). Built with Tauri 2 (Rust backend) and TypeScript/React (frontend).
 
@@ -37,11 +37,11 @@ Primary users are mechanical and controls engineers working with code, PLC expor
 
 ### 4.1 Lessons from GitHub Desktop (`desktop/desktop`, MIT)
 
-| GitHub Desktop pattern | Anvil equivalent |
+| GitHub Desktop pattern | Tenajlo equivalent |
 |---|---|
 | `dugite`: bundled git binary, spawned per command | Rust `git` module spawning the git CLI. MinGit bundled as a Tauri sidecar on Windows. |
 | `app/src/lib/git/*`: one file per git operation, typed results | `src-tauri/src/git/*`: one module per operation, typed structs |
-| **Trampoline**: small helper set as `GIT_ASKPASS` / credential helper that calls back into the app over a local socket | `anvil-askpass` sidecar binary plus a localhost IPC server in the app, with a per-operation token |
+| **Trampoline**: small helper set as `GIT_ASKPASS` / credential helper that calls back into the app over a local socket | `tenajlo-askpass` sidecar binary plus a localhost IPC server in the app, with a per-operation token |
 | `AppStore` / `GitStore` / `Dispatcher` | Rust `RepoManager` owns git state. Frontend uses a Zustand store and a thin `api/` layer for Tauri commands. |
 | Parses `status --porcelain=v2 -z` and custom `log --format` | Same approach |
 | Progress parsing of `--progress` stderr | Same approach, emitted as Tauri events |
@@ -52,7 +52,7 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 ### 4.2 Process model
 
 ```
-┌─────────────────────────── Anvil (Tauri app) ───────────────────────────┐
+┌─────────────────────────── Tenajlo (Tauri app) ───────────────────────────┐
 │  WebView (React + TS)                                                   │
 │    UI components ── Zustand store ── api/ (typed invoke + listen)       │
 │                       ▲ events (progress, repo-changed, auth-prompt)    │
@@ -63,7 +63,7 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 │                 └── auth/ (keyring, accounts, trampoline server)        │
 │                            ▲ localhost TCP, per-op token                │
 └────────────────────────────┼────────────────────────────────────────────┘
-          git.exe ── GIT_ASKPASS / credential.helper / SSH_ASKPASS ──► anvil-askpass (sidecar)
+          git.exe ── GIT_ASKPASS / credential.helper / SSH_ASKPASS ──► tenajlo-askpass (sidecar)
 ```
 
 ### 4.3 Responsibilities
@@ -79,9 +79,9 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 - Renders state and dispatches intents through typed commands.
 - Contains no business logic about Git semantics beyond display.
 
-**`anvil-askpass` (sidecar, Rust, `crates/askpass/`)**
+**`tenajlo-askpass` (sidecar, Rust, `crates/askpass/`)**
 - A tiny binary. Reads the prompt from argv (askpass mode) or stdin (credential-helper mode).
-- Connects to `127.0.0.1:$ANVIL_TRAMPOLINE_PORT`, sends `$ANVIL_TRAMPOLINE_TOKEN` and the request, prints the response, then exits.
+- Connects to `127.0.0.1:$TENAJLO_TRAMPOLINE_PORT`, sends `$TENAJLO_TRAMPOLINE_TOKEN` and the request, prints the response, then exits.
 - Never stores anything.
 
 ### 4.4 Key crates and packages
@@ -117,13 +117,13 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 - Reject user-supplied ref names or remote names that begin with `-`, and validate with `git check-ref-format`.
 - Use a base environment for every invocation:
   - `GIT_TERMINAL_PROMPT=0` (never hang waiting on a TTY)
-  - `GIT_ASKPASS`, `SSH_ASKPASS` → `anvil-askpass` path; `SSH_ASKPASS_REQUIRE=force`
-  - `ANVIL_TRAMPOLINE_PORT`, `ANVIL_TRAMPOLINE_TOKEN` (per operation)
+  - `GIT_ASKPASS`, `SSH_ASKPASS` → `tenajlo-askpass` path; `SSH_ASKPASS_REQUIRE=force`
+  - `TENAJLO_TRAMPOLINE_PORT`, `TENAJLO_TRAMPOLINE_TOKEN` (per operation)
   - `LC_ALL=C` for parse stability (except commit message input)
   - `GIT_OPTIONAL_LOCKS=0` for read-only background commands (status, log)
 - Use base `-c` options per invocation, never written to the user's global config:
   - `core.quotepath=false`
-  - `credential.helper=` (clears inherited helpers), then `credential.helper=<anvil-askpass> credential` *when an Anvil account matches the remote host*. Otherwise the user's own helper chain stays intact (see §6.2).
+  - `credential.helper=` (clears inherited helpers), then `credential.helper=<tenajlo-askpass> credential` *when a Tenajlo account matches the remote host*. Otherwise the user's own helper chain stays intact (see §6.2).
   - Windows: `http.sslBackend=schannel` so the Windows cert store, including domain-pushed internal CAs, is trusted.
 - Every operation has a timeout and is cancellable (kill the child process tree).
 - At most one mutating operation per repository at a time, using a per-repo async mutex. Reads may run concurrently.
@@ -189,7 +189,7 @@ type Account = {
   sshHost?: string;           // optional override, e.g. TMC-GIT01.tmus.local:2222
 };
 // Secret stored separately in OS keychain:
-//   service = "anvil", user = `${baseUrl}|${login}` → PAT
+//   service = "tenajlo", user = `${baseUrl}|${login}` → PAT
 ```
 
 Only metadata goes to disk and to the frontend. The PAT lives only in the keychain.
@@ -198,8 +198,8 @@ Only metadata goes to disk and to the frontend. The PAT lives only in the keycha
 
 Resolution order when git asks for credentials for `https://host/...`:
 
-1. **Anvil account for this host** → return `username=<login>`, `password=<PAT>` from the keychain. Forgejo accepts PATs as the HTTPS password.
-2. **User's existing git credential helper** (e.g. Git Credential Manager). When no Anvil account matches the host, Anvil does not override `credential.helper`, so the user's chain runs as normal.
+1. **Tenajlo account for this host** → return `username=<login>`, `password=<PAT>` from the keychain. Forgejo accepts PATs as the HTTPS password.
+2. **User's existing git credential helper** (e.g. Git Credential Manager). When no Tenajlo account matches the host, Tenajlo does not override `credential.helper`, so the user's chain runs as normal.
 3. **Prompt** via the trampoline. Show a UI dialog for username and password or token, with a "Save to keychain" option.
 
 On `AuthFailed`, invalidate the cached secret for that host and re-prompt once. Never loop.
@@ -210,7 +210,7 @@ When the credential helper protocol sends `erase`, delete the keychain entry. On
 
 - Use the system OpenSSH client (Windows ships `C:\Windows\System32\OpenSSH\ssh.exe`; prefer it over MinGit's ssh so the Windows `ssh-agent` service is used). Set `core.sshCommand` per invocation.
 - **Key passphrase:** `SSH_ASKPASS` → trampoline → UI dialog. Optionally remember the passphrase in the keychain per key fingerprint (off by default).
-- **Unknown host key:** detect the prompt text, show host, key type, and fingerprint, and let the user accept or reject. On accept, answer `yes` so OpenSSH writes `known_hosts` itself. Anvil never edits `known_hosts` directly.
+- **Unknown host key:** detect the prompt text, show host, key type, and fingerprint, and let the user accept or reject. On accept, answer `yes` so OpenSSH writes `known_hosts` itself. Tenajlo never edits `known_hosts` directly.
 - **Key management (v1.1):** list keys in `~/.ssh`, generate an ed25519 key, and upload the public key to Forgejo (`POST /api/v1/user/keys`, needs `write:user` scope).
 
 ### 6.4 Forgejo sign-in flow
@@ -268,7 +268,7 @@ The layout mirrors GitHub Desktop, which users may already know.
 ### 8.1 Screens and dialogs
 - **Welcome / first run:** sign in to Forgejo, or skip. Set git name and email (writes `user.name` and `user.email` globally only after confirmation, prefilled from the Forgejo profile).
 - **Repository list (dropdown):** recent repos, filter box, "Add local…", "Clone…", "Create new…" (`git init`).
-- **Clone dialog:** tabs for *Your Forgejo repos* (list from API) and *URL*. Choose HTTPS or SSH URL, then the local path. Default path is `~/Documents/Anvil/<repo>`, configurable.
+- **Clone dialog:** tabs for *Your Forgejo repos* (list from API) and *URL*. Choose HTTPS or SSH URL, then the local path. Default path is `~/Documents/Tenajlo/<repo>`, configurable.
 - **Changes tab:** file list with checkboxes (stage state), status icons, and a right-click menu (discard, ignore, reveal in explorer, open in editor). Commit box at the bottom.
 - **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff.
 - **Branch dropdown:** filter, current, recent, other local, remote-only (check out creates a tracking branch), plus "New branch…". When switching with local changes, offer *Bring changes* or *Stash and switch* (GitHub Desktop behavior).
@@ -289,11 +289,13 @@ The layout mirrors GitHub Desktop, which users may already know.
 
 | Data | Location | Format |
 |---|---|---|
-| Repository list (paths, last opened, alias) | `$APPDATA/anvil/repositories.json` | JSON, versioned schema |
-| Accounts (no secrets) | `$APPDATA/anvil/accounts.json` | JSON |
-| Settings | `$APPDATA/anvil/settings.json` | JSON |
+| Repository list (paths, last opened, alias) | `$DATA/repositories.json` | JSON, versioned schema |
+| Accounts (no secrets) | `$DATA/accounts.json` | JSON |
+| Settings | `$DATA/settings.json` | JSON |
 | Secrets (PATs, optional passphrases) | OS keychain | — |
-| Logs | `$APPDATA/anvil/logs/` | rolling, 7 days, redacted |
+| Logs | `$DATA/logs/` | rolling, 7 days, redacted |
+
+`$DATA` is Tauri's app data directory for the bundle identifier `com.kovirlabs.tenajlo`: `%APPDATA%\com.kovirlabs.tenajlo` on Windows, `~/.local/share/com.kovirlabs.tenajlo` on Linux, `~/Library/Application Support/com.kovirlabs.tenajlo` on macOS.
 
 Every JSON file has a `"schemaVersion"` field and a migration function. Writes are atomic: write to a temp file, then rename.
 
@@ -303,13 +305,13 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 
 1. Secrets never reach the WebView, logs, crash reports, or disk outside the keychain.
 2. Redact `https://user:token@host` patterns and `Authorization` headers in all logs and error details.
-3. Tauri capabilities are least-privilege. The frontend gets only Anvil's own commands plus dialog open/save. No `fs`, `shell`, or `http` plugin access from JS.
+3. Tauri capabilities are least-privilege. The frontend gets only Tenajlo's own commands plus dialog open/save. No `fs`, `shell`, or `http` plugin access from JS.
 4. Use a strict CSP with no remote scripts. All assets are bundled.
 5. Never pass a shell. Use argument arrays only, with `--` before paths, and validate refs (§5.2).
 6. The trampoline listener binds to loopback only, uses per-operation random tokens, and rejects everything else.
 7. Never auto-accept SSH host keys. Never set `http.sslVerify=false`, and offer no UI toggle for it. Untrusted certs are fixed in the OS trust store.
 8. Updates (v1.1) use Tauri updater with signature verification, from an internal update endpoint.
-9. Repository paths opened by the user are canonicalized. Anvil operates only inside the selected repo root.
+9. Repository paths opened by the user are canonicalized. Tenajlo operates only inside the selected repo root.
 
 ---
 

@@ -1,7 +1,7 @@
 import { restoreSavedChanges } from "../api/branches";
 import { useChangesStore } from "../stores/changesStore";
 
-/** Shown when Anvil saved changes on this branch during an earlier switch. */
+/** Shown when Tenajlo saved changes on this branch during an earlier switch. */
 export function SavedChangesBanner() {
   const saved = useChangesStore((s) => s.saved);
   const busy = useChangesStore((s) => s.busy);

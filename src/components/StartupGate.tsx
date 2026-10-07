@@ -27,7 +27,7 @@ export function StartupGate({ children }: { children: ReactNode }) {
       return (
         <Blocker
           title="Git needs an update"
-          message={`Anvil needs Git ${formatVersion(gitCheck.info.minimum)} or newer. This computer has Git ${formatVersion(gitCheck.info.version)}. Update Git, then try again.`}
+          message={`Tenajlo needs Git ${formatVersion(gitCheck.info.minimum)} or newer. This computer has Git ${formatVersion(gitCheck.info.version)}. Update Git, then try again.`}
           details={`Git found at: ${gitCheck.info.path}`}
           onRetry={runGitCheck}
         />

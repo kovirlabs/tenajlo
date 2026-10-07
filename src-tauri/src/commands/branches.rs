@@ -90,7 +90,7 @@ pub async fn delete_branch(
     Ok(switch::delete(&git, &root, &name, force).await?)
 }
 
-/// Changes Anvil saved when the user last left the current branch, if any.
+/// Changes Tenajlo saved when the user last left the current branch, if any.
 #[tauri::command]
 #[specta::specta]
 pub async fn get_saved_changes(

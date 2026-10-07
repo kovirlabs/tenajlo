@@ -1,4 +1,4 @@
-//! The only place in Anvil that spawns git (CLAUDE.md rule 1, spec §5.2).
+//! The only place in Tenajlo that spawns git (CLAUDE.md rule 1, spec §5.2).
 //!
 //! Every invocation gets argument-array spawning (never a shell), the base
 //! environment, per-invocation `-c` flags, a timeout, and optional cancellation.

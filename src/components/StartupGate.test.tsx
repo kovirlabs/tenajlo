@@ -47,7 +47,7 @@ describe("StartupGate", () => {
     const error: AppError = {
       kind: "GitNotFound",
       gitKind: null,
-      message: "Anvil couldn't find Git on this computer.",
+      message: "Tenajlo couldn't find Git on this computer.",
       details: "Looked in: /usr/bin/git",
     };
     checkGit.mockResolvedValueOnce({ status: "error", error });

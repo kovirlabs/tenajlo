@@ -62,7 +62,7 @@ impl From<GitError> for AppError {
         match err {
             GitError::NotFound { searched } => AppError::new(
                 AppErrorKind::GitNotFound,
-                "Anvil couldn't find Git on this computer. Install Git 2.40 or newer, then reopen Anvil.",
+                "Tenajlo couldn't find Git on this computer. Install Git 2.40 or newer, then reopen Tenajlo.",
                 Some(
                     searched
                         .iter()
@@ -74,7 +74,7 @@ impl From<GitError> for AppError {
             GitError::Unsupported { found, minimum } => AppError::new(
                 AppErrorKind::GitUnsupported,
                 format!(
-                    "Anvil needs Git {minimum} or newer. This computer has Git {found}. Update Git, then reopen Anvil."
+                    "Tenajlo needs Git {minimum} or newer. This computer has Git {found}. Update Git, then reopen Tenajlo."
                 ),
                 None,
             ),
@@ -91,7 +91,7 @@ impl From<GitError> for AppError {
                 details: Some(stderr),
             },
             GitError::Spawn(e) => {
-                AppError::new(AppErrorKind::Internal, "Anvil couldn't start Git.", Some(e.to_string()))
+                AppError::new(AppErrorKind::Internal, "Tenajlo couldn't start Git.", Some(e.to_string()))
             }
             GitError::InvalidRefName(name) => AppError::new(
                 AppErrorKind::InvalidInput,
@@ -100,7 +100,7 @@ impl From<GitError> for AppError {
             ),
             GitError::Parse(s) => AppError::new(
                 AppErrorKind::Internal,
-                "Git returned something Anvil didn't understand.",
+                "Git returned something Tenajlo didn't understand.",
                 Some(crate::redact::redact(&s)),
             ),
         }
@@ -118,7 +118,7 @@ impl From<RepoError> for AppError {
             RepoError::Git(e) => e.into(),
             RepoError::Store(e) => AppError::new(
                 AppErrorKind::Storage,
-                "Anvil couldn't save your repository list.",
+                "Tenajlo couldn't save your repository list.",
                 Some(crate::redact::redact(&e.to_string())),
             ),
         }

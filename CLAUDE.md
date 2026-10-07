@@ -1,6 +1,6 @@
-# CLAUDE.md — Anvil
+# CLAUDE.md — Tenajlo
 
-Anvil is a desktop Git client for self-hosted Forgejo, modeled on GitHub Desktop. It uses Tauri 2 with a Rust backend and a React + TypeScript frontend.
+Tenajlo is a desktop Git client for self-hosted Forgejo, modeled on GitHub Desktop. It uses Tauri 2 with a Rust backend and a React + TypeScript frontend.
 
 **`spec.md` is the source of truth** for scope, architecture, and milestones. Read the relevant section before starting a task. If a request conflicts with the spec, say so and ask before deviating. Do not silently expand scope beyond the current milestone.
 
@@ -40,7 +40,7 @@ src-tauri/
     repo_manager.rs        # per-repo state, per-repo mutation lock, fs watcher
     store/                 # JSON persistence with schemaVersion + migrations
   capabilities/            # Tauri permission files — keep minimal
-crates/askpass/            # anvil-askpass sidecar binary
+crates/askpass/            # tenajlo-askpass sidecar binary
 src/                       # React frontend
   api/                     # wrappers around generated bindings + event listeners
   bindings.ts              # GENERATED — never edit by hand
@@ -75,10 +75,10 @@ dev/forgejo.yml            # docker compose for integration tests
 
 ## Auth model (summary — details in spec §6)
 
-- **HTTPS with an Anvil account for the host:** the credential helper returns `login` + PAT from the keychain.
+- **HTTPS with a Tenajlo account for the host:** the credential helper returns `login` + PAT from the keychain.
 - **HTTPS without an account:** leave the user's `credential.helper` chain alone (e.g. Git Credential Manager), and fall back to a trampoline UI prompt.
 - **SSH:** system OpenSSH (on Windows, use `System32\OpenSSH` so the Windows ssh-agent works). Passphrase and host-key prompts go through `SSH_ASKPASS` and the trampoline to a UI dialog.
-- **Trampoline:** `anvil-askpass` connects to a loopback port with a per-operation random token. Treat an unknown or expired token as an attack: reject it and log without the token.
+- **Trampoline:** `tenajlo-askpass` connects to a loopback port with a per-operation random token. Treat an unknown or expired token as an attack: reject it and log without the token.
 - **Forgejo API:** `Authorization: token <PAT>`. The base URL comes from the account. The first deployment is `https://TMC-GIT01.tmus.local`.
 
 ## Environment notes
