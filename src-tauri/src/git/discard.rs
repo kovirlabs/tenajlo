@@ -152,11 +152,11 @@ mod tests {
         let left: Vec<&str> = after.files.iter().map(|f| f.path.as_str()).collect();
         assert_eq!(left, vec!["keep me.txt"]);
         assert_eq!(
-            std::fs::read_to_string(repo.join("mod.txt")).unwrap(),
+            crate::git::test_support::read_text(&repo.join("mod.txt")),
             "orig\n"
         );
         assert_eq!(
-            std::fs::read_to_string(repo.join("del.txt")).unwrap(),
+            crate::git::test_support::read_text(&repo.join("del.txt")),
             "keep\n"
         );
         assert!(repo.join("ren.txt").exists() && !repo.join("ren2.txt").exists());
