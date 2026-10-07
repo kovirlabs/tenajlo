@@ -327,13 +327,33 @@ async fn read_stderr_lines(
 }
 
 /// `-c` flags applied to every invocation. Never written to the user's config.
-fn base_config_flags() -> Vec<&'static str> {
+fn base_config_flags() -> Vec<String> {
     // credential.helper is overridden per operation, only for account hosts (auth/remote_auth.rs).
     #[allow(unused_mut)]
-    let mut flags = vec!["core.quotepath=false"];
+    let mut flags = vec!["core.quotepath=false".to_owned()];
     #[cfg(windows)]
-    flags.push("http.sslBackend=schannel");
+    {
+        flags.push("http.sslBackend=schannel".to_owned());
+        if let Some(ssh) = windows_openssh() {
+            flags.push(format!("core.sshCommand={ssh}"));
+        }
+    }
     flags
+}
+
+/// Windows' own OpenSSH (`System32\OpenSSH\ssh.exe`), so the Windows ssh-agent service and
+/// its keys are used (spec §6.3). Quoted for git's shell; `None` if the feature isn't installed.
+#[cfg(windows)]
+fn windows_openssh() -> Option<String> {
+    use std::sync::OnceLock;
+    static SSH: OnceLock<Option<String>> = OnceLock::new();
+    SSH.get_or_init(|| {
+        let root = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
+        let ssh = std::path::Path::new(&root).join("System32\\OpenSSH\\ssh.exe");
+        ssh.is_file()
+            .then(|| format!("'{}'", ssh.to_string_lossy().replace('\\', "/")))
+    })
+    .clone()
 }
 
 /// Base environment for every invocation (spec §5.2).

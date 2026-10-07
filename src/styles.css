@@ -820,3 +820,30 @@ button.danger {
   border: 1px solid var(--border);
   border-radius: 10px;
 }
+
+.fingerprint {
+  padding: 8px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.clone-protocol {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.clone-protocol legend {
+  float: left;
+  margin-right: 8px;
+  font-weight: 600;
+}
+
+.clone-protocol label {
+  flex-direction: row;
+  align-items: center;
+  font-weight: 400;
+}

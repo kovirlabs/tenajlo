@@ -209,7 +209,7 @@ When the credential helper protocol sends `erase`, delete the keychain entry. On
 ### 6.3 SSH remotes
 
 - Use the system OpenSSH client (Windows ships `C:\Windows\System32\OpenSSH\ssh.exe`; prefer it over MinGit's ssh so the Windows `ssh-agent` service is used). Set `core.sshCommand` per invocation.
-- **Key passphrase:** `SSH_ASKPASS` → trampoline → UI dialog. Optionally remember the passphrase in the keychain per key fingerprint (off by default).
+- **Key passphrase:** `SSH_ASKPASS` → trampoline → UI dialog, which says when a previous answer was wrong. (Remembering the passphrase in the keychain is deferred to v1.1; on Windows the ssh-agent service already covers this.)
 - **Unknown host key:** detect the prompt text, show host, key type, and fingerprint, and let the user accept or reject. On accept, answer `yes` so OpenSSH writes `known_hosts` itself. Tenajlo never edits `known_hosts` directly.
 - **Key management (v1.1):** list keys in `~/.ssh`, generate an ed25519 key, and upload the public key to Forgejo (`POST /api/v1/user/keys`, needs `write:user` scope).
 
@@ -351,7 +351,7 @@ CI (Forgejo Actions on TMC-GIT01) runs `cargo fmt --check`, `cargo clippy -D war
 ## 13. Open questions
 
 1. **LFS:** Will TMC repos hold large binaries (CAD, PLC archives, EPLAN projects)? If so, LFS support moves from v1.1 to M6.
-2. **SSH port:** Will Forgejo SSH run on 22 or an alternate port (e.g. 2222)? This affects the default clone URL and `sshHost` handling.
+2. ~~**SSH port:**~~ **Answered:** TMC-GIT01 serves SSH on **2222**. The clone dialog uses the `ssh_url` Forgejo reports (`ssh://git@host:2222/…`), so no `sshHost` override is needed unless that URL is misconfigured.
 3. **Internal CA:** Is TMC-GIT01's certificate issued by a domain CA pushed via GPO? If so, schannel handles Windows. Linux machines need the CA installed manually.
 4. **Distribution:** Internal-only (Intune/RMM push of MSI) or public under Kovir Labs? Public release affects naming, code signing, and the update endpoint.
 5. **Pull default:** Should the default stay ff-only with a prompt on divergence (safest), or use merge (GitHub Desktop's default)?

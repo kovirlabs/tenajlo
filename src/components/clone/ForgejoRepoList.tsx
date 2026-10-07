@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
-import type { Account } from "../../bindings";
+import type { Account, RemoteRepository } from "../../bindings";
 import { useCloneStore } from "../../stores/cloneStore";
 import { useUiStore } from "../../stores/uiStore";
 import { InlineError } from "../InlineError";
 
 type Props = {
   accounts: Account[];
-  selectedUrl: string;
-  onSelect: (cloneUrl: string) => void;
+  /** `fullName` of the selected repository. */
+  selected: string | null;
+  onSelect: (repo: RemoteRepository) => void;
 };
 
 /** "Your Forgejo repositories" tab: pick a repository from a signed-in account. */
-export function ForgejoRepoList({ accounts, selectedUrl, onSelect }: Props) {
+export function ForgejoRepoList({ accounts, selected, onSelect }: Props) {
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
   const [filter, setFilter] = useState("");
   const account = accounts.find((a) => a.id === accountId) ?? accounts[0] ?? null;
@@ -87,11 +88,11 @@ export function ForgejoRepoList({ accounts, selectedUrl, onSelect }: Props) {
         {loading && !list && <li className="muted picker-empty">Loading repositories…</li>}
         {list && repos.length === 0 && <li className="muted picker-empty">No repositories</li>}
         {repos.map((r) => (
-          <li key={r.fullName} role="option" aria-selected={r.cloneUrl === selectedUrl}>
+          <li key={r.fullName} role="option" aria-selected={r.fullName === selected}>
             <button
               type="button"
-              className={r.cloneUrl === selectedUrl ? "picker-item current" : "picker-item"}
-              onClick={() => onSelect(r.cloneUrl)}
+              className={r.fullName === selected ? "picker-item current" : "picker-item"}
+              onClick={() => onSelect(r)}
             >
               <span>
                 {r.owner}/<strong>{r.name}</strong>

@@ -54,6 +54,8 @@ struct OpEntry {
     /// Password from a combined username+password dialog, handed to git's next
     /// `Password for …` prompt and then forgotten.
     cached_password: Option<String>,
+    /// Keys whose passphrase was already asked for: asking again means it was wrong.
+    passphrase_keys: Vec<String>,
 }
 
 struct Inner {
@@ -123,6 +125,7 @@ impl Trampoline {
             account,
             account_used: false,
             cached_password: None,
+            passphrase_keys: Vec::new(),
         };
         self.inner.lock().insert(token.clone(), entry);
         Ok(OpToken {
@@ -147,11 +150,20 @@ pub struct OpToken {
 impl OpToken {
     /// Environment for git so it routes prompts through `askpass` to this operation.
     pub fn env(&self, askpass: &Path) -> Vec<(OsString, OsString)> {
-        vec![
+        let mut env: Vec<(OsString, OsString)> = vec![
             ("GIT_ASKPASS".into(), askpass.as_os_str().to_owned()),
+            // OpenSSH passphrase and host-key prompts (spec §6.3). `force` makes ssh use
+            // askpass even when Tenajlo was started from a terminal.
+            ("SSH_ASKPASS".into(), askpass.as_os_str().to_owned()),
+            ("SSH_ASKPASS_REQUIRE".into(), "force".into()),
             (ENV_PORT.into(), self.inner.port.to_string().into()),
             (ENV_TOKEN.into(), self.token.clone().into()),
-        ]
+        ];
+        // OpenSSH before 8.4 ignores SSH_ASKPASS_REQUIRE and only uses askpass with DISPLAY set.
+        if std::env::var_os("DISPLAY").is_none() {
+            env.push(("DISPLAY".into(), ".".into()));
+        }
+        env
     }
 }
 
@@ -246,7 +258,7 @@ fn credential(inner: &Inner, req: &Request) -> Fields {
 }
 
 async fn answer(inner: &Inner, req: Request) -> Option<String> {
-    let kind = parse_prompt(req.prompt.as_deref().unwrap_or_default());
+    let mut kind = parse_prompt(req.prompt.as_deref().unwrap_or_default());
     let (pending, cancel) = {
         let mut ops = inner.lock();
         let Some(entry) = ops.get_mut(&req.token) else {
@@ -255,6 +267,12 @@ async fn answer(inner: &Inner, req: Request) -> Option<String> {
         };
         if let (PromptKind::Password { .. }, Some(pw)) = (&kind, entry.cached_password.take()) {
             return Some(pw);
+        }
+        if let PromptKind::Passphrase { key, retry } = &mut kind {
+            *retry = entry.passphrase_keys.contains(key);
+            if !*retry {
+                entry.passphrase_keys.push(key.clone());
+            }
         }
         let pending = PendingPrompt {
             repo_id: entry.repo_id.clone(),
@@ -280,7 +298,11 @@ async fn answer(inner: &Inner, req: Request) -> Option<String> {
             }
             Some(answer.username.unwrap_or_default())
         }
-        PromptKind::Password { .. } | PromptKind::Other { .. } => Some(answer.secret),
+        // Accepting is decided here, not by the UI's text: OpenSSH expects exactly "yes".
+        PromptKind::HostKey { .. } => Some("yes".to_owned()),
+        PromptKind::Password { .. } | PromptKind::Passphrase { .. } | PromptKind::Other { .. } => {
+            Some(answer.secret)
+        }
     }
 }
 
@@ -367,6 +389,54 @@ mod tests {
         // The cached password is used once; a second password prompt asks again.
         ask(&t, &tok, "Password for 'https://evan@h': ").await;
         assert_eq!(count.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn ssh_prompts_host_key_yes_and_passphrase_retry() {
+        let (prompt, _, seen) = user(Some(AuthAnswer {
+            username: None,
+            secret: "pass phrase".into(),
+        }));
+        let t = Trampoline::start(prompt).await.unwrap();
+        let op = t
+            .register("repo", "op1", CancellationToken::new(), None)
+            .unwrap();
+        let tok = token_of(&op);
+        let host_key = "The authenticity of host 'h (1.2.3.4)' can't be established.\nED25519 key fingerprint is SHA256:abc.\nAre you sure you want to continue connecting (yes/no/[fingerprint])? ";
+        assert_eq!(ask(&t, &tok, host_key).await.as_deref(), Some("yes"));
+        let pp = "Enter passphrase for key '/k': ";
+        assert_eq!(ask(&t, &tok, pp).await.as_deref(), Some("pass phrase"));
+        ask(&t, &tok, pp).await;
+        let seen = seen.lock().unwrap();
+        assert_eq!(
+            seen[1],
+            PromptKind::Passphrase {
+                key: "/k".into(),
+                retry: false
+            }
+        );
+        assert_eq!(
+            seen[2],
+            PromptKind::Passphrase {
+                key: "/k".into(),
+                retry: true
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn env_routes_git_and_ssh_prompts() {
+        let (prompt, _, _) = user(None);
+        let t = Trampoline::start(prompt).await.unwrap();
+        let op = t
+            .register("repo", "op1", CancellationToken::new(), None)
+            .unwrap();
+        let env = op.env(Path::new("/opt/tenajlo-askpass"));
+        let get = |k: &str| env.iter().find(|(key, _)| key == k).map(|(_, v)| v.clone());
+        assert_eq!(get("GIT_ASKPASS"), Some("/opt/tenajlo-askpass".into()));
+        assert_eq!(get("SSH_ASKPASS"), Some("/opt/tenajlo-askpass".into()));
+        assert_eq!(get("SSH_ASKPASS_REQUIRE"), Some("force".into()));
+        assert_eq!(get(ENV_TOKEN), Some(token_of(&op).into()));
     }
 
     #[tokio::test]

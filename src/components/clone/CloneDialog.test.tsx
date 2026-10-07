@@ -23,6 +23,7 @@ const repo = (owner: string, name: string): RemoteRepository => ({
   private: true,
   archived: false,
   cloneUrl: `https://tmc-git01.tmus.local/${owner}/${name}.git`,
+  sshUrl: `ssh://git@tmc-git01.tmus.local:2222/${owner}/${name}.git`,
 });
 
 let accounts: Account[] = [];
@@ -87,6 +88,27 @@ describe("CloneDialog", () => {
     );
     await waitFor(() => expect(useUiStore.getState().dialog).toBeNull());
     expect(repoLoad).toHaveBeenCalled();
+  });
+
+  it("clones over SSH when chosen", async () => {
+    cloneApi.listForgejoRepositories.mockResolvedValue({
+      status: "ok",
+      data: [repo("TMC", "plc")],
+    });
+    cloneApi.cloneRepository.mockResolvedValue({ status: "ok", data: {} });
+    render(<CloneDialog />);
+    fireEvent.click(await screen.findByRole("button", { name: /plc/ }));
+    fireEvent.click(screen.getByLabelText("SSH (your SSH key)"));
+    const folder = screen.getByLabelText("Local folder") as HTMLInputElement;
+    await waitFor(() => expect(folder.value).toBe("/Users/evan/Documents/Tenajlo/plc"));
+    fireEvent.click(screen.getByRole("button", { name: "Clone" }));
+    await waitFor(() =>
+      expect(cloneApi.cloneRepository).toHaveBeenCalledWith(
+        expect.any(String),
+        "ssh://git@tmc-git01.tmus.local:2222/TMC/plc.git",
+        "/Users/evan/Documents/Tenajlo/plc",
+      ),
+    );
   });
 
   it("clones a typed URL into a chosen folder and shows errors inline", async () => {

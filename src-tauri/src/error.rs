@@ -225,7 +225,7 @@ impl From<CloneError> for AppError {
 
 fn clone_message(err: &CloneError) -> String {
     match err {
-        CloneError::InvalidUrl(_) => "Tenajlo can only clone https:// addresses for now (SSH comes in a later version). The address must not include a password.".to_owned(),
+        CloneError::InvalidUrl(_) => "Enter an https:// or SSH address, like https://server/team/project.git or git@server:team/project.git. The address must not include a password.".to_owned(),
         CloneError::DestinationExists(path) => format!(
             "A folder already exists at {}. Choose another name or location.",
             path.display()
@@ -267,8 +267,15 @@ impl From<AccountError> for AppError {
 fn git_message(kind: GitErrorKind) -> &'static str {
     match kind {
         GitErrorKind::AuthFailed => "The server didn't accept your sign-in. Check your account or token.",
-        GitErrorKind::HostKeyUnknown => "The server's identity couldn't be confirmed.",
-        GitErrorKind::SshKeyRejected => "The server didn't accept your SSH key.",
+        GitErrorKind::HostKeyUnknown => {
+            "The server's identity wasn't confirmed, so Tenajlo didn't connect. Try again and check the fingerprint with your IT team."
+        }
+        GitErrorKind::HostKeyChanged => {
+            "The server's identity has changed since you last connected. This can mean someone is intercepting the connection. Don't continue: contact your IT team."
+        }
+        GitErrorKind::SshKeyRejected => {
+            "The server didn't accept your SSH key. Add your public key (for example id_ed25519.pub in your .ssh folder) to your Forgejo account under Settings → SSH / GPG Keys, or clone with HTTPS instead."
+        }
         GitErrorKind::PushRejected => "The server has changes you don't have yet. Pull first, then push.",
         GitErrorKind::PullDiverged => "Your branch and the server's branch have both changed.",
         GitErrorKind::LocalChangesBlock => "You have changes that would be overwritten.",

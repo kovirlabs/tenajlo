@@ -3,13 +3,12 @@
 //! and `tenajlo-askpass`, and diagnosis of rejected tokens. See `dev/forgejo.yml`.
 #![cfg(feature = "integration")]
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use tenajlo_lib::auth::accounts::AccountManager;
 use tenajlo_lib::auth::remote_auth::{self, AuthDiagnosis, RemoteAuth};
-use tenajlo_lib::auth::secrets::{Secret, SecretError, SecretStore};
+use tenajlo_lib::auth::secrets::Secret;
 use tenajlo_lib::auth::trampoline::{PromptFn, Trampoline};
 use tenajlo_lib::forgejo::address::normalize_base_url;
 use tenajlo_lib::forgejo::{repos, ForgejoClient};
@@ -20,72 +19,8 @@ use tenajlo_lib::git::exec::{Access, GitBinary, GitCommand};
 use tenajlo_lib::git::remote::{self, RemoteRun};
 use tokio_util::sync::CancellationToken;
 
-const BASE: &str = "http://localhost:3000";
-const USER: &str = "tenajlo";
-const PASSWORD: &str = "tenajlo-dev-password";
-
-#[derive(Default)]
-struct Keychain(Mutex<HashMap<String, Secret>>);
-
-impl SecretStore for Keychain {
-    fn get(&self, key: &str) -> Result<Option<Secret>, SecretError> {
-        Ok(self.0.lock().unwrap().get(key).cloned())
-    }
-    fn set(&self, key: &str, secret: &Secret) -> Result<(), SecretError> {
-        self.0.lock().unwrap().insert(key.into(), secret.clone());
-        Ok(())
-    }
-    fn delete(&self, key: &str) -> Result<(), SecretError> {
-        self.0.lock().unwrap().remove(key);
-        Ok(())
-    }
-}
-
-/// Admin-side setup with basic auth (not what the app does).
-async fn api(method: reqwest::Method, path: &str, body: serde_json::Value) -> serde_json::Value {
-    let res = reqwest::Client::new()
-        .request(method, format!("{BASE}/api/v1/{path}"))
-        .basic_auth(USER, Some(PASSWORD))
-        .json(&body)
-        .send()
-        .await
-        .unwrap();
-    let status = res.status();
-    let json = res.json().await.unwrap_or(serde_json::Value::Null);
-    assert!(
-        status.is_success() || status.as_u16() == 422 || status.as_u16() == 409,
-        "{path}: {status} {json}"
-    );
-    json
-}
-
-async fn token(scopes: &[&str]) -> Secret {
-    let name = format!("it-{}", uuid::Uuid::new_v4());
-    let created = api(
-        reqwest::Method::POST,
-        &format!("users/{USER}/tokens"),
-        serde_json::json!({ "name": name, "scopes": scopes }),
-    )
-    .await;
-    Secret::new(created["sha1"].as_str().unwrap().to_owned())
-}
-
-/// Builds `tenajlo-askpass` (it's a separate binary crate) and returns its path.
-fn askpass() -> PathBuf {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-    let status = std::process::Command::new(env!("CARGO"))
-        .args(["build", "-q", "-p", "tenajlo-askpass"])
-        .current_dir(&root)
-        .status()
-        .unwrap();
-    assert!(status.success());
-    let exe = if cfg!(windows) {
-        "tenajlo-askpass.exe"
-    } else {
-        "tenajlo-askpass"
-    };
-    root.join("target/debug").join(exe)
-}
+mod common;
+use common::*;
 
 struct Env {
     _dir: tempfile::TempDir,
@@ -173,30 +108,6 @@ impl Env {
                 .unwrap();
         }
     }
-}
-
-async fn private_repos() -> (String, String) {
-    let name = format!("it-{}", &uuid::Uuid::new_v4().to_string()[..8]);
-    let org = format!("org-{name}");
-    api(
-        reqwest::Method::POST,
-        "user/repos",
-        serde_json::json!({ "name": name, "private": true, "auto_init": true }),
-    )
-    .await;
-    api(
-        reqwest::Method::POST,
-        "orgs",
-        serde_json::json!({ "username": org }),
-    )
-    .await;
-    api(
-        reqwest::Method::POST,
-        &format!("orgs/{org}/repos"),
-        serde_json::json!({ "name": name, "private": true, "auto_init": true }),
-    )
-    .await;
-    (format!("{USER}/{name}"), format!("{org}/{name}"))
 }
 
 const FULL: [&str; 3] = ["read:user", "read:repository", "write:repository"];

@@ -28,22 +28,32 @@ pub enum CloneError {
     Git(#[from] GitError),
 }
 
-/// Accepts `https://` URLs (and `http://` for loopback test servers). SSH arrives in M5.
-/// Rejects embedded passwords: git would save them in `.git/config`.
+/// Accepts `https://` URLs (and `http://` for loopback test servers), `ssh://` URLs and
+/// scp-style `user@host:path`. Rejects embedded passwords (git would save them in
+/// `.git/config`) and anything that could be read as an option by git or ssh.
 pub fn validate_url(url: &str) -> Result<(), CloneError> {
     let url = url.trim();
     if url.starts_with('-') {
         return Err(CloneError::InvalidUrl("starts with -"));
     }
+    if let Some((user_host, path)) = scp_like(url) {
+        let host = user_host.rsplit_once('@').map_or(user_host, |(_, h)| h);
+        if host.is_empty() || host.starts_with('-') || user_host.starts_with('-') || path.is_empty()
+        {
+            return Err(CloneError::InvalidUrl("bad ssh address"));
+        }
+        return Ok(());
+    }
     let parsed = Url::parse(url).map_err(|_| CloneError::InvalidUrl("not a URL"))?;
     match parsed.scheme() {
-        "https" => {}
+        "https" | "ssh" => {}
         "http" if is_loopback(&parsed) => {}
         "http" => return Err(CloneError::InvalidUrl("plain http")),
-        _ => return Err(CloneError::InvalidUrl("not https")),
+        _ => return Err(CloneError::InvalidUrl("unsupported scheme")),
     }
-    if parsed.host_str().is_none_or(str::is_empty) {
-        return Err(CloneError::InvalidUrl("no host"));
+    let host = parsed.host_str().unwrap_or_default();
+    if host.is_empty() || host.starts_with('-') || parsed.username().starts_with('-') {
+        return Err(CloneError::InvalidUrl("bad host"));
     }
     if parsed.password().is_some() {
         return Err(CloneError::InvalidUrl("contains a password"));
@@ -51,11 +61,26 @@ pub fn validate_url(url: &str) -> Result<(), CloneError> {
     Ok(())
 }
 
+/// Splits scp-style `[user@]host:path` (git's rule: a `:` before any `/`, and not a URL).
+fn scp_like(url: &str) -> Option<(&str, &str)> {
+    if url.contains("://") {
+        return None;
+    }
+    let (left, path) = url.split_once(':')?;
+    // `C:\repo` is a Windows path, not a host.
+    let windows_drive = left.len() == 1 && left.chars().all(|c| c.is_ascii_alphabetic());
+    (!left.contains('/') && !windows_drive).then_some((left, path))
+}
+
 /// Folder name for a clone of `url`: its last path segment without `.git`.
 /// `None` if that isn't a usable folder name on every platform.
 pub fn folder_name(url: &str) -> Option<String> {
-    let parsed = Url::parse(url.trim()).ok()?;
-    let last = parsed.path_segments()?.rev().find(|s| !s.is_empty())?;
+    let url = url.trim();
+    let path = match scp_like(url) {
+        Some((_, path)) => path.to_owned(),
+        None => Url::parse(url).ok()?.path().to_owned(),
+    };
+    let last = path.rsplit('/').find(|s| !s.is_empty())?;
     let name = last.strip_suffix(".git").unwrap_or(last);
     let invalid = |c: char| c.is_control() || r#"<>:"/\|?*%"#.contains(c);
     let usable = !name.is_empty()
@@ -119,13 +144,20 @@ mod tests {
         assert!(validate_url("https://tmc-git01.tmus.local/team/plc.git").is_ok());
         assert!(validate_url(" https://evan@h/x.git ").is_ok());
         assert!(validate_url("http://localhost:3000/x.git").is_ok());
+        assert!(validate_url("ssh://git@tmc-git01.tmus.local:2222/team/plc.git").is_ok());
+        assert!(validate_url("git@tmc-git01.tmus.local:team/plc.git").is_ok());
         for bad in [
             "http://h/x.git",
             "https://evan:pat@h/x.git",
-            "git@h:team/x.git",
-            "ssh://git@h/x.git",
             "file:///tmp/x",
             "--upload-pack=evil",
+            "ssh://-oProxyCommand=evil/x",
+            "ssh://-u@h/x",
+            "-oProxyCommand=evil:x",
+            "git@-oProxyCommand=evil:x",
+            "git@h:",
+            "C:\\repos\\x",
+            "/tmp/x",
             "https://",
             "",
         ] {
@@ -151,6 +183,12 @@ mod tests {
         assert_eq!(folder_name("https://h/"), None);
         assert_eq!(folder_name("https://h/team/..").as_deref(), None);
         assert_eq!(folder_name("https://h/team/.git"), None);
+        assert_eq!(folder_name("git@h:team/plc.git").as_deref(), Some("plc"));
+        assert_eq!(folder_name("git@h:plc.git").as_deref(), Some("plc"));
+        assert_eq!(
+            folder_name("ssh://git@h:2222/team/plc.git").as_deref(),
+            Some("plc")
+        );
     }
 
     /// A bare origin with one commit, cloned through `file://` so git reports progress.

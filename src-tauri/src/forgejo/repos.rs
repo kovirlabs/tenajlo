@@ -29,6 +29,9 @@ pub struct RemoteRepository {
     pub archived: bool,
     /// HTTPS clone URL.
     pub clone_url: String,
+    /// SSH clone URL, with the server's SSH port (e.g. `ssh://git@host:2222/team/x.git`).
+    /// Empty if the server has SSH disabled.
+    pub ssh_url: String,
 }
 
 #[derive(Deserialize)]
@@ -43,6 +46,8 @@ struct ApiRepo {
     #[serde(default)]
     archived: bool,
     clone_url: String,
+    #[serde(default)]
+    ssh_url: String,
 }
 
 #[derive(Deserialize)]
@@ -68,6 +73,7 @@ pub async fn list_repositories(
             private: r.private,
             archived: r.archived,
             clone_url: r.clone_url,
+            ssh_url: r.ssh_url,
         })
         .collect();
     out.sort_by_key(|r| r.full_name.to_lowercase());
@@ -108,7 +114,7 @@ mod tests {
 
     fn repo(owner: &str, name: &str) -> String {
         format!(
-            r#"{{"full_name":"{owner}/{name}","name":"{name}","owner":{{"login":"{owner}"}},"description":"d","private":true,"clone_url":"https://h/{owner}/{name}.git"}}"#
+            r#"{{"full_name":"{owner}/{name}","name":"{name}","owner":{{"login":"{owner}"}},"description":"d","private":true,"clone_url":"https://h/{owner}/{name}.git","ssh_url":"ssh://git@h:2222/{owner}/{name}.git"}}"#
         )
     }
 
@@ -140,6 +146,7 @@ mod tests {
         assert_eq!(repos[0].full_name, "evan/r00");
         assert_eq!(repos[50].full_name, "TMC Controls/plc");
         assert!(repos.iter().all(|r| r.private));
+        assert_eq!(repos[0].ssh_url, "ssh://git@h:2222/evan/r00.git");
         assert_eq!(seen.lock().unwrap().len(), 2);
     }
 

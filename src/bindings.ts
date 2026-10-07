@@ -264,7 +264,9 @@ export type FileDiff = { type: "Text"; hunks: DiffHunk[] } | { type: "Binary" } 
 export type FileStatusKind = "Untracked" | "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "Conflicted";
 
 /**  Typed classification of a failed git invocation. */
-export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | "SshKeyRejected" | "PushRejected" | "PullDiverged" | "LocalChangesBlock" | "TlsUntrusted" | "HostUnreachable" | "MergeConflict" | "NotARepository" | 
+export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | 
+/**  The server's SSH host key differs from `known_hosts`: possibly an attack. */
+"HostKeyChanged" | "SshKeyRejected" | "PushRejected" | "PullDiverged" | "LocalChangesBlock" | "TlsUntrusted" | "HostUnreachable" | "MergeConflict" | "NotARepository" | 
 /**  Folder owned by another user; git's `safe.directory` check refused it. */
 "DubiousOwnership" | 
 /**  `user.name` / `user.email` not configured. */
@@ -326,6 +328,13 @@ export type PromptKind =
 { type: "Credentials"; host: string } | 
 /**  Password only; the username is already known (e.g. `https://evan@host/…`). */
 { type: "Password"; host: string; username: string } | 
+/**  OpenSSH wants the passphrase for a private key. `retry` = an earlier answer was wrong. */
+{ type: "Passphrase"; key: string; retry: boolean } | 
+/**
+ *  OpenSSH hasn't seen this server's host key. Accepting lets OpenSSH record it in
+ *  `known_hosts` itself; Tenajlo never edits that file (CLAUDE.md rule 4).
+ */
+{ type: "HostKey"; host: string; key_type: string; fingerprint: string } | 
 /**  Anything else git asks; shown verbatim. */
 { type: "Other"; prompt: string };
 
@@ -340,6 +349,11 @@ export type RemoteRepository = {
 	archived: boolean,
 	/**  HTTPS clone URL. */
 	cloneUrl: string,
+	/**
+	 *  SSH clone URL, with the server's SSH port (e.g. `ssh://git@host:2222/team/x.git`).
+	 *  Empty if the server has SSH disabled.
+	 */
+	sshUrl: string,
 };
 
 /**  Emitted (debounced) when files or git state in a watched repository change. */

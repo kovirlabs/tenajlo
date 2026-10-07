@@ -55,4 +55,28 @@ describe("AuthPromptDialog", () => {
     await show(prompt({ type: "Credentials", host: "h" }, "old-op"));
     expect(screen.queryByText(/Sign in to/)).toBeNull();
   });
+
+  it("asks for an SSH key passphrase and says when it was wrong", async () => {
+    await show(prompt({ type: "Passphrase", key: "/home/evan/.ssh/id_ed25519", retry: true }));
+    expect(screen.getByText("Unlock your SSH key")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("didn't work");
+    fireEvent.change(screen.getByLabelText("Passphrase"), { target: { value: "pp" } });
+    fireEvent.click(screen.getByRole("button", { name: "Unlock" }));
+    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", { username: null, secret: "pp" });
+  });
+
+  it("shows the host key fingerprint and only trusts on request", async () => {
+    await show(
+      prompt({
+        type: "HostKey",
+        host: "[tmc-git01.tmus.local]:2222",
+        key_type: "ED25519",
+        fingerprint: "SHA256:abc",
+      }),
+    );
+    expect(screen.getByText("Connect to [tmc-git01.tmus.local]:2222?")).toBeTruthy();
+    expect(screen.getByText("SHA256:abc")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Trust and connect" }));
+    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", { username: null, secret: "" });
+  });
 });

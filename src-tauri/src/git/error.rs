@@ -11,6 +11,8 @@ use super::parse::version::GitVersion;
 pub enum GitErrorKind {
     AuthFailed,
     HostKeyUnknown,
+    /// The server's SSH host key differs from `known_hosts`: possibly an attack.
+    HostKeyChanged,
     SshKeyRejected,
     PushRejected,
     PullDiverged,
@@ -49,6 +51,11 @@ const PATTERNS: &[(&str, GitErrorKind)] = &[
     (
         "does not appear to be a git repository",
         GitErrorKind::RepositoryNotFound,
+    ),
+    // OpenSSH prints this banner before "Host key verification failed", so it goes first.
+    (
+        "REMOTE HOST IDENTIFICATION HAS CHANGED",
+        GitErrorKind::HostKeyChanged,
     ),
     ("Host key verification failed", GitErrorKind::HostKeyUnknown),
     ("Permission denied (publickey", GitErrorKind::SshKeyRejected),
@@ -140,6 +147,10 @@ mod tests {
                 GitErrorKind::HostKeyUnknown,
             ),
             ("git@h: Permission denied (publickey).", GitErrorKind::SshKeyRejected),
+            (
+                "@@@@@\n@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @\n@@@@@\nHost key verification failed.",
+                GitErrorKind::HostKeyChanged,
+            ),
             (
                 "remote: Repository not found.\nfatal: repository 'https://h/team/x.git/' not found",
                 GitErrorKind::RepositoryNotFound,

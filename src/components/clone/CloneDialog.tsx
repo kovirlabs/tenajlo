@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { AppError } from "../../bindings";
+import type { AppError, RemoteRepository } from "../../bindings";
 import { chooseCloneFolder, suggestClonePath } from "../../api/clone";
 import { onProgress } from "../../api/sync";
 import { useAccountStore } from "../../stores/accountStore";
@@ -11,6 +11,7 @@ import { Modal } from "../Modal";
 import { ForgejoRepoList } from "./ForgejoRepoList";
 
 type Tab = "forgejo" | "url";
+type Protocol = "https" | "ssh";
 
 /** Clone dialog (spec §8.1): pick a Forgejo repository or paste a URL, then a local folder. */
 export function CloneDialog() {
@@ -34,11 +35,13 @@ function CloneBody({ onClose }: { onClose: () => void }) {
   const loadAccounts = useAccountStore((s) => s.load);
   const running = useCloneStore((s) => s.running);
   const [tab, setTab] = useState<Tab>("forgejo");
-  const [pickedUrl, setPickedUrl] = useState("");
+  const [picked, setPicked] = useState<RemoteRepository | null>(null);
+  const [protocol, setProtocol] = useState<Protocol>("https");
   const [typedUrl, setTypedUrl] = useState("");
   const [path, setPath] = useState("");
   const [pathChosen, setPathChosen] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
+  const pickedUrl = picked ? (protocol === "ssh" ? picked.sshUrl : picked.cloneUrl) : "";
   const url = (tab === "forgejo" ? pickedUrl : typedUrl).trim();
 
   useEffect(() => {
@@ -120,14 +123,42 @@ function CloneBody({ onClose }: { onClose: () => void }) {
       </div>
 
       {tab === "forgejo" ? (
-        <ForgejoRepoList accounts={accounts} selectedUrl={pickedUrl} onSelect={setPickedUrl} />
+        <>
+          <ForgejoRepoList
+            accounts={accounts}
+            selected={picked?.fullName ?? null}
+            onSelect={setPicked}
+          />
+          <fieldset className="clone-protocol" disabled={running !== null}>
+            <legend>Connect with</legend>
+            <label>
+              <input
+                type="radio"
+                name="protocol"
+                checked={protocol === "https"}
+                onChange={() => setProtocol("https")}
+              />
+              HTTPS (your Forgejo account)
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="protocol"
+                checked={protocol === "ssh"}
+                disabled={picked !== null && picked.sshUrl === ""}
+                onChange={() => setProtocol("ssh")}
+              />
+              SSH (your SSH key)
+            </label>
+          </fieldset>
+        </>
       ) : (
         <label>
           Repository address
           <input
             value={typedUrl}
             onChange={(e) => setTypedUrl(e.target.value)}
-            placeholder="https://TMC-GIT01.tmus.local/team/project.git"
+            placeholder="https://… or git@TMC-GIT01.tmus.local:team/project.git"
             spellCheck={false}
             autoFocus
           />

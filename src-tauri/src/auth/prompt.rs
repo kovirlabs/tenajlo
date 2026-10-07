@@ -1,4 +1,4 @@
-//! What git is asking for, parsed from askpass prompts, and the user's answer.
+//! What git or OpenSSH is asking for, parsed from askpass prompts, and the user's answer.
 
 use std::fmt;
 
@@ -12,6 +12,15 @@ pub enum PromptKind {
     Credentials { host: String },
     /// Password only; the username is already known (e.g. `https://evan@host/…`).
     Password { host: String, username: String },
+    /// OpenSSH wants the passphrase for a private key. `retry` = an earlier answer was wrong.
+    Passphrase { key: String, retry: bool },
+    /// OpenSSH hasn't seen this server's host key. Accepting lets OpenSSH record it in
+    /// `known_hosts` itself; Tenajlo never edits that file (CLAUDE.md rule 4).
+    HostKey {
+        host: String,
+        key_type: String,
+        fingerprint: String,
+    },
     /// Anything else git asks; shown verbatim.
     Other { prompt: String },
 }
@@ -35,6 +44,9 @@ impl fmt::Debug for AuthAnswer {
 /// Parses git's askpass prompt. Exec forces `LC_ALL=C`, so the wording is stable:
 /// `Username for 'https://host': ` and `Password for 'https://user@host': `.
 pub fn parse_prompt(prompt: &str) -> PromptKind {
+    if let Some(kind) = parse_ssh_prompt(prompt) {
+        return kind;
+    }
     let quoted = |prefix: &str| {
         prompt
             .strip_prefix(prefix)
@@ -57,6 +69,39 @@ pub fn parse_prompt(prompt: &str) -> PromptKind {
     PromptKind::Other {
         prompt: prompt.trim().to_owned(),
     }
+}
+
+/// OpenSSH's askpass prompts (stable English text; OpenSSH isn't localized):
+/// `Enter passphrase for key '<path>': ` and the multi-line unknown-host confirmation.
+fn parse_ssh_prompt(prompt: &str) -> Option<PromptKind> {
+    if let Some(rest) = prompt.strip_prefix("Enter passphrase for key '") {
+        let key = rest
+            .trim_end()
+            .strip_suffix("':")
+            .unwrap_or(rest.trim_end());
+        return Some(PromptKind::Passphrase {
+            key: key.to_owned(),
+            retry: false,
+        });
+    }
+    let rest = prompt.split_once("The authenticity of host '")?.1;
+    let host = rest.split_once('\'')?.0;
+    // OpenSSH ≥ 10: "ED25519 key fingerprint is: SHA256:…"; older: "… is SHA256:….".
+    let (key_type, fingerprint) = prompt.lines().find_map(|line| {
+        let (key_type, fp) = line.trim().split_once(" key fingerprint is")?;
+        let fp = fp.trim_start_matches(':').trim().trim_end_matches('.');
+        Some((key_type.to_owned(), fp.to_owned()))
+    })?;
+    if !prompt.contains("continue connecting") {
+        return None;
+    }
+    // "[localhost]:2222 ([127.0.0.1]:2222)" → "[localhost]:2222"
+    let host = host.split(" (").next().unwrap_or(host);
+    Some(PromptKind::HostKey {
+        host: host.to_owned(),
+        key_type,
+        fingerprint,
+    })
 }
 
 fn strip_scheme(url: &str) -> &str {
@@ -103,11 +148,47 @@ mod tests {
             }
         );
         assert_eq!(
-            parse_prompt("Enter passphrase for key '/home/e/.ssh/id_ed25519': "),
+            parse_prompt("git@h's password: "),
             PromptKind::Other {
-                prompt: "Enter passphrase for key '/home/e/.ssh/id_ed25519':".into()
+                prompt: "git@h's password:".into()
             }
         );
+    }
+
+    #[test]
+    fn parses_openssh_prompts() {
+        // Captured from OpenSSH 10.3 against Forgejo on port 2222.
+        let host_key = "The authenticity of host '[localhost]:2222 ([127.0.0.1]:2222)' can't be established.\nED25519 key fingerprint is: SHA256:O1QkjOlwIL6Lug/2cvCCxPHIfu9OX+W02xC/x3YTBxI\nThis key is not known by any other names.\nAre you sure you want to continue connecting (yes/no/[fingerprint])? ";
+        assert_eq!(
+            parse_prompt(host_key),
+            PromptKind::HostKey {
+                host: "[localhost]:2222".into(),
+                key_type: "ED25519".into(),
+                fingerprint: "SHA256:O1QkjOlwIL6Lug/2cvCCxPHIfu9OX+W02xC/x3YTBxI".into(),
+            }
+        );
+        // Older OpenSSH (e.g. Windows' 8.x/9.x builds).
+        let old = "The authenticity of host 'tmc-git01.tmus.local (10.1.2.3)' can't be established.\r\nECDSA key fingerprint is SHA256:abc+/def.\r\nAre you sure you want to continue connecting (yes/no/[fingerprint])? ";
+        assert_eq!(
+            parse_prompt(old),
+            PromptKind::HostKey {
+                host: "tmc-git01.tmus.local".into(),
+                key_type: "ECDSA".into(),
+                fingerprint: "SHA256:abc+/def".into(),
+            }
+        );
+        assert_eq!(
+            parse_prompt("Enter passphrase for key 'C:\\Users\\Evan G\\.ssh\\id_ed25519': "),
+            PromptKind::Passphrase {
+                key: "C:\\Users\\Evan G\\.ssh\\id_ed25519".into(),
+                retry: false
+            }
+        );
+        // Without a fingerprint line it's not something we can show safely.
+        assert!(matches!(
+            parse_prompt("The authenticity of host 'h' can't be established.\nAre you sure you want to continue connecting (yes/no)? "),
+            PromptKind::Other { .. }
+        ));
     }
 
     #[test]
