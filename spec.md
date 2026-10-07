@@ -328,7 +328,7 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 | End-to-end (v1.1) | Tauri WebDriver smoke test: sign in, clone, commit, push |
 | Manual matrix | Windows domain machine with internal CA, Ubuntu, SSH with passphrase key, PAT with HTTPS |
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace` on Windows, Linux and macOS, `pnpm lint`, `pnpm typecheck` and `pnpm test`, and the Forgejo integration suite in Docker, on every push. Version tags build the Windows installer into a draft GitHub Release (`release.yml`).
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace` on Windows, Linux and macOS, `pnpm lint`, `pnpm typecheck` and `pnpm test`, and the Forgejo integration suite in Docker, on every push. Version tags build the Windows installer, a Linux `.deb` and a macOS (Apple Silicon) `.dmg` into a draft GitHub Release (`release.yml`).
 
 ---
 
@@ -353,5 +353,5 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 1. ~~**LFS:**~~ **Answered:** yes, target users' repositories hold large binaries (CAD, PLC archives). Full LFS support is part of M6.
 2. ~~**SSH port:**~~ **Answered:** self-hosted Forgejo often serves SSH on an alternate port such as **2222** (the dev server does). The clone dialog uses the `ssh_url` Forgejo reports (`ssh://git@host:2222/…`), so no `sshHost` override is needed unless that URL is misconfigured.
 3. **Internal CA:** When a server's certificate comes from a company CA deployed through Group Policy, schannel trusts it on Windows. On Linux and macOS the CA has to be installed in the OS trust store manually.
-4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs, Apache-2.0: NSIS installer built by GitHub Actions (unsigned until a certificate is chosen), public docs, no organization-specific defaults in the UI.
+4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs, Apache-2.0: NSIS installer built by GitHub Actions (unsigned until a certificate is chosen), public docs, no organization-specific defaults in the UI. From v1.0.1, releases also include a Linux `.deb` (needs system git 2.40+) and an ad-hoc-signed, un-notarized macOS `.dmg` for Apple Silicon; notarization needs an Apple Developer account, which hasn't been decided.
 5. ~~**Pull default:**~~ **Answered:** ff-only by default. On divergence, offer "Merge the server's changes" (a merge commit); conflicts go to the conflict banner. Rebase is a Settings option without guided conflict UI.

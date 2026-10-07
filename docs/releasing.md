@@ -27,10 +27,15 @@ git push origin main v1.2.3
 
 The release workflow checks the tag matches `tauri.conf.json`, builds `tenajlo-askpass`,
 downloads the pinned MinGit and git-lfs (`scripts/fetch-mingit.mjs` verifies their SHA-256),
-generates `THIRD_PARTY_LICENSES.html`, and builds the NSIS installer. It then creates a draft
-release with the installer and the license list attached.
+generates `THIRD_PARTY_LICENSES.html`, and builds the NSIS installer. Linux (`ubuntu-22.04`, so
+the `.deb` runs on older glibc too) and macOS (Apple Silicon) build a `.deb` and a `.dmg` in
+parallel; they use the system's git, so they skip the MinGit download. Each platform's build
+settings are in `src-tauri/tauri.<platform>.conf.json`. A first job creates the draft release
+and the three builds upload into it, along with the license list.
 
-## 3. Check on Windows before publishing
+## 3. Check before publishing
+
+### Windows
 
 Install the draft's installer on a clean Windows 10 or 11 machine (no Git installed) and run
 through the manual matrix from spec §11:
@@ -47,6 +52,21 @@ through the manual matrix from spec §11:
       than 260 characters clones.
 - [ ] Uninstall removes the app; reinstalling keeps accounts and settings.
 
+### Linux (Ubuntu 24.04 or Debian 13)
+
+- [ ] `sudo apt install ./Tenajlo_<version>_amd64.deb` installs it, pulling in git and
+      git-lfs; Tenajlo appears in the app menu.
+- [ ] Sign in (the token is saved in the desktop keyring); clone, commit, push, pull over HTTPS
+      and SSH; an LFS repository clones with real content.
+- [ ] `sudo apt remove tenajlo` removes it.
+
+### macOS (Apple Silicon)
+
+- [ ] The `.dmg` opens and Tenajlo drags to Applications. The first launch is blocked as
+      unverified; System Settings → Privacy & Security → **Open Anyway** starts it.
+- [ ] Sign in (the token is saved in the Keychain); clone, commit, push, pull over HTTPS and
+      SSH; the SSH passphrase prompt appears in Tenajlo.
+
 Then publish the draft release.
 
 ## Updating bundled Git or Git LFS
@@ -62,3 +82,9 @@ Builds are unsigned for now. When a certificate is chosen, set
 `bundle.windows.signCommand` in `src-tauri/tauri.windows.conf.json` (or
 `certificateThumbprint` for a local certificate) and pass its secrets to the release job.
 See Tauri's Windows code-signing guide.
+
+The macOS app is signed ad hoc (`"signingIdentity": "-"` in `src-tauri/tauri.macos.conf.json`),
+which Apple Silicon needs to run it at all, but it isn't notarized, so Gatekeeper asks users to
+allow it once. Notarizing needs an Apple Developer ID certificate: set `signingIdentity` to it
+and pass `APPLE_CERTIFICATE`, `APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID` to the macOS
+build. See Tauri's macOS code-signing guide.

@@ -1,5 +1,6 @@
-# Builds the Windows installer for a version tag (e.g. v1.0.0) and attaches it to a draft
-# GitHub Release for review. See docs/releasing.md. Builds are unsigned for now.
+# Builds the installers for a version tag (e.g. v1.0.0) and attaches them to a draft GitHub
+# Release for review: Windows NSIS, Linux .deb and macOS (Apple Silicon) .dmg. See
+# docs/releasing.md. Builds are unsigned for now.
 name: Release
 
 on:
@@ -10,10 +11,54 @@ permissions:
   contents: write
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  # One job creates the draft so the build jobs don't race to create it (drafts can't be
+  # looked up by tag, so each would make its own).
+  create-release:
+    runs-on: ubuntu-24.04
+    outputs:
+      release-id: ${{ steps.create.outputs.id }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check the tag matches the app version
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match tauri.conf.json version $version" >&2
+            exit 1
+          fi
+      - name: Create the draft release
+        id: create
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "Tenajlo $GITHUB_REF_NAME" \
+            --notes "See docs/user-guide.md for what's new and how to install."
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases" \
+            --jq "[.[] | select(.tag_name == \"$GITHUB_REF_NAME\" and .draft)][0].id")
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            bundles: nsis
+          # 22.04's older glibc lets the .deb run on Debian 12+ as well as Ubuntu 22.04+.
+          - os: ubuntu-22.04
+            bundles: deb
+          - os: macos-latest # Apple Silicon (arm64)
+            bundles: dmg
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux libraries for Tauri
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -25,26 +70,17 @@ jobs:
         with:
           tool: cargo-about@0.9.2
       - run: pnpm install --frozen-lockfile
-      - name: Check the tag matches the app version
-        shell: bash
-        run: |
-          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME doesn't match tauri.conf.json version $version" >&2
-            exit 1
-          fi
-      # Runs `pnpm tauri build`; beforeBuildCommand builds tenajlo-askpass, fetches the pinned,
-      # checksum-verified MinGit + git-lfs, and generates THIRD_PARTY_LICENSES.html.
+      # Runs `pnpm tauri build`; beforeBuildCommand (tauri.<platform>.conf.json) builds
+      # tenajlo-askpass, generates THIRD_PARTY_LICENSES.html and, on Windows, fetches the
+      # pinned, checksum-verified MinGit + git-lfs.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Tenajlo ${{ github.ref_name }}
-          releaseBody: See docs/user-guide.md for what's new and how to install.
-          releaseDraft: true
-          args: --bundles nsis
+          releaseId: ${{ needs.create-release.outputs.release-id }}
+          args: --bundles ${{ matrix.bundles }}
       - name: Attach the license list to the release
+        if: runner.os == 'Windows'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

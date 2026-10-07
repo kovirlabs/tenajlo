@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "build": {
+    "beforeBuildCommand": "node scripts/build-askpass.mjs --release && node scripts/third-party-licenses.mjs && pnpm build"
+  },
+  "bundle": {
+    "targets": ["dmg"],
+    "resources": {
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
+      "../LICENSE": "LICENSE",
+      "../NOTICE": "NOTICE",
+      "resources/THIRD_PARTY_LICENSES.html": "THIRD_PARTY_LICENSES.html"
+    },
+    "macOS": {
+      "signingIdentity": "-"
+    }
+  }
+}

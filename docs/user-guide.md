@@ -13,8 +13,27 @@ Tenajlo; you don't need to install them.
 > Tenajlo's installer isn't code-signed yet, so Windows may say "Windows protected your PC".
 > Choose **More info → Run anyway** if you downloaded it from Tenajlo's Releases page.
 
-**Linux and macOS:** install Git 2.40 or newer and [Git LFS](https://git-lfs.com), then
-build Tenajlo from source (see the [README](../README.md)).
+**Debian and Ubuntu (x64):** download `Tenajlo_<version>_amd64.deb` from the Releases page
+and install it with:
+
+```bash
+sudo apt install ./Tenajlo_<version>_amd64.deb
+```
+
+`apt` also installs Git and Git LFS if you don't have them. Tenajlo needs Git 2.40 or newer:
+Ubuntu 24.04 and Debian 13 have it; on Debian 12, install `git` from bookworm-backports first.
+
+**macOS (Apple Silicon, M1 or later):** download `Tenajlo_<version>_aarch64.dmg`, open it and
+drag Tenajlo to Applications. Tenajlo needs Git 2.40 or newer: recent Apple command line tools
+include it (`xcode-select --install`), or install it with `brew install git`. For large files,
+also install [Git LFS](https://git-lfs.com) (`brew install git-lfs`).
+
+> Tenajlo isn't notarized by Apple yet, so the first time you open it macOS says it can't
+> check the app. Click **Done**, then open **System Settings → Privacy & Security**, scroll
+> down and click **Open Anyway** next to Tenajlo. You only need to do this once.
+
+**Other Linux distributions and Intel Macs:** build Tenajlo from source (see the
+[README](../README.md)).
 
 ## Sign in to your Forgejo server
 

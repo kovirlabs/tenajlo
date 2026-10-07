@@ -6,6 +6,12 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-07
+
+- Linux: a `.deb` package for Debian and Ubuntu (x64). It uses the system's Git.
+- macOS: a `.dmg` for Apple Silicon Macs. It isn't notarized yet, so macOS asks you to allow
+  it once in System Settings → Privacy & Security.
+
 ## [1.0.0] - 2026-10-07
 
 First public release:
@@ -24,5 +30,6 @@ First public release:
   theme.
 - First-run welcome, plain-language error messages, daily log files.
 
-[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/kovirlabs/tenajlo/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/kovirlabs/tenajlo/releases/tag/v1.0.0
