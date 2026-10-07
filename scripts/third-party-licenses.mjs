@@ -33,8 +33,8 @@ const out =
     ? process.argv[outArg + 1]
     : join(root, "src-tauri", "resources", "THIRD_PARTY_LICENSES.html");
 
-const run = (cmd, args) =>
-  execFileSync(cmd, args, { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+const run = (cmd, args, shell = false) =>
+  execFileSync(cmd, args, { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, shell });
 
 // --- Rust crates (cargo-about) -------------------------------------------------------------
 // `cargo metadata` resolves every platform's dependencies, so fetch them all first; then run
@@ -66,7 +66,11 @@ const rustGroups = about.licenses
   .sort((a, b) => a.id.localeCompare(b.id) || a.users[0].localeCompare(b.users[0]));
 
 // --- npm packages (bundled into the app's frontend) ------------------------------------------
-const npm = JSON.parse(run("pnpm", ["licenses", "list", "--prod", "--json"]));
+// On Windows pnpm is pnpm.cmd, which Node only starts through a shell. The arguments are fixed
+// strings, so nothing needs quoting.
+const npm = JSON.parse(
+  run("pnpm", ["licenses", "list", "--prod", "--json"], process.platform === "win32"),
+);
 const npmByText = new Map();
 const rejected = [];
 for (const [license, packages] of Object.entries(npm)) {
