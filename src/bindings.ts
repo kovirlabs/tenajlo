@@ -54,6 +54,11 @@ export const commands = {
 	discardChanges: (repoId: string, paths: string[]) => typedError<null, AppError>(__TAURI_INVOKE("discard_changes", { repoId, paths })),
 	/**  Adds an untracked file (or all files with its extension) to the root `.gitignore`. */
 	ignoreFile: (repoId: string, path: string, byExtension: boolean) => typedError<null, AppError>(__TAURI_INVOKE("ignore_file", { repoId, path, byExtension })),
+	/**
+	 *  Undoes the most recent commit if it is still `sha`, keeping its changes staged.
+	 *  Returns the commit's message so the UI can restore it.
+	 */
+	undoCommit: (repoId: string, sha: string) => typedError<UndoneCommit, AppError>(__TAURI_INVOKE("undo_commit", { repoId, sha })),
 	/**  How a typed branch name will be created (`"Fix pump"` → `"Fix-pump"`). Pure; no git call. */
 	previewBranchName: (name: string) => __TAURI_INVOKE<string>("preview_branch_name", { name }),
 	/**  Creates a branch from the current commit and switches to it. Local changes come along. */
@@ -252,6 +257,12 @@ export type SavedChanges = {
 
 /**  How much of a file's change is staged. */
 export type StagedState = "None" | "Partial" | "Full";
+
+/**  The message of an undone commit, so the UI can put it back in the commit box. */
+export type UndoneCommit = {
+	summary: string,
+	description: string,
+};
 
 /**  Parsed working directory status. */
 export type WorkingDirectoryStatus = {

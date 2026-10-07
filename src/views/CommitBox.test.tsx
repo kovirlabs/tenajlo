@@ -6,10 +6,15 @@ import { CommitBox } from "./CommitBox";
 
 const identity = vi.fn<() => Promise<{ status: "ok"; data: Identity }>>();
 const commitChanges = vi.fn(async () => ({ status: "ok" as const, data: "abc" }));
+const undoCommit = vi.fn(async () => ({
+  status: "ok" as const,
+  data: { summary: "Fix pump", description: "details" },
+}));
 vi.mock("../api/changes", () => ({
   getIdentity: () => identity(),
   commitChanges: (...a: unknown[]) => (commitChanges as (...x: unknown[]) => unknown)(...a),
   setGlobalIdentity: vi.fn(),
+  undoCommit: (...a: unknown[]) => (undoCommit as (...x: unknown[]) => unknown)(...a),
 }));
 
 const file = (staged: FileChange["staged"]): FileChange => ({
@@ -52,6 +57,25 @@ describe("CommitBox", () => {
     fireEvent.keyDown(summary, { key: "Enter", ctrlKey: true });
     await waitFor(() => expect(commitChanges).toHaveBeenCalledWith("r1", "Fix pump", ""));
     await waitFor(() => expect(summary.value).toBe(""));
+  });
+
+  it("offers Undo while the new commit is the tip, restoring the message", async () => {
+    setup("Full");
+    const summary = screen.getByLabelText("Commit summary") as HTMLInputElement;
+    fireEvent.change(summary, { target: { value: "Fix pump" } });
+    await waitFor(() => expect(identity).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /Commit to main/ }));
+    await waitFor(() => expect(summary.value).toBe(""));
+    // The store refresh would move the tip to the new commit; simulate it.
+    useChangesStore.setState((s) => ({
+      status: s.status && { ...s.status, branch: { ...s.status.branch, tip: "abc" } },
+    }));
+    fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(undoCommit).toHaveBeenCalledWith("r1", "abc"));
+    await waitFor(() => expect(summary.value).toBe("Fix pump"));
+    expect((screen.getByLabelText("Commit description") as HTMLTextAreaElement).value).toBe(
+      "details",
+    );
   });
 
   it("is disabled with nothing staged or no summary", () => {

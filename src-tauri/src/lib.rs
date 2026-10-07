@@ -35,6 +35,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::changes::set_global_identity,
             commands::changes::discard_changes,
             commands::changes::ignore_file,
+            commands::changes::undo_commit,
             commands::branches::preview_branch_name,
             commands::branches::create_branch,
             commands::branches::switch_branch,

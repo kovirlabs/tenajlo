@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Identity } from "../bindings";
-import { commitChanges, getIdentity } from "../api/changes";
+import { commitChanges, getIdentity, undoCommit } from "../api/changes";
 import { IdentityDialog } from "../components/IdentityDialog";
 import { useChangesStore } from "../stores/changesStore";
 
@@ -13,6 +13,7 @@ export function CommitBox({ repoId }: { repoId: string }) {
   const [description, setDescription] = useState("");
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [askIdentity, setAskIdentity] = useState(false);
+  const [lastCommit, setLastCommit] = useState<{ sha: string; summary: string } | null>(null);
 
   const [identityVersion, setIdentityVersion] = useState(0);
 
@@ -35,12 +36,36 @@ export function CommitBox({ repoId }: { repoId: string }) {
   const commit = async () => {
     if (!canCommit) return;
     if (missingIdentity) return setAskIdentity(true);
-    const ok = await mutate((id) => commitChanges(id, summary, description));
-    if (ok) {
+    const committedSummary = summary.trim();
+    const committed: { sha?: string } = {};
+    await mutate(async (id) => {
+      const res = await commitChanges(id, summary, description);
+      if (res.status === "ok") committed.sha = res.data;
+      return res;
+    });
+    if (committed.sha) {
+      setLastCommit({ sha: committed.sha, summary: committedSummary });
       setSummary("");
       setDescription("");
     }
   };
+
+  const undo = async () => {
+    if (!lastCommit) return;
+    const { sha } = lastCommit;
+    await mutate(async (id) => {
+      const res = await undoCommit(id, sha);
+      if (res.status === "ok") {
+        setSummary(res.data.summary);
+        setDescription(res.data.description);
+        setLastCommit(null);
+      }
+      return res;
+    });
+  };
+
+  // Only offer Undo while our commit is still the branch tip.
+  const canUndo = lastCommit !== null && status?.branch.tip === lastCommit.sha;
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -51,6 +76,16 @@ export function CommitBox({ repoId }: { repoId: string }) {
 
   return (
     <div className="commit-box">
+      {canUndo && (
+        <div className="undo-bar" role="status">
+          <span>
+            Committed just now · <strong>{lastCommit.summary}</strong>
+          </span>
+          <button type="button" className="secondary" disabled={busy} onClick={() => void undo()}>
+            Undo
+          </button>
+        </div>
+      )}
       <input
         className="commit-summary-input"
         placeholder="Summary (required)"

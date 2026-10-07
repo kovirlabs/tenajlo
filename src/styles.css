@@ -673,3 +673,22 @@ button.danger {
 .picker-item:disabled {
   opacity: 0.5;
 }
+
+.undo-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.undo-bar span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit-box .undo-bar button {
+  width: auto;
+  padding: 2px 10px;
+}

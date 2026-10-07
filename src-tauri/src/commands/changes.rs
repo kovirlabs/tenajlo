@@ -10,6 +10,7 @@ use crate::git::discard::{self, DiscardError};
 use crate::git::identity::{self, Identity};
 use crate::git::parse::status::FileStatusKind;
 use crate::git::parse::status::{FileChange, StagedState};
+use crate::git::undo::{self, UndoError, UndoneCommit};
 use crate::git::{commit, ignore, stage, status};
 use crate::state::AppState;
 
@@ -178,4 +179,30 @@ pub async fn ignore_file(
             e.to_string(),
         )
     })
+}
+
+/// Undoes the most recent commit if it is still `sha`, keeping its changes staged.
+/// Returns the commit's message so the UI can restore it.
+#[tauri::command]
+#[specta::specta]
+pub async fn undo_commit(
+    state: State<'_, AppState>,
+    repo_id: String,
+    sha: String,
+) -> Result<UndoneCommit, AppError> {
+    if !crate::git::log::is_commit_hash(&sha) {
+        return Err(AppError::invalid_input("That commit id isn't valid."));
+    }
+    let (root, _guard) = state.repos.lock_repo(parse_id(&repo_id)?).await?;
+    match undo::undo_last_commit(&state.git()?, &root, &sha).await {
+        Ok(undone) => Ok(undone),
+        Err(UndoError::Git(e)) => Err(e.into()),
+        Err(UndoError::HeadMoved) => {
+            Err(AppError::invalid_input("This isn't the latest commit anymore, so it can't be undone."))
+        }
+        Err(UndoError::MergeCommit) => Err(AppError::invalid_input("Merge commits can't be undone here.")),
+        Err(UndoError::AlreadyPushed) => Err(AppError::invalid_input(
+            "This commit is already on the server, so undoing it here would cause problems for others.",
+        )),
+    }
 }

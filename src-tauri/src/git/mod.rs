@@ -20,4 +20,5 @@ pub mod status;
 pub mod switch;
 #[cfg(test)]
 pub mod test_support;
+pub mod undo;
 pub mod version;

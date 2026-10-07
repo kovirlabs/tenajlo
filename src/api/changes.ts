@@ -1,4 +1,4 @@
-import { commands, type Identity } from "../bindings";
+import { commands, type Identity, type UndoneCommit } from "../bindings";
 import type { Result } from "./result";
 
 /** Stages (`staged = true`) or unstages changed files. */
@@ -36,4 +36,9 @@ export function ignoreFile(
   byExtension: boolean,
 ): Promise<Result<null>> {
   return commands.ignoreFile(repoId, path, byExtension);
+}
+
+/** Undoes the latest commit if it is still `sha`; returns its message. */
+export function undoCommit(repoId: string, sha: string): Promise<Result<UndoneCommit>> {
+  return commands.undoCommit(repoId, sha);
 }
