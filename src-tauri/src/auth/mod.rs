@@ -1,7 +1,9 @@
-//! Authentication: askpass trampoline and UI prompts (spec §6).
+//! Authentication: accounts, keychain, askpass trampoline and UI prompts (spec §6).
 
+pub mod accounts;
 pub mod broker;
 pub mod prompt;
+pub mod secrets;
 pub mod trampoline;
 
 use std::path::PathBuf;

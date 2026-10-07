@@ -1,0 +1,296 @@
+//! Signed-in Forgejo accounts: metadata in `accounts.json`, PATs in the keychain (spec §6.1).
+//!
+//! One account per server. Signing in again to the same server replaces its account.
+
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+
+use serde::Serialize;
+use uuid::Uuid;
+
+use super::secrets::{Secret, SecretError, SecretStore};
+use crate::forgejo::ForgejoUser;
+use crate::store::accounts::{AccountEntry, AccountKind, AccountsFile, FILE_NAME};
+use crate::store::{self, StoreError};
+
+/// Account metadata for the frontend. Never includes the token (CLAUDE.md rule 2).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct Account {
+    pub id: String,
+    pub kind: AccountKind,
+    pub base_url: String,
+    pub login: String,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+}
+
+/// Errors changing accounts.
+#[derive(Debug, thiserror::Error)]
+pub enum AccountError {
+    #[error("unknown account id")]
+    UnknownAccount,
+    #[error("accounts.json can't be changed this session")]
+    ReadOnly,
+    #[error(transparent)]
+    Secret(#[from] SecretError),
+    #[error(transparent)]
+    Store(#[from] StoreError),
+}
+
+/// Owns `accounts.json` and the matching keychain entries.
+pub struct AccountManager {
+    path: PathBuf,
+    file: Mutex<AccountsFile>,
+    /// Set when the file on disk couldn't be loaded safely; we then never overwrite it.
+    read_only: bool,
+    secrets: Arc<dyn SecretStore>,
+}
+
+impl AccountManager {
+    /// Loads accounts from `data_dir`. Never fails: an unreadable file yields no accounts
+    /// and a read-only manager.
+    pub fn load(data_dir: &Path, secrets: Arc<dyn SecretStore>) -> Self {
+        let path = data_dir.join(FILE_NAME);
+        let (file, read_only) = match store::load::<AccountsFile>(&path) {
+            Ok(f) => (f, false),
+            Err(e) => {
+                tracing::error!(error = %e, "could not load accounts; changes won't be saved");
+                (AccountsFile::default(), true)
+            }
+        };
+        Self {
+            path,
+            file: Mutex::new(file),
+            read_only,
+            secrets,
+        }
+    }
+
+    /// All accounts, ordered by server then login.
+    pub fn list(&self) -> Vec<Account> {
+        let mut out: Vec<Account> = self.data().accounts.iter().map(to_dto).collect();
+        out.sort_by(|a, b| (&a.base_url, &a.login).cmp(&(&b.base_url, &b.login)));
+        out
+    }
+
+    /// Saves a verified sign-in: the token to the keychain, then the metadata. Replaces any
+    /// existing account for `base_url` (and deletes its old token if the login changed).
+    pub async fn sign_in(
+        &self,
+        base_url: &str,
+        user: ForgejoUser,
+        token: Secret,
+    ) -> Result<Account, AccountError> {
+        if self.read_only {
+            return Err(AccountError::ReadOnly);
+        }
+        let previous = self
+            .data()
+            .accounts
+            .iter()
+            .find(|a| a.base_url == base_url)
+            .cloned();
+        let display_name = if user.full_name.trim().is_empty() {
+            user.login.clone()
+        } else {
+            user.full_name.trim().to_owned()
+        };
+        let entry = AccountEntry {
+            id: previous.as_ref().map_or_else(Uuid::new_v4, |p| p.id),
+            kind: AccountKind::Forgejo,
+            base_url: base_url.to_owned(),
+            login: user.login,
+            display_name,
+            avatar_url: user.avatar_url.filter(|u| !u.is_empty()),
+            token_scopes: None,
+            ssh_host: previous.as_ref().and_then(|p| p.ssh_host.clone()),
+        };
+
+        let key = entry.keychain_key();
+        self.blocking(move |s| s.set(&key, &token)).await?;
+
+        let mut next = self.data().clone();
+        next.accounts.retain(|a| a.base_url != base_url);
+        next.accounts.push(entry.clone());
+        if let Err(e) = store::save(&self.path, &next) {
+            if previous.as_ref().map(AccountEntry::keychain_key) != Some(entry.keychain_key()) {
+                let key = entry.keychain_key();
+                let _ = self.blocking(move |s| s.delete(&key)).await;
+            }
+            return Err(e.into());
+        }
+        *self.data() = next;
+
+        if let Some(old) = previous.filter(|p| p.login != entry.login) {
+            let key = old.keychain_key();
+            if let Err(e) = self.blocking(move |s| s.delete(&key)).await {
+                tracing::warn!(error = %e, "could not delete the replaced account's token");
+            }
+        }
+        tracing::info!(server = %crate::redact::redact(&entry.base_url), login = %entry.login, "signed in");
+        Ok(to_dto(&entry))
+    }
+
+    /// Signs out: deletes the token from the keychain, then the metadata.
+    pub async fn sign_out(&self, id: Uuid) -> Result<(), AccountError> {
+        if self.read_only {
+            return Err(AccountError::ReadOnly);
+        }
+        let entry = self
+            .data()
+            .accounts
+            .iter()
+            .find(|a| a.id == id)
+            .cloned()
+            .ok_or(AccountError::UnknownAccount)?;
+        let key = entry.keychain_key();
+        self.blocking(move |s| s.delete(&key)).await?;
+
+        let mut next = self.data().clone();
+        next.accounts.retain(|a| a.id != id);
+        store::save(&self.path, &next)?;
+        *self.data() = next;
+        tracing::info!(server = %crate::redact::redact(&entry.base_url), login = %entry.login, "signed out");
+        Ok(())
+    }
+
+    /// Runs a keychain call off the async runtime (the OS store may block or show UI).
+    async fn blocking<T: Send + 'static>(
+        &self,
+        f: impl FnOnce(&dyn SecretStore) -> Result<T, SecretError> + Send + 'static,
+    ) -> Result<T, SecretError> {
+        let secrets = self.secrets.clone();
+        tokio::task::spawn_blocking(move || f(secrets.as_ref()))
+            .await
+            .map_err(|e| SecretError(e.to_string()))?
+    }
+
+    fn data(&self) -> std::sync::MutexGuard<'_, AccountsFile> {
+        self.file.lock().unwrap_or_else(|p| p.into_inner())
+    }
+}
+
+fn to_dto(e: &AccountEntry) -> Account {
+    Account {
+        id: e.id.to_string(),
+        kind: e.kind,
+        base_url: e.base_url.clone(),
+        login: e.login.clone(),
+        display_name: e.display_name.clone(),
+        avatar_url: e.avatar_url.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::auth::secrets::MemoryStore;
+    use std::sync::atomic::Ordering;
+
+    fn user(login: &str) -> ForgejoUser {
+        ForgejoUser {
+            login: login.into(),
+            full_name: String::new(),
+            avatar_url: Some(String::new()),
+        }
+    }
+
+    fn setup() -> (tempfile::TempDir, Arc<MemoryStore>, AccountManager) {
+        let dir = tempfile::tempdir().unwrap();
+        let secrets = Arc::new(MemoryStore::default());
+        let m = AccountManager::load(dir.path(), secrets.clone());
+        (dir, secrets, m)
+    }
+
+    const BASE: &str = "https://tmc-git01.tmus.local";
+
+    #[tokio::test]
+    async fn sign_in_stores_token_in_keychain_only() {
+        let (dir, secrets, m) = setup();
+        let acct = m
+            .sign_in(BASE, user("evan"), Secret::new("pat-123".into()))
+            .await
+            .unwrap();
+        assert_eq!(acct.display_name, "evan", "falls back to the login");
+        assert_eq!(acct.avatar_url, None, "empty avatar dropped");
+        assert_eq!(
+            secrets
+                .get(&format!("{BASE}|evan"))
+                .unwrap()
+                .unwrap()
+                .expose(),
+            "pat-123"
+        );
+        let raw = std::fs::read_to_string(dir.path().join(FILE_NAME)).unwrap();
+        assert!(!raw.contains("pat-123"), "{raw}");
+        assert!(raw.contains("\"schemaVersion\": 1"));
+
+        let reloaded = AccountManager::load(dir.path(), secrets);
+        assert_eq!(reloaded.list(), vec![acct]);
+    }
+
+    #[tokio::test]
+    async fn re_sign_in_replaces_the_servers_account() {
+        let (_dir, secrets, m) = setup();
+        let first = m
+            .sign_in(BASE, user("evan"), Secret::new("a".into()))
+            .await
+            .unwrap();
+        let second = m
+            .sign_in(BASE, user("evan2"), Secret::new("b".into()))
+            .await
+            .unwrap();
+        assert_eq!(first.id, second.id, "same server keeps its id");
+        assert_eq!(m.list(), vec![second]);
+        assert_eq!(secrets.get(&format!("{BASE}|evan")).unwrap(), None);
+
+        m.sign_in("https://other", user("evan"), Secret::new("c".into()))
+            .await
+            .unwrap();
+        assert_eq!(m.list().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn sign_out_removes_token_and_metadata() {
+        let (_dir, secrets, m) = setup();
+        let acct = m
+            .sign_in(BASE, user("evan"), Secret::new("a".into()))
+            .await
+            .unwrap();
+        m.sign_out(acct.id.parse().unwrap()).await.unwrap();
+        assert!(m.list().is_empty());
+        assert_eq!(secrets.get(&format!("{BASE}|evan")).unwrap(), None);
+        assert!(matches!(
+            m.sign_out(Uuid::new_v4()).await,
+            Err(AccountError::UnknownAccount)
+        ));
+    }
+
+    #[tokio::test]
+    async fn keychain_failure_saves_nothing() {
+        let (dir, secrets, m) = setup();
+        secrets.fail.store(true, Ordering::SeqCst);
+        assert!(matches!(
+            m.sign_in(BASE, user("evan"), Secret::new("a".into())).await,
+            Err(AccountError::Secret(_))
+        ));
+        assert!(m.list().is_empty());
+        assert!(!dir.path().join(FILE_NAME).exists());
+    }
+
+    #[tokio::test]
+    async fn newer_file_is_read_only() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(FILE_NAME),
+            r#"{"schemaVersion":99,"accounts":[]}"#,
+        )
+        .unwrap();
+        let m = AccountManager::load(dir.path(), Arc::new(MemoryStore::default()));
+        assert!(matches!(
+            m.sign_in(BASE, user("evan"), Secret::new("a".into())).await,
+            Err(AccountError::ReadOnly)
+        ));
+    }
+}

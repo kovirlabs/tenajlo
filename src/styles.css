@@ -227,9 +227,11 @@ button:focus-visible {
 }
 
 .picker-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
   padding: 8px;
   border-top: 1px solid var(--border);
-  text-align: right;
 }
 
 .dialog {
@@ -719,4 +721,40 @@ button.danger {
   border-radius: 10px;
   background: var(--bg);
   border: 1px solid var(--border);
+}
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.form-error {
+  color: var(--danger);
+}
+
+.form-error .error-details {
+  color: var(--fg);
+}
+
+.account-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
 }

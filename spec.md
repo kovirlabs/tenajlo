@@ -92,7 +92,7 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 | Async | `tokio` |
 | Typed IPC bindings | `specta` + `tauri-specta` (generate `src/bindings.ts`) |
 | Secrets | `keyring` (Windows Credential Manager, macOS Keychain, Secret Service) |
-| HTTP | `reqwest` with `rustls-tls-native-roots` so the OS trust store applies (internal CA) |
+| HTTP | `reqwest` 0.13 with `rustls` + `rustls-platform-verifier`, so the OS verifier and trust store apply (internal CA) |
 | FS watching | `notify` + `notify-debouncer-full` |
 | Errors | `thiserror` (library) / `anyhow` only at command boundary |
 | Logging | `tracing` + rolling file appender, secrets redacted |
@@ -200,9 +200,9 @@ Resolution order when git asks for credentials for `https://host/...`:
 
 1. **Tenajlo account for this host** → return `username=<login>`, `password=<PAT>` from the keychain. Forgejo accepts PATs as the HTTPS password.
 2. **User's existing git credential helper** (e.g. Git Credential Manager). When no Tenajlo account matches the host, Tenajlo does not override `credential.helper`, so the user's chain runs as normal.
-3. **Prompt** via the trampoline. Show a UI dialog for username and password or token, with a "Save to keychain" option.
+3. **Prompt** via the trampoline. Show a UI dialog for username and password or token. (A "Save to keychain" option is deferred to v1.1: hosts that need saved credentials should use a Forgejo account, or the user's own helper.)
 
-On `AuthFailed`, invalidate the cached secret for that host and re-prompt once. Never loop.
+On `AuthFailed` for an account host, check the PAT with `GET /api/v1/user`. If that returns 401, the token is dead: keep the account metadata, mark it as needing sign-in, and show a re-enter-token dialog once. If the token still works, the failure is a repository permission problem: say so and keep the PAT. Never loop.
 
 When the credential helper protocol sends `erase`, delete the keychain entry. On `store`, save it only if the user opted in.
 
@@ -274,6 +274,7 @@ The layout mirrors GitHub Desktop, which users may already know.
 - **Branch dropdown:** filter, current, recent, other local, remote-only (check out creates a tracking branch), plus "New branch…". When switching with local changes, offer *Bring changes* or *Stash and switch* (GitHub Desktop behavior).
 - **Toolbar sync button:** context-aware label: *Publish branch* / *Fetch origin* / *Pull origin (↓3)* / *Push origin (↑2)*, with a progress bar during the operation.
 - **Auth prompts:** HTTPS credentials, SSH passphrase, and host-key confirmation dialogs, all driven by `auth-prompt` events.
+- **Accounts dialog (M4 interim):** list, sign in, sign out; opened from the repository dropdown and the no-repository screen. One account per server. Folds into Settings in M6.
 - **Settings:** accounts, git identity, default clone path, external editor (VS Code / Notepad++ / custom), pull strategy, background fetch interval (default 5 min, 0 = off), theme (system / light / dark), git binary override.
 - **Conflict banner:** lists conflicted files with "Open in editor" and "Mark resolved" (`git add`). Commit is blocked until resolved. Abort merge is available.
 

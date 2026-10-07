@@ -2,6 +2,8 @@
 
 use serde::Serialize;
 
+use crate::auth::accounts::AccountError;
+use crate::forgejo::ForgejoError;
 use crate::git::error::{GitError, GitErrorKind};
 use crate::repo_manager::RepoError;
 
@@ -14,6 +16,9 @@ pub enum AppErrorKind {
     GitCancelled,
     Git,
     UnknownRepository,
+    /// A Forgejo server request failed (sign-in, repository list).
+    Server,
+    UnknownAccount,
     Storage,
     InvalidInput,
     Internal,
@@ -120,6 +125,78 @@ impl From<RepoError> for AppError {
                 AppErrorKind::Storage,
                 "Tenajlo couldn't save your repository list.",
                 Some(crate::redact::redact(&e.to_string())),
+            ),
+        }
+    }
+}
+
+impl From<ForgejoError> for AppError {
+    fn from(err: ForgejoError) -> Self {
+        let details = err.to_string();
+        let (kind, message) = match &err {
+            ForgejoError::InvalidUrl(reason) => (
+                AppErrorKind::InvalidInput,
+                format!("That server address can't be used: {reason}."),
+            ),
+            ForgejoError::TlsUntrusted(_) => (
+                AppErrorKind::Server,
+                git_message(GitErrorKind::TlsUntrusted).to_owned(),
+            ),
+            ForgejoError::Unreachable(_) => (
+                AppErrorKind::Server,
+                "Couldn't reach the server. Check the address and your network or VPN connection.".to_owned(),
+            ),
+            ForgejoError::TimedOut => (
+                AppErrorKind::Server,
+                "The server took too long to respond. Try again in a moment.".to_owned(),
+            ),
+            ForgejoError::NotForgejo(_) => (
+                AppErrorKind::Server,
+                "That address doesn't look like a Forgejo server. Check it and try again.".to_owned(),
+            ),
+            ForgejoError::Unauthorized => (
+                AppErrorKind::Server,
+                "The server didn't accept that token. Check that you copied all of it and that it hasn't expired or been deleted.".to_owned(),
+            ),
+            ForgejoError::MissingScope(_) => (
+                AppErrorKind::Server,
+                format!(
+                    "That token is missing a permission Tenajlo needs. Create a new token with these permissions: {}.",
+                    crate::forgejo::client::REQUIRED_SCOPES.join(", ")
+                ),
+            ),
+            ForgejoError::Http { status, .. } => (
+                AppErrorKind::Server,
+                format!("The server reported a problem (error {status}). Try again later."),
+            ),
+            ForgejoError::Other(_) => (AppErrorKind::Server, "Couldn't talk to the server.".to_owned()),
+        };
+        AppError::with_details(kind, message, details)
+    }
+}
+
+impl From<AccountError> for AppError {
+    fn from(err: AccountError) -> Self {
+        match err {
+            AccountError::UnknownAccount => AppError::new(
+                AppErrorKind::UnknownAccount,
+                "That account is no longer signed in.",
+                None,
+            ),
+            AccountError::ReadOnly => AppError::new(
+                AppErrorKind::Storage,
+                "Your accounts were saved by a newer version of Tenajlo, so they can't be changed here. Update Tenajlo.",
+                None,
+            ),
+            AccountError::Secret(e) => AppError::with_details(
+                AppErrorKind::Storage,
+                "Tenajlo couldn't use this computer's password store (keychain).",
+                e.to_string(),
+            ),
+            AccountError::Store(e) => AppError::with_details(
+                AppErrorKind::Storage,
+                "Tenajlo couldn't save your accounts.",
+                e.to_string(),
             ),
         }
     }

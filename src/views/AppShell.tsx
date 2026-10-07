@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { AccountsDialog } from "../components/accounts/AccountsDialog";
 import { AuthPromptDialog } from "../components/AuthPromptDialog";
 import { ErrorDialog } from "../components/ErrorDialog";
 import { NewBranchDialog } from "../components/branches/NewBranchDialog";
@@ -31,6 +32,7 @@ export function AppShell() {
       <Toolbar />
       {body}
       {repo && !repo.missing && <NewBranchDialog key={repo.id} />}
+      <AccountsDialog />
       <AuthPromptDialog />
       <ErrorDialog />
     </div>

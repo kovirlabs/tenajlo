@@ -59,6 +59,16 @@ export const commands = {
 	 *  Returns the commit's message so the UI can restore it.
 	 */
 	undoCommit: (repoId: string, sha: string) => typedError<UndoneCommit, AppError>(__TAURI_INVOKE("undo_commit", { repoId, sha })),
+	/**  Signed-in accounts (metadata only). */
+	listAccounts: () => __TAURI_INVOKE<Account[]>("list_accounts"),
+	/**  Checks that `server` is a reachable, trusted Forgejo server (sign-in step 2). */
+	checkServer: (server: string) => typedError<ServerInfo, AppError>(__TAURI_INVOKE("check_server", { server })),
+	/**  Verifies `token` with `GET /api/v1/user`, then saves the account and keychain entry. */
+	signIn: (server: string, token: string) => typedError<Account, AppError>(__TAURI_INVOKE("sign_in", { server, token })),
+	/**  Signs out: removes the account and deletes its token from the keychain. */
+	signOut: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("sign_out", { id })),
+	/**  Opens the server's "Applications" settings page, where the user creates a token. */
+	openTokenSettings: (server: string) => typedError<null, AppError>(__TAURI_INVOKE("open_token_settings", { server })),
 	/**  Delivers the user's answer to a prompt (`None` = cancelled, which stops the operation). */
 	answerAuthPrompt: (promptId: string, answer: {
 	username: string | null,
@@ -97,6 +107,19 @@ export const events = {
 };
 
 /* Types */
+/**  Account metadata for the frontend. Never includes the token (CLAUDE.md rule 2). */
+export type Account = {
+	id: string,
+	kind: AccountKind,
+	baseUrl: string,
+	login: string,
+	displayName: string,
+	avatarUrl: string | null,
+};
+
+/**  Kind of account. Only Forgejo for v1. */
+export type AccountKind = "forgejo";
+
 /**  Error shape sent to the frontend. Never contains secrets: `details` is redacted. */
 export type AppError = {
 	kind: AppErrorKind,
@@ -109,7 +132,9 @@ export type AppError = {
 };
 
 /**  Broad category the UI uses to pick a dialog. */
-export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "UnknownRepository" | "Storage" | "InvalidInput" | "Internal";
+export type AppErrorKind = "GitNotFound" | "GitUnsupported" | "GitTimedOut" | "GitCancelled" | "Git" | "UnknownRepository" | 
+/**  A Forgejo server request failed (sign-in, repository list). */
+"Server" | "UnknownAccount" | "Storage" | "InvalidInput" | "Internal";
 
 /**  The user's answer. Flows UI → Rust only (CLAUDE.md rule 2). Debug output is redacted. */
 export type AuthAnswer = {
@@ -310,6 +335,16 @@ export type RepositoryList = {
 /**  Changes Tenajlo saved when the user left a branch. */
 export type SavedChanges = {
 	branch: string,
+};
+
+/**  A reachable Forgejo (or Gitea-compatible) server. */
+export type ServerInfo = {
+	/**  Normalized address, e.g. `https://tmc-git01.tmus.local`. */
+	baseUrl: string,
+	version: string,
+	/**  Where the user creates a personal access token. */
+	tokenSettingsUrl: string,
+	requiredScopes: string[],
 };
 
 /**  How much of a file's change is staged. */

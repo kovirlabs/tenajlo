@@ -4,6 +4,7 @@
 //! versions forward, refuses files written by a newer Tenajlo, and moves corrupt
 //! files aside instead of silently discarding them. Writes are atomic.
 
+pub mod accounts;
 pub mod repositories;
 
 use std::fs;

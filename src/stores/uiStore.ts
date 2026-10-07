@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { AppError } from "../bindings";
 
 export type Tab = "changes" | "history";
-export type Dialog = "newBranch" | null;
+export type Dialog = "newBranch" | "accounts" | null;
 
 type UiState = {
   error: AppError | null;

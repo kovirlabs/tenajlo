@@ -3,8 +3,10 @@
 use std::path::PathBuf;
 use std::sync::RwLock;
 
+use crate::auth::accounts::AccountManager;
 use crate::auth::broker::PromptBroker;
 use crate::auth::trampoline::Trampoline;
+use crate::forgejo::ForgejoClient;
 use crate::git::error::GitError;
 use crate::git::exec::GitBinary;
 use crate::operations::Operations;
@@ -18,6 +20,8 @@ pub struct AppState {
     /// Set by `check_git` once a supported git is found.
     git: RwLock<Option<GitBinary>>,
     pub repos: RepoManager,
+    pub accounts: AccountManager,
+    pub forgejo: ForgejoClient,
     pub watcher: RepoWatcher,
     pub operations: Operations,
     pub prompts: PromptBroker,
@@ -29,9 +33,12 @@ pub struct AppState {
 
 impl AppState {
     /// Creates state with no git resolved yet.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         bundled_git_dir: Option<PathBuf>,
         repos: RepoManager,
+        accounts: AccountManager,
+        forgejo: ForgejoClient,
         prompts: PromptBroker,
         trampoline: Option<Trampoline>,
         askpass: Option<PathBuf>,
@@ -40,6 +47,8 @@ impl AppState {
             bundled_git_dir,
             git: RwLock::new(None),
             repos,
+            accounts,
+            forgejo,
             watcher: RepoWatcher::default(),
             operations: Operations::default(),
             prompts,

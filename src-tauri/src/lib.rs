@@ -3,6 +3,7 @@
 pub mod auth;
 pub mod commands;
 pub mod error;
+pub mod forgejo;
 pub mod git;
 pub mod operations;
 pub mod os_trash;
@@ -38,6 +39,11 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::changes::discard_changes,
             commands::changes::ignore_file,
             commands::changes::undo_commit,
+            commands::accounts::list_accounts,
+            commands::accounts::check_server,
+            commands::accounts::sign_in,
+            commands::accounts::sign_out,
+            commands::accounts::open_token_settings,
             commands::auth::answer_auth_prompt,
             commands::auth::cancel_operation,
             commands::sync::get_sync_state,
@@ -68,12 +74,19 @@ pub fn run() {
     let builder = specta_builder();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Rust-side only (token settings link); the WebView gets no opener permissions.
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
             let bundled_git_dir = app.path().resource_dir().ok().map(|d| d.join("mingit"));
             let data_dir = app.path().app_data_dir()?;
             let repos = repo_manager::RepoManager::load(&data_dir);
+            let accounts = auth::accounts::AccountManager::load(
+                &data_dir,
+                std::sync::Arc::new(auth::secrets::KeyringStore),
+            );
+            let forgejo = forgejo::ForgejoClient::new()?;
 
             let prompts = auth::broker::PromptBroker::default();
             let prompt_fn = prompts.prompt_fn(app.handle().clone());
@@ -88,7 +101,7 @@ pub fn run() {
             if askpass.is_none() {
                 tracing::error!("tenajlo-askpass sidecar missing; run `node scripts/build-askpass.mjs`");
             }
-            app.manage(state::AppState::new(bundled_git_dir, repos, prompts, trampoline, askpass));
+            app.manage(state::AppState::new(bundled_git_dir, repos, accounts, forgejo, prompts, trampoline, askpass));
             Ok(())
         })
         .run(tauri::generate_context!())

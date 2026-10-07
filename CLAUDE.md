@@ -20,7 +20,7 @@ cd src-tauri
 cargo fmt --all
 cargo clippy --all-targets -- -D warnings   # also with --target x86_64-pc-windows-msvc when touching cfg(windows) code (needs llvm-rc, e.g. `brew install llvm`)
 cargo test --workspace       # unit + temp-repo tests + askpass crate (needs git >= 2.40 on PATH)
-cargo test --features integration   # needs Forgejo in Docker: docker compose -f dev/forgejo.yml up -d
+cargo test --features integration   # needs Forgejo in Docker: docker compose -f dev/forgejo.yml up -d && dev/seed-forgejo.sh
 ```
 
 Before calling a task done, run `cargo fmt`, `cargo clippy -D warnings`, `cargo test --workspace`, `pnpm typecheck`, `pnpm lint`, and `pnpm test`. All must pass.
@@ -84,7 +84,7 @@ dev/forgejo.yml            # docker compose for integration tests
 
 ## Environment notes
 
-- Target network uses an internal domain (`tmus.local`) with an internal CA. On Windows, pass `-c http.sslBackend=schannel`. `reqwest` uses `rustls-tls-native-roots`. If you hit TLS errors in dev, fix the trust store and never the verification flag.
+- Target network uses an internal domain (`tmus.local`) with an internal CA. On Windows, pass `-c http.sslBackend=schannel`. `reqwest` uses rustls with `rustls-platform-verifier` (the OS verifier). If you hit TLS errors in dev, fix the trust store and never the verification flag.
 - Windows is the P0 platform. Test path handling with backslashes, spaces, long paths, and CRLF. MinGit ships as a Tauri sidecar on Windows only.
 - Minimum git version is 2.40. Use modern porcelain (`switch`, `restore`, `status --porcelain=v2`).
 

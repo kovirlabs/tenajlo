@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRepoStore, useSelectedRepository } from "../stores/repoStore";
+import { useUiStore } from "../stores/uiStore";
 import { Popover } from "./Popover";
 
 /** Toolbar "Current repository" dropdown with filter and "Add local…". */
@@ -53,6 +54,16 @@ export function RepoDropdown() {
             {shown.length === 0 && <li className="muted picker-empty">No repositories</li>}
           </ul>
           <div className="picker-footer">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                close();
+                useUiStore.getState().openDialog("accounts");
+              }}
+            >
+              Accounts…
+            </button>
             <button
               type="button"
               onClick={() => {
