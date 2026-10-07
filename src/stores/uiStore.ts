@@ -10,6 +10,9 @@ type UiState = {
   tab: Tab;
   dialog: Dialog;
   settingsTab: SettingsTab;
+  /** The toolbar repository list (Ctrl/Cmd+T). */
+  repoPickerOpen: boolean;
+  setRepoPickerOpen: (open: boolean) => void;
   /** Account whose token stopped working; the Accounts dialog opens straight to re-entering it. */
   signInAgainId: string | null;
   openDialog: (dialog: Dialog) => void;
@@ -26,6 +29,8 @@ export const useUiStore = create<UiState>((set) => ({
   tab: "changes",
   dialog: null,
   settingsTab: "accounts",
+  repoPickerOpen: false,
+  setRepoPickerOpen: (repoPickerOpen) => set({ repoPickerOpen }),
   signInAgainId: null,
   openDialog: (dialog) => set({ dialog, signInAgainId: null }),
   openSettings: (tab = "accounts") =>

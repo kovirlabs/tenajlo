@@ -4,15 +4,20 @@ import { useUiStore } from "../stores/uiStore";
 
 /**
  * App keyboard shortcuts (spec §8.2). Ctrl/Cmd+Shift+N: new branch; Ctrl/Cmd+Shift+P: push;
- * Ctrl/Cmd+,: settings.
+ * Ctrl/Cmd+T: repository list; Ctrl/Cmd+,: settings.
  */
 export function useShortcuts(repoOpen: boolean) {
   const openDialog = useUiStore((s) => s.openDialog);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === ",") {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+      const ui = useUiStore.getState();
+      if (e.key === ",") {
         e.preventDefault();
-        useUiStore.getState().openSettings();
+        ui.openSettings();
+      } else if (e.key.toLowerCase() === "t" && ui.dialog === null) {
+        e.preventDefault();
+        ui.setRepoPickerOpen(!ui.repoPickerOpen);
       }
     };
     window.addEventListener("keydown", onKey);

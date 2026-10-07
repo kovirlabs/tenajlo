@@ -47,7 +47,7 @@ offers **Sign in again**. Paste a new token; nothing else changes.
 You can also paste an address on the **URL** tab, for example
 `https://git.example.com/team/project.git` or `git@git.example.com:team/project.git`.
 
-To open a repository that's already on your computer, use **Current repository → Add local…**.
+To open a repository that's already on your computer, use **Current repository → Add local…**. To start a brand-new one, use **Current repository → New…**. Press **Ctrl+T** (⌘T on a Mac) to open the repository list quickly.
 
 ## Save your changes (commit)
 

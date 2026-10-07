@@ -10,12 +10,16 @@ export function RepoDropdown() {
   const select = useRepoStore((s) => s.select);
   const addLocal = useRepoStore((s) => s.addLocal);
   const [filter, setFilter] = useState("");
+  const open = useUiStore((s) => s.repoPickerOpen);
+  const setOpen = useUiStore((s) => s.setRepoPickerOpen);
 
   const needle = filter.trim().toLowerCase();
   const shown = repositories.filter((r) => r.name.toLowerCase().includes(needle));
 
   return (
     <Popover
+      open={open}
+      onOpenChange={setOpen}
       ariaLabel="Current repository"
       label={
         <span className="toolbar-label">

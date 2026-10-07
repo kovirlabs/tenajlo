@@ -5,11 +5,20 @@ type Props = {
   /** Accessible name for the trigger button. */
   ariaLabel: string;
   children: (close: () => void) => ReactNode;
+  /** Controlled mode (e.g. opened by a keyboard shortcut). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 /** A toolbar button that opens a panel. Closes on Escape or outside click. */
-export function Popover({ label, ariaLabel, children }: Props) {
-  const [open, setOpen] = useState(false);
+export function Popover({ label, ariaLabel, children, open: controlled, onOpenChange }: Props) {
+  const [uncontrolled, setUncontrolled] = useState(false);
+  const open = controlled ?? uncontrolled;
+  const setOpen = (next: boolean | ((o: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(open) : next;
+    if (controlled === undefined) setUncontrolled(value);
+    onOpenChange?.(value);
+  };
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
