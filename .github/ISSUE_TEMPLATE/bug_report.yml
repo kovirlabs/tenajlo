@@ -1,0 +1,58 @@
+name: Bug report
+description: Something in Tenajlo doesn't work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! For security problems, please use
+        [private reporting](https://github.com/kovirlabs/tenajlo/security/advisories/new) instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Clone a repository over SSH
+        2. Click Push origin
+        3. …
+  - type: textarea
+    id: details
+    attributes:
+      label: Error details
+      description: >
+        If Tenajlo showed an error, paste the text under "Details". Tenajlo removes passwords and
+        tokens, but please check before posting.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Tenajlo version
+      description: Settings → About
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows 11, Windows 10, macOS, Linux]
+    validations:
+      required: true
+  - type: dropdown
+    id: remote
+    attributes:
+      label: How does this repository connect?
+      options:
+        [HTTPS with a Forgejo account, HTTPS without an account, SSH, Not related to a server]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log excerpt (optional)
+      description: Settings → About → Show log files. Paste the lines around the problem.
+      render: text
