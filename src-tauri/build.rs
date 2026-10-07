@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 fn main() {
     ensure_askpass_placeholder();
-    ensure_mingit_placeholder();
+    ensure_bundled_resource_placeholders();
     let target = std::env::var("TARGET").unwrap_or_default();
     if target.contains("windows-msvc") {
         // tauri-build embeds the Common Controls v6 manifest into the app executable only, so
@@ -24,19 +24,20 @@ fn main() {
     }
 }
 
-/// Windows builds bundle `resources/mingit` and `resources/THIRD_PARTY_LICENSES.html`
-/// (tauri.windows.conf.json), which must exist for this build script. `pnpm tauri build`
-/// generates them (scripts/fetch-mingit.mjs, scripts/third-party-licenses.mjs); placeholders
-/// keep plain cargo commands and `tauri dev` working, and debug builds then fall back to
-/// git on PATH.
-fn ensure_mingit_placeholder() {
+/// Release builds bundle `resources/THIRD_PARTY_LICENSES.html` (tauri.<platform>.conf.json)
+/// and, on Windows, `resources/mingit`; both must exist for this build script. `pnpm tauri
+/// build` generates them (scripts/third-party-licenses.mjs, scripts/fetch-mingit.mjs);
+/// placeholders keep plain cargo commands and `tauri dev` working, and debug builds then fall
+/// back to git on PATH.
+fn ensure_bundled_resource_placeholders() {
+    let licenses = std::path::Path::new("resources/THIRD_PARTY_LICENSES.html");
+    if !licenses.exists() {
+        let _ = std::fs::create_dir_all("resources");
+        let _ = std::fs::write(licenses, b"");
+    }
     let target = std::env::var("TARGET").unwrap_or_default();
     if target.contains("windows") {
         let _ = std::fs::create_dir_all("resources/mingit");
-        let licenses = std::path::Path::new("resources/THIRD_PARTY_LICENSES.html");
-        if !licenses.exists() {
-            let _ = std::fs::write(licenses, b"");
-        }
     }
 }
 
