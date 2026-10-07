@@ -12,6 +12,7 @@ pub mod exec;
 pub mod identity;
 pub mod ignore;
 pub mod log;
+pub mod merge;
 pub mod parse;
 mod process_tree;
 pub mod remote;

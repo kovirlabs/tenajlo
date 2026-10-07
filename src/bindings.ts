@@ -80,6 +80,14 @@ export const commands = {
 	 *  `GitProgress` events with an empty `repoId`; `cancel_operation(op_id)` stops it.
 	 */
 	cloneRepository: (opId: string, url: string, path: string) => typedError<Repository, AppError>(__TAURI_INVOKE("clone_repository", { opId, url, path })),
+	/**  The merge (or rebase…) in progress and its conflicted files. */
+	getOperationState: (repoId: string) => typedError<OperationState, AppError>(__TAURI_INVOKE("get_operation_state", { repoId })),
+	/**  Marks conflicted files as resolved. Paths that aren't conflicted are ignored. */
+	markResolved: (repoId: string, paths: string[]) => typedError<null, AppError>(__TAURI_INVOKE("mark_resolved", { repoId, paths })),
+	/**  Aborts the merge, rebase, cherry-pick or revert in progress. */
+	abortOperation: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("abort_operation", { repoId })),
+	/**  Opens a file from the repository in its default app (e.g. to resolve conflicts). */
+	openRepoFile: (repoId: string, path: string) => typedError<null, AppError>(__TAURI_INVOKE("open_repo_file", { repoId, path })),
 	/**  Delivers the user's answer to a prompt (`None` = cancelled, which stops the operation). */
 	answerAuthPrompt: (promptId: string, answer: {
 	username: string | null,
@@ -225,6 +233,13 @@ export type CommitFile = {
 	kind: FileStatusKind,
 };
 
+/**  A conflicted file and how many conflict regions are still in it. */
+export type ConflictedFile = {
+	path: string,
+	/**  `<<<<<<<` markers left; `None` for binary or very large files. */
+	markers: number | null,
+};
+
 export type DiffHunk = {
 	/**  The full `@@ … @@ section` header line. */
 	header: string,
@@ -310,6 +325,17 @@ export type LocalChanges =
 "Bring" | 
 /**  Save them on the current branch and switch with a clean working directory. */
 "Leave";
+
+/**  A multi-step git operation that's waiting for the user. */
+export type OperationKind = "Merge" | "Rebase" | "CherryPick" | "Revert";
+
+/**  What the conflict banner shows. */
+export type OperationState = {
+	operation: OperationKind | null,
+	conflicts: ConflictedFile[],
+	/**  First line of git's prepared merge message, to prefill the commit summary. */
+	mergeSummary: string | null,
+};
 
 /**  One progress update, e.g. `Receiving objects: 45% (450/1000)`. */
 export type Progress = {
@@ -406,7 +432,9 @@ export type SyncAction =
 { type: "Pull"; remote: string } | { type: "Push"; remote: string } | { type: "Fetch"; remote: string };
 
 /**  What the user clicked. Rust re-derives the details (remote, branch) itself. */
-export type SyncRequest = "Fetch" | "Pull" | "Push" | "Publish";
+export type SyncRequest = "Fetch" | "Pull" | 
+/**  "Merge the server's changes" after a fast-forward pull found diverged branches. */
+"PullMerge" | "Push" | "Publish";
 
 /**  Sync button state for the current branch. */
 export type SyncState = {

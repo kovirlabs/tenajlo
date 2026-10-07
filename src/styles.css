@@ -847,3 +847,34 @@ button.danger {
   align-items: center;
   font-weight: 400;
 }
+
+.conflict-banner {
+  padding: 8px 12px;
+  background: var(--diff-hunk-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.conflict-banner p {
+  margin: 0 0 8px;
+}
+
+.conflict-list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.conflict-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.conflict-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}

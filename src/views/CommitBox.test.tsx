@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { FileChange, Identity } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
+import { useConflictStore } from "../stores/conflictStore";
 import { CommitBox } from "./CommitBox";
 
 const identity = vi.fn<() => Promise<{ status: "ok"; data: Identity }>>();
@@ -46,7 +47,10 @@ function setup(staged: FileChange["staged"], id: Identity = { name: "E", email: 
 }
 
 describe("CommitBox", () => {
-  beforeEach(() => commitChanges.mockClear());
+  beforeEach(() => {
+    commitChanges.mockClear();
+    useConflictStore.setState({ repoId: "r1", state: null });
+  });
   afterEach(cleanup);
 
   it("commits with Ctrl+Enter and clears the message", async () => {
@@ -92,5 +96,32 @@ describe("CommitBox", () => {
     fireEvent.click(screen.getByRole("button", { name: /Commit to main/ }));
     expect(commitChanges).not.toHaveBeenCalled();
     expect(screen.getByText(/global Git settings/)).toBeTruthy();
+  });
+
+  it("finishes a merge with git's message even when nothing is staged", async () => {
+    useConflictStore.setState({
+      repoId: "r1",
+      state: { operation: "Merge", conflicts: [], mergeSummary: "Merge branch 'main' of h" },
+    });
+    setup("None");
+    const summary = screen.getByLabelText("Commit summary") as HTMLInputElement;
+    expect(summary.value).toBe("Merge branch 'main' of h");
+    await waitFor(() => expect(identity).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /Commit merge to main/ }));
+    await waitFor(() =>
+      expect(commitChanges).toHaveBeenCalledWith("r1", "Merge branch 'main' of h", ""),
+    );
+  });
+
+  it("blocks committing during a rebase started elsewhere", () => {
+    useConflictStore.setState({
+      repoId: "r1",
+      state: { operation: "Rebase", conflicts: [], mergeSummary: null },
+    });
+    setup("Full");
+    fireEvent.change(screen.getByLabelText("Commit summary"), { target: { value: "x" } });
+    expect(
+      (screen.getByRole("button", { name: /Commit to main/ }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 });

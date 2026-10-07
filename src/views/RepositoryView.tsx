@@ -3,6 +3,7 @@ import { useChangesStore } from "../stores/changesStore";
 import { useUiStore, type Tab } from "../stores/uiStore";
 import { getWorkingDiff } from "../api/diff";
 import { useRepoRefresh } from "../hooks/useRepoRefresh";
+import { ConflictBanner } from "../components/conflicts/ConflictBanner";
 import { ChangesList } from "./ChangesList";
 import { CommitBox } from "./CommitBox";
 import { CommitDetail } from "./CommitDetail";
@@ -25,6 +26,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   return (
     <div className="repo-view">
       <aside className="sidebar">
+        <ConflictBanner repoId={repo.id} />
         <div role="tablist" className="tabs">
           {TABS.map((t) => (
             <button

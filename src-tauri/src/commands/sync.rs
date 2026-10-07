@@ -25,6 +25,8 @@ const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
 pub enum SyncRequest {
     Fetch,
     Pull,
+    /// "Merge the server's changes" after a fast-forward pull found diverged branches.
+    PullMerge,
     Push,
     Publish,
 }
@@ -101,7 +103,8 @@ pub async fn sync(
 
     let result = match plan {
         Plan::Fetch { remote } => remote::fetch(&git, &root, &remote, run).await,
-        Plan::Pull { .. } => remote::pull(&git, &root, run).await,
+        Plan::Pull { merge: false, .. } => remote::pull(&git, &root, run).await,
+        Plan::Pull { merge: true, .. } => remote::pull_merge(&git, &root, run).await,
         Plan::Push {
             remote,
             branch,
@@ -124,6 +127,7 @@ enum Plan {
     },
     Pull {
         remote: String,
+        merge: bool,
     },
     Push {
         remote: String,
@@ -140,7 +144,7 @@ impl Plan {
     fn remote(&self) -> &str {
         match self {
             Plan::Fetch { remote }
-            | Plan::Pull { remote }
+            | Plan::Pull { remote, .. }
             | Plan::Push { remote, .. }
             | Plan::Publish { remote, .. } => remote,
         }
@@ -175,9 +179,12 @@ fn plan(
             | SyncAction::Push { remote }
             | SyncAction::Publish { remote } => Plan::Fetch { remote },
         },
-        SyncRequest::Pull => {
+        SyncRequest::Pull | SyncRequest::PullMerge => {
             let (remote, _) = upstream().ok_or_else(not_published)?;
-            Plan::Pull { remote }
+            Plan::Pull {
+                remote,
+                merge: request == SyncRequest::PullMerge,
+            }
         }
         SyncRequest::Push => {
             let branch = branch.ok_or_else(detached)?;

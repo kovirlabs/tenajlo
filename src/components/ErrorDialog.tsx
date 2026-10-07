@@ -1,3 +1,4 @@
+import { useSyncStore } from "../stores/syncStore";
 import { useUiStore } from "../stores/uiStore";
 import { ErrorDetails } from "./ErrorDetails";
 import { Modal } from "./Modal";
@@ -8,6 +9,7 @@ export function ErrorDialog() {
   const dismiss = useUiStore((s) => s.dismissError);
   const signInAgain = useUiStore((s) => s.signInAgain);
   const reauthId = error?.kind === "SignInRequired" ? error.accountId : null;
+  const canMerge = error?.gitKind === "PullDiverged";
   return (
     <Modal open={error !== null} title="Something went wrong" onClose={dismiss}>
       {error && (
@@ -22,6 +24,22 @@ export function ErrorDialog() {
                 </button>
                 <button type="button" onClick={() => signInAgain(reauthId)} autoFocus>
                   Sign in again
+                </button>
+              </>
+            ) : canMerge ? (
+              <>
+                <button type="button" className="secondary" onClick={dismiss}>
+                  Not now
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    dismiss();
+                    void useSyncStore.getState().run("PullMerge");
+                  }}
+                  autoFocus
+                >
+                  Merge the server's changes
                 </button>
               </>
             ) : (

@@ -342,16 +342,16 @@ CI (Forgejo Actions on TMC-GIT01) runs `cargo fmt --check`, `cargo clippy -D war
 | M3 | Remotes over HTTPS | Fetch, pull (ff-only), push, publish, ahead/behind, progress UI. Trampoline with credential prompts and user's helper passthrough. |
 | M4 | Forgejo accounts | Sign-in with PAT, keychain storage, clone dialog listing repos, automatic HTTPS auth for account hosts |
 | M5 | SSH | System OpenSSH, passphrase prompt, host-key confirmation, clone via SSH URL |
-| M6 | Polish and ship v1.0 | Conflict banner, settings screen, error mapping, Windows installer (MSI/NSIS), signed build, internal docs |
-| v1.1 | Nice-to-haves | Hunk/line staging, SSH key generate + upload, Git LFS awareness (CAD/binary files), auto-update, background fetch notifications |
+| M6 | Polish and ship v1.0 | Merge on pull divergence + conflict banner, settings screen, Git LFS (bundled git-lfs, progress, auth), error mapping, signed Windows NSIS installer, user docs |
+| v1.1 | Nice-to-haves | Hunk/line staging, SSH key generate + upload, auto-update, background fetch notifications, remembered SSH passphrases, saving prompt credentials |
 | v2 | Forgejo native | OAuth2 PKCE sign-in, open PR in browser from branch, PR status badge |
 
 ---
 
 ## 13. Open questions
 
-1. **LFS:** Will TMC repos hold large binaries (CAD, PLC archives, EPLAN projects)? If so, LFS support moves from v1.1 to M6.
+1. ~~**LFS:**~~ **Answered:** yes, TMC repos will hold large binaries. Full LFS support is part of M6.
 2. ~~**SSH port:**~~ **Answered:** TMC-GIT01 serves SSH on **2222**. The clone dialog uses the `ssh_url` Forgejo reports (`ssh://git@host:2222/…`), so no `sshHost` override is needed unless that URL is misconfigured.
 3. **Internal CA:** Is TMC-GIT01's certificate issued by a domain CA pushed via GPO? If so, schannel handles Windows. Linux machines need the CA installed manually.
-4. **Distribution:** Internal-only (Intune/RMM push of MSI) or public under Kovir Labs? Public release affects naming, code signing, and the update endpoint.
-5. **Pull default:** Should the default stay ff-only with a prompt on divergence (safest), or use merge (GitHub Desktop's default)?
+4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs: signed NSIS installer, public docs, no TMC-specific defaults in the UI.
+5. ~~**Pull default:**~~ **Answered:** ff-only by default. On divergence, offer "Merge the server's changes" (a merge commit); conflicts go to the conflict banner. Rebase is a Settings option without guided conflict UI.

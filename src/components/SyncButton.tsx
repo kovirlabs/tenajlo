@@ -42,6 +42,7 @@ export function describe(state: SyncState): Label | null {
 const RUNNING_TITLE: Record<SyncRequest, string> = {
   Fetch: "Fetching…",
   Pull: "Pulling…",
+  PullMerge: "Merging…",
   Push: "Pushing…",
   Publish: "Publishing…",
 };

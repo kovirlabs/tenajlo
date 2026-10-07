@@ -4,6 +4,7 @@ import { useBranchStore } from "../stores/branchStore";
 import { useChangesStore } from "../stores/changesStore";
 import { useHistoryStore } from "../stores/historyStore";
 import { useSyncStore } from "../stores/syncStore";
+import { useConflictStore } from "../stores/conflictStore";
 import { onProgress } from "../api/sync";
 
 /**
@@ -16,6 +17,7 @@ export function useRepoRefresh(repoId: string) {
   const refreshBranches = useBranchStore((s) => s.refresh);
   const refreshHistory = useHistoryStore((s) => s.refresh);
   const refreshSync = useSyncStore((s) => s.refresh);
+  const refreshConflicts = useConflictStore((s) => s.refresh);
   const tip = useChangesStore((s) => (s.repoId === repoId ? s.status?.branch.tip : undefined));
 
   useEffect(() => {
@@ -23,6 +25,7 @@ export function useRepoRefresh(repoId: string) {
       void refreshChanges(repoId);
       void refreshBranches(repoId);
       void refreshSync(repoId);
+      void refreshConflicts(repoId);
     };
     refresh();
     void watchRepository(repoId);
@@ -45,7 +48,7 @@ export function useRepoRefresh(repoId: string) {
       unlisteners.forEach((fn) => fn());
       window.removeEventListener("focus", refresh);
     };
-  }, [repoId, refreshChanges, refreshBranches, refreshSync]);
+  }, [repoId, refreshChanges, refreshBranches, refreshSync, refreshConflicts]);
 
   useEffect(() => {
     // `undefined` = status not loaded yet; `null` = no commits yet (still worth loading: empty).

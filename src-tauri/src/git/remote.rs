@@ -159,6 +159,25 @@ pub async fn pull(git: &GitBinary, root: &Path, r: RemoteRun) -> Result<(), GitE
     .await
 }
 
+/// Pull that merges when the branches have diverged ("Merge the server's changes").
+/// Conflicts fail with `MergeConflict` and leave the merge in progress for the banner.
+pub async fn pull_merge(git: &GitBinary, root: &Path, mut r: RemoteRun) -> Result<(), GitError> {
+    // Never open an editor for the merge message.
+    r.env.push(("GIT_MERGE_AUTOEDIT".into(), "no".into()));
+    run_remote(
+        git,
+        root,
+        vec![
+            "pull".into(),
+            "--progress".into(),
+            "--no-rebase".into(),
+            "--no-edit".into(),
+        ],
+        r,
+    )
+    .await
+}
+
 /// Pushes `local` to `remote_branch` on `remote`. With `set_upstream`, also starts tracking
 /// it (publish). Names must be validated by the caller.
 pub async fn push(
@@ -354,5 +373,89 @@ mod tests {
             fetch(&git, &repo, "origin", run).await,
             Err(GitError::Cancelled)
         ));
+    }
+
+    /// `repo` and a teammate's clone both commit after `init`, editing `file`.
+    async fn diverged(file_ours: &str, file_theirs: &str) -> (tempfile::TempDir, PathBuf) {
+        let (tmp, repo, other) = setup().await;
+        let git = resolve(None, None).unwrap();
+        push(
+            &git,
+            &repo,
+            "origin",
+            "main",
+            "main",
+            true,
+            RemoteRun::quiet(),
+        )
+        .await
+        .unwrap();
+        let origin = tmp.path().join("origin.git");
+        git_in(
+            tmp.path(),
+            &[
+                "clone",
+                "-q",
+                origin.to_str().unwrap(),
+                other.to_str().unwrap(),
+            ],
+        )
+        .await;
+        write(&other, file_theirs, "theirs\n");
+        git_in(&other, &["add", "-A"]).await;
+        git_in(&other, &["commit", "-q", "-m", "theirs"]).await;
+        git_in(&other, &["push", "-q"]).await;
+        write(&repo, file_ours, "ours\n");
+        git_in(&repo, &["add", "-A"]).await;
+        git_in(&repo, &["commit", "-q", "-m", "ours"]).await;
+        // pull_merge commits as the user; tests have no global identity.
+        git_in(&repo, &["config", "user.name", "Test"]).await;
+        git_in(&repo, &["config", "user.email", "t@example.com"]).await;
+        (tmp, repo)
+    }
+
+    #[tokio::test]
+    async fn diverged_pull_fails_ff_only_then_merges() {
+        let (_tmp, repo) = diverged("mine.txt", "theirs.txt").await;
+        let git = resolve(None, None).unwrap();
+        let err = pull(&git, &repo, RemoteRun::quiet()).await.unwrap_err();
+        assert!(
+            matches!(
+                err,
+                GitError::Failed {
+                    kind: GitErrorKind::PullDiverged,
+                    ..
+                }
+            ),
+            "{err:?}"
+        );
+        pull_merge(&git, &repo, RemoteRun::quiet()).await.unwrap();
+        assert!(repo.join("theirs.txt").exists() && repo.join("mine.txt").exists());
+        let st = status(&git, &repo).await.unwrap();
+        assert_eq!(
+            (st.branch.ahead, st.branch.behind),
+            (2, 0),
+            "ours + merge commit"
+        );
+    }
+
+    #[tokio::test]
+    async fn conflicting_merge_is_left_in_progress() {
+        let (_tmp, repo) = diverged("a.txt", "a.txt").await;
+        let git = resolve(None, None).unwrap();
+        let err = pull_merge(&git, &repo, RemoteRun::quiet())
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(
+                err,
+                GitError::Failed {
+                    kind: GitErrorKind::MergeConflict,
+                    ..
+                }
+            ),
+            "{err:?}"
+        );
+        assert!(status(&git, &repo).await.unwrap().has_conflicts);
     }
 }

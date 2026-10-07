@@ -1,6 +1,7 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { AppError } from "../bindings";
+import { useSyncStore } from "../stores/syncStore";
 import { useUiStore } from "../stores/uiStore";
 import { ErrorDialog } from "./ErrorDialog";
 
@@ -30,6 +31,16 @@ describe("ErrorDialog", () => {
     render(<ErrorDialog />);
     expect(screen.queryByRole("button", { name: "Sign in again" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "OK" }));
+    expect(useUiStore.getState().error).toBeNull();
+  });
+
+  it("offers to merge when the branches have diverged", () => {
+    const run = vi.fn(async () => {});
+    useSyncStore.setState({ run });
+    useUiStore.setState({ error: { ...error("Git", null), gitKind: "PullDiverged" } });
+    render(<ErrorDialog />);
+    fireEvent.click(screen.getByRole("button", { name: "Merge the server's changes" }));
+    expect(run).toHaveBeenCalledWith("PullMerge");
     expect(useUiStore.getState().error).toBeNull();
   });
 });

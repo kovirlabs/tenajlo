@@ -277,13 +277,17 @@ fn git_message(kind: GitErrorKind) -> &'static str {
             "The server didn't accept your SSH key. Add your public key (for example id_ed25519.pub in your .ssh folder) to your Forgejo account under Settings → SSH / GPG Keys, or clone with HTTPS instead."
         }
         GitErrorKind::PushRejected => "The server has changes you don't have yet. Pull first, then push.",
-        GitErrorKind::PullDiverged => "Your branch and the server's branch have both changed.",
+        GitErrorKind::PullDiverged => {
+            "Your branch and the server's branch both have new commits. Merge the server's changes into your branch to continue."
+        }
         GitErrorKind::LocalChangesBlock => "You have changes that would be overwritten.",
         GitErrorKind::TlsUntrusted => {
             "This computer doesn't trust the server's certificate. Your IT team may need to install the company certificate."
         }
         GitErrorKind::HostUnreachable => "Couldn't reach the server. Check your network or VPN connection.",
-        GitErrorKind::MergeConflict => "Some files have conflicts that need to be resolved.",
+        GitErrorKind::MergeConflict => {
+            "Some files were changed both on the server and by you. Resolve the conflicts, then commit to finish."
+        }
         GitErrorKind::NotARepository => "This folder isn't a Git repository.",
         GitErrorKind::DubiousOwnership => {
             "Git won't open this folder because it belongs to a different user account. Ask IT to fix the folder's owner, or mark it as safe with `git config --global --add safe.directory <path>`."

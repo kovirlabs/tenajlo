@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { Progress, SyncRequest, SyncState } from "../bindings";
 import { cancelOperation, getSyncState, sync } from "../api/sync";
 import { useBranchStore } from "./branchStore";
+import { useConflictStore } from "./conflictStore";
 import { useChangesStore } from "./changesStore";
 import { useUiStore } from "./uiStore";
 
@@ -35,14 +36,18 @@ export const useSyncStore = create<SyncStoreState>((set, get) => ({
     set({ running: { opId, request, progress: null } });
     const res = await sync(repoId, opId, request);
     if (get().running?.opId === opId) set({ running: null });
-    // A cancelled operation needs no explanation.
-    if (res.status === "error" && res.error.kind !== "GitCancelled") {
+    // A cancelled operation needs no explanation; merge conflicts show in the conflict banner.
+    const quiet =
+      res.status === "error" &&
+      (res.error.kind === "GitCancelled" || res.error.gitKind === "MergeConflict");
+    if (res.status === "error" && !quiet) {
       useUiStore.getState().showError(res.error);
     }
     await Promise.all([
       get().refresh(repoId),
       useChangesStore.getState().refresh(repoId),
       useBranchStore.getState().refresh(repoId),
+      useConflictStore.getState().refresh(repoId),
     ]);
   },
 

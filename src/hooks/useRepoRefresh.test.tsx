@@ -4,6 +4,7 @@ import { useBranchStore } from "../stores/branchStore";
 import { useChangesStore } from "../stores/changesStore";
 import { useHistoryStore } from "../stores/historyStore";
 import { useSyncStore } from "../stores/syncStore";
+import { useConflictStore } from "../stores/conflictStore";
 import { useRepoRefresh } from "./useRepoRefresh";
 
 let emit: ((repoId: string) => void) | null = null;
@@ -39,6 +40,8 @@ describe("useRepoRefresh", () => {
     useHistoryStore.setState({ refresh: vi.fn(async () => {}) });
     const sync = vi.fn(async () => {});
     useSyncStore.setState({ refresh: sync });
+    const conflicts = vi.fn(async () => {});
+    useConflictStore.setState({ refresh: conflicts });
 
     const { unmount } = render(<Probe id="r1" />);
     expect(changes).toHaveBeenCalledTimes(1);
@@ -50,6 +53,7 @@ describe("useRepoRefresh", () => {
     expect(changes).toHaveBeenCalledTimes(2);
     expect(branches).toHaveBeenCalledTimes(2);
     expect(sync).toHaveBeenCalledTimes(2);
+    expect(conflicts).toHaveBeenCalledTimes(2);
 
     window.dispatchEvent(new Event("focus"));
     expect(changes).toHaveBeenCalledTimes(3);

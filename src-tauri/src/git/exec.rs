@@ -13,7 +13,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 use tokio_util::sync::CancellationToken;
 
-use super::error::{classify, GitError};
+use super::error::{classify, GitError, GitErrorKind};
 use super::process_tree::TreeKiller;
 use crate::redact::redact;
 
@@ -282,8 +282,13 @@ impl GitCommand {
         }
         let stderr = redact(&stderr);
         tracing::debug!(?exit_code, %stderr, "git failed");
+        // Some failures are only explained on stdout (merge: "CONFLICT (content): …").
+        let kind = match classify(&stderr) {
+            GitErrorKind::Unknown => classify(&String::from_utf8_lossy(&output.stdout)),
+            kind => kind,
+        };
         Err(GitError::Failed {
-            kind: classify(&stderr),
+            kind,
             exit_code,
             stderr,
         })

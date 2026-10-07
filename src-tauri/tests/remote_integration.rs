@@ -208,3 +208,49 @@ async fn rejected_and_read_only_tokens_are_diagnosed() {
     );
     assert!(dead.accounts.list()[0].needs_sign_in);
 }
+
+#[tokio::test]
+async fn diverged_branches_merge_and_push_with_the_account() {
+    let (mine, _) = private_repos().await;
+    let env = env_with(token(&FULL).await).await;
+    let url = format!("{BASE}/{mine}.git");
+    let (a, b) = (env.work.join("a"), env.work.join("b"));
+    for dest in [&a, &b] {
+        let (_auth, run) = env.auth(&url).await;
+        clone(&env.git, &url, dest, run).await.unwrap();
+        for kv in [["user.name", "Test"], ["user.email", "t@example.com"]] {
+            GitCommand::new(["config", kv[0], kv[1]], Access::Mutating)
+                .cwd(dest)
+                .run(&env.git)
+                .await
+                .unwrap();
+        }
+    }
+    env.commit(&b, "teammate.txt").await;
+    let (_auth, run) = env.auth(&url).await;
+    remote::push(&env.git, &b, "origin", "main", "main", false, run)
+        .await
+        .unwrap();
+
+    env.commit(&a, "mine.txt").await;
+    let (_auth, run) = env.auth(&url).await;
+    let err = remote::pull(&env.git, &a, run).await.unwrap_err();
+    assert!(
+        matches!(
+            err,
+            GitError::Failed {
+                kind: GitErrorKind::PullDiverged,
+                ..
+            }
+        ),
+        "{err:?}"
+    );
+    let (_auth, run) = env.auth(&url).await;
+    remote::pull_merge(&env.git, &a, run).await.unwrap();
+    assert!(a.join("teammate.txt").exists());
+    let (_auth, run) = env.auth(&url).await;
+    remote::push(&env.git, &a, "origin", "main", "main", false, run)
+        .await
+        .unwrap();
+    assert!(env.prompts.lock().unwrap().is_empty());
+}
