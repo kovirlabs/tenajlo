@@ -63,6 +63,7 @@ pub struct GitCommand {
     timeout: Duration,
     cancel: Option<CancellationToken>,
     ok_exit_codes: &'static [i32],
+    literal_pathspecs: bool,
 }
 
 impl GitCommand {
@@ -82,6 +83,7 @@ impl GitCommand {
             access,
             timeout: DEFAULT_TIMEOUT,
             cancel: None,
+            literal_pathspecs: false,
             ok_exit_codes: &[0],
         }
     }
@@ -108,6 +110,24 @@ impl GitCommand {
     pub fn cancel_on(mut self, token: CancellationToken) -> Self {
         self.cancel = Some(token);
         self
+    }
+
+    /// Pathspecs are literal paths (`GIT_LITERAL_PATHSPECS=1`): no globs, no `:(magic)`.
+    pub fn literal_pathspecs(mut self) -> Self {
+        self.literal_pathspecs = true;
+        self
+    }
+
+    /// Feeds `paths` as NUL-separated pathspecs on stdin. Add
+    /// `--pathspec-from-file=- --pathspec-file-nul` to the args. Avoids command-line
+    /// length limits (Windows: 32K chars) and implies [`Self::literal_pathspecs`].
+    pub fn pathspecs_on_stdin<S: AsRef<str>>(self, paths: &[S]) -> Self {
+        let mut buf = Vec::new();
+        for p in paths {
+            buf.extend_from_slice(p.as_ref().as_bytes());
+            buf.push(0);
+        }
+        self.stdin(buf).literal_pathspecs()
     }
 
     /// Exit codes treated as success (default `[0]`), e.g. `[0, 1]` for `diff --no-index`.
@@ -147,6 +167,9 @@ impl GitCommand {
             .stderr(Stdio::piped())
             .kill_on_drop(true);
         apply_base_env(&mut cmd, self.access);
+        if self.literal_pathspecs {
+            cmd.env("GIT_LITERAL_PATHSPECS", "1");
+        }
         if let Some(dir) = &self.cwd {
             cmd.current_dir(dir);
         }
@@ -278,6 +301,10 @@ fn apply_base_env(cmd: &mut Command, access: Access) {
         "GIT_WORK_TREE",
         "GIT_INDEX_FILE",
         "GIT_OBJECT_DIRECTORY",
+        "GIT_LITERAL_PATHSPECS",
+        "GIT_GLOB_PATHSPECS",
+        "GIT_NOGLOB_PATHSPECS",
+        "GIT_ICASE_PATHSPECS",
     ] {
         cmd.env_remove(var);
     }

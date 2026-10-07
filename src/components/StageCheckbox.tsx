@@ -1,10 +1,15 @@
 import { useEffect, useRef } from "react";
 import type { StagedState } from "../bindings";
 
-type Props = { state: StagedState; label: string };
+type Props = {
+  state: StagedState;
+  label: string;
+  disabled?: boolean;
+  onChange: (stage: boolean) => void;
+};
 
-/** Shows how much of a file is staged. Read-only until staging lands in M2. */
-export function StageCheckbox({ state, label }: Props) {
+/** Checked = staged, indeterminate = partly staged. Clicking a partial file stages all of it. */
+export function StageCheckbox({ state, label, disabled, onChange }: Props) {
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = state === "Partial";
@@ -14,9 +19,10 @@ export function StageCheckbox({ state, label }: Props) {
       ref={ref}
       type="checkbox"
       checked={state === "Full"}
-      disabled
-      readOnly
+      disabled={disabled}
       aria-label={label}
+      onClick={(e) => e.stopPropagation()}
+      onChange={() => onChange(state !== "Full")}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { FileChange } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
@@ -49,6 +49,29 @@ describe("ChangesList", () => {
 
     fireEvent.click(screen.getByText("new.txt"));
     expect(useChangesStore.getState().selectedPath).toBe("new.txt");
+  });
+
+  it("stages a file and toggles all files", () => {
+    setStatus([
+      file("a.txt"),
+      file("b.txt", { staged: "Full" }),
+      file("c.txt", { kind: "Conflicted" }),
+    ]);
+    const setStaged = vi.fn(async () => {});
+    useChangesStore.setState({ setStaged, busy: false });
+    render(<ChangesList />);
+
+    fireEvent.click(screen.getByLabelText("Include a.txt"));
+    expect(setStaged).toHaveBeenLastCalledWith(["a.txt"], true);
+    fireEvent.click(screen.getByLabelText("Include b.txt"));
+    expect(setStaged).toHaveBeenLastCalledWith(["b.txt"], false);
+    expect((screen.getByLabelText("Include c.txt") as HTMLInputElement).disabled).toBe(true);
+
+    // Partially staged overall → clicking stages everything except the conflict.
+    fireEvent.click(screen.getByLabelText("Include all files"));
+    expect(setStaged).toHaveBeenLastCalledWith(["a.txt", "b.txt"], true);
+    // Clicking a checkbox doesn't change which file is selected.
+    expect(useChangesStore.getState().selectedPath).toBe("a.txt");
   });
 
   it("shows an empty state", () => {

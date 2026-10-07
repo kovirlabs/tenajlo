@@ -8,6 +8,7 @@ pub mod exec;
 pub mod log;
 pub mod parse;
 pub mod repo_root;
+pub mod stage;
 pub mod status;
 #[cfg(test)]
 pub mod test_support;

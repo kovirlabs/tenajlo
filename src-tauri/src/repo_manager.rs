@@ -1,10 +1,12 @@
 //! Owns the repository list and per-repository state.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
+use tokio::sync::OwnedMutexGuard;
 use uuid::Uuid;
 
 use crate::git::error::GitError;
@@ -51,6 +53,8 @@ pub struct RepoManager {
     file: Mutex<RepositoriesFile>,
     /// Set when the file on disk couldn't be loaded safely; we then never overwrite it.
     read_only: bool,
+    /// One mutation lock per repository (CLAUDE.md rule 6).
+    locks: Mutex<HashMap<Uuid, Arc<tokio::sync::Mutex<()>>>>,
 }
 
 impl RepoManager {
@@ -69,12 +73,13 @@ impl RepoManager {
             path,
             file: Mutex::new(file),
             read_only,
+            locks: Mutex::default(),
         }
     }
 
     /// Current list, most recently opened first.
     pub fn list(&self) -> RepositoryList {
-        let file = self.lock();
+        let file = self.data();
         let mut entries: Vec<&RepositoryEntry> = file.repositories.iter().collect();
         entries.sort_by_key(|e| std::cmp::Reverse(e.last_opened));
         RepositoryList {
@@ -86,7 +91,7 @@ impl RepoManager {
     /// Adds the repository containing `dir` and selects it. Re-adding selects the existing entry.
     pub async fn add(&self, git: &GitBinary, dir: &Path) -> Result<Repository, RepoError> {
         let root = repo_root::show_toplevel(git, dir).await?;
-        let mut file = self.lock();
+        let mut file = self.data();
         let id = match file.repositories.iter_mut().find(|r| r.path == root) {
             Some(existing) => {
                 existing.last_opened = now();
@@ -116,7 +121,7 @@ impl RepoManager {
 
     /// Removes a repository from the list. Files on disk are untouched.
     pub fn remove(&self, id: Uuid) -> Result<(), RepoError> {
-        let mut file = self.lock();
+        let mut file = self.data();
         let before = file.repositories.len();
         file.repositories.retain(|r| r.id != id);
         if file.repositories.len() == before {
@@ -131,7 +136,7 @@ impl RepoManager {
 
     /// Marks a repository as selected and recently opened.
     pub fn select(&self, id: Uuid) -> Result<Repository, RepoError> {
-        let mut file = self.lock();
+        let mut file = self.data();
         let entry = file
             .repositories
             .iter_mut()
@@ -146,12 +151,23 @@ impl RepoManager {
 
     /// Working-tree root for `id`. All git operations on a repository start here.
     pub fn root(&self, id: Uuid) -> Result<PathBuf, RepoError> {
-        let file = self.lock();
+        let file = self.data();
         file.repositories
             .iter()
             .find(|r| r.id == id)
             .map(|r| r.path.clone())
             .ok_or(RepoError::UnknownRepository)
+    }
+
+    /// Waits for and takes the repository's mutation lock. Hold it for the whole
+    /// mutating git operation; read-only operations don't need it.
+    pub async fn lock_repo(&self, id: Uuid) -> Result<(PathBuf, OwnedMutexGuard<()>), RepoError> {
+        let root = self.root(id)?;
+        let lock = {
+            let mut locks = self.locks.lock().unwrap_or_else(|p| p.into_inner());
+            locks.entry(id).or_default().clone()
+        };
+        Ok((root, lock.lock_owned().await))
     }
 
     fn save(&self, file: &RepositoriesFile) -> Result<(), StoreError> {
@@ -162,7 +178,7 @@ impl RepoManager {
         store::save(&self.path, file)
     }
 
-    fn lock(&self) -> std::sync::MutexGuard<'_, RepositoriesFile> {
+    fn data(&self) -> std::sync::MutexGuard<'_, RepositoriesFile> {
         // A poisoned lock only means another thread panicked mid-update; the data is still usable.
         self.file.lock().unwrap_or_else(|p| p.into_inner())
     }
@@ -239,6 +255,34 @@ mod tests {
             Err(RepoError::Git(GitError::Failed { .. }))
         ));
         assert!(mgr.list().repositories.is_empty());
+    }
+
+    #[tokio::test]
+    async fn repo_lock_serializes_mutations() {
+        let data = tempfile::tempdir().unwrap();
+        let (_tmp, repo) = init_repo().await;
+        let mgr = std::sync::Arc::new(RepoManager::load(data.path()));
+        let id: Uuid = mgr
+            .add(&resolve(None, None).unwrap(), &repo)
+            .await
+            .unwrap()
+            .id
+            .parse()
+            .unwrap();
+
+        let (_root, guard) = mgr.lock_repo(id).await.unwrap();
+        let waiter = {
+            let mgr = mgr.clone();
+            tokio::spawn(async move { mgr.lock_repo(id).await.map(|_| ()) })
+        };
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(!waiter.is_finished(), "second mutation must wait");
+        drop(guard);
+        waiter.await.unwrap().unwrap();
+        assert!(matches!(
+            mgr.lock_repo(Uuid::new_v4()).await,
+            Err(RepoError::UnknownRepository)
+        ));
     }
 
     #[test]

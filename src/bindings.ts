@@ -39,6 +39,8 @@ export const commands = {
 	 *  Watching is best-effort: on failure the UI still refreshes on window focus.
 	 */
 	watchRepository: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { repoId })),
+	/**  Stages (`staged = true`) or unstages the given changed files. */
+	setStaged: (repoId: string, paths: string[], staged: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_staged", { repoId, paths, staged })),
 };
 
 /** Events */
