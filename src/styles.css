@@ -763,3 +763,60 @@ button.danger {
   gap: 8px;
   max-width: 320px;
 }
+
+.clone-form {
+  width: min(560px, 80vw);
+}
+
+.clone-list-controls,
+.clone-path,
+.clone-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clone-filter,
+.clone-path input {
+  flex: 1;
+}
+
+.clone-progress progress {
+  flex: 1;
+}
+
+.clone-repo-list {
+  height: 260px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.clone-repo-list .picker-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.clone-repo-desc {
+  font-size: 0.85rem;
+}
+
+.clone-empty {
+  padding: 24px 0;
+  text-align: center;
+}
+
+.badge {
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}

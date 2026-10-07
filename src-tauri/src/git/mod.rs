@@ -3,6 +3,7 @@
 pub mod binary;
 pub mod branch_name;
 pub mod branches;
+pub mod clone;
 pub mod commit;
 pub mod diff;
 pub mod discard;

@@ -8,7 +8,10 @@ import { SignInForm } from "./SignInForm";
 /** Lists Forgejo accounts, with sign in and sign out. Settings (M6) will absorb this. */
 export function AccountsDialog() {
   const open = useUiStore((s) => s.dialog === "accounts");
-  const close = () => useUiStore.getState().openDialog(null);
+  const close = () => {
+    // Also fires when another dialog replaced this one; keep that one open.
+    if (useUiStore.getState().dialog === "accounts") useUiStore.getState().openDialog(null);
+  };
   return (
     <Modal open={open} title="Forgejo accounts" onClose={close}>
       <AccountsBody onClose={close} />

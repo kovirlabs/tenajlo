@@ -159,6 +159,11 @@ impl AccountManager {
         Ok(())
     }
 
+    /// The stored account with `id`.
+    pub fn entry(&self, id: Uuid) -> Option<AccountEntry> {
+        self.data().accounts.iter().find(|a| a.id == id).cloned()
+    }
+
     /// The account whose server hosts `remote_url`, if any (spec §6.2 step 1).
     pub fn for_remote(&self, remote_url: &str) -> Option<AccountEntry> {
         self.data()

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Account, AppError, ServerInfo } from "../../bindings";
 import { checkServer, openTokenSettings, signIn } from "../../api/accounts";
-import { ErrorDetails } from "../ErrorDetails";
+import { InlineError } from "../InlineError";
 
 type Props = {
   /** Known server (signing in again): skips straight to checking it. */
@@ -53,12 +53,7 @@ export function SignInForm({ initialServer, onSignedIn, onCancel }: Props) {
       onSignedIn(res.data);
     });
 
-  const errorBox = error && (
-    <div className="form-error" role="alert">
-      {error.message}
-      <ErrorDetails details={error.details} />
-    </div>
-  );
+  const errorBox = <InlineError error={error} />;
 
   if (!info) {
     return (

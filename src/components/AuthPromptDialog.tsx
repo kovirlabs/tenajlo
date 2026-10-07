@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AuthPromptRequested } from "../bindings";
 import { answerAuthPrompt, onAuthPrompt } from "../api/sync";
+import { useCloneStore } from "../stores/cloneStore";
 import { useSyncStore } from "../stores/syncStore";
 import { Modal } from "./Modal";
 
@@ -25,9 +26,11 @@ export function AuthPromptDialog() {
   }, []);
 
   // Prompts for an operation that has finished or been cancelled are stale.
-  const runningOp = useSyncStore((s) => s.running?.opId);
-  const current = queue.find((p) => p.opId === runningOp) ?? null;
-  const done = () => setQueue((q) => q.filter((p) => p !== current && p.opId === runningOp));
+  const syncOp = useSyncStore((s) => s.running?.opId);
+  const cloneOp = useCloneStore((s) => s.running?.opId);
+  const isRunning = (opId: string) => opId === syncOp || opId === cloneOp;
+  const current = queue.find((p) => isRunning(p.opId)) ?? null;
+  const done = () => setQueue((q) => q.filter((p) => p !== current && isRunning(p.opId)));
   return current ? <PromptForm key={current.promptId} prompt={current} onDone={done} /> : null;
 }
 

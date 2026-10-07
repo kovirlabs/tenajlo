@@ -69,6 +69,17 @@ export const commands = {
 	signOut: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("sign_out", { id })),
 	/**  Opens the server's "Applications" settings page, where the user creates a token. */
 	openTokenSettings: (server: string) => typedError<null, AppError>(__TAURI_INVOKE("open_token_settings", { server })),
+	/**  Repositories the account can clone: its own and its organizations'. */
+	listForgejoRepositories: (accountId: string) => typedError<RemoteRepository[], AppError>(__TAURI_INVOKE("list_forgejo_repositories", { accountId })),
+	/**  Default destination for `url`: `Documents/Tenajlo/<name>`, made unique if taken. */
+	suggestClonePath: (url: string) => typedError<string, AppError>(__TAURI_INVOKE("suggest_clone_path", { url })),
+	/**  Lets the user pick a parent folder; returns `<picked>/<name>`, or `None` if cancelled. */
+	chooseCloneFolder: (url: string) => typedError<string | null, AppError>(__TAURI_INVOKE("choose_clone_folder", { url })),
+	/**
+	 *  Clones `url` into `path`, then adds and selects the new repository. Progress arrives as
+	 *  `GitProgress` events with an empty `repoId`; `cancel_operation(op_id)` stops it.
+	 */
+	cloneRepository: (opId: string, url: string, path: string) => typedError<Repository, AppError>(__TAURI_INVOKE("clone_repository", { opId, url, path })),
 	/**  Delivers the user's answer to a prompt (`None` = cancelled, which stops the operation). */
 	answerAuthPrompt: (promptId: string, answer: {
 	username: string | null,
@@ -257,7 +268,9 @@ export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | "SshKeyRejected" | 
 /**  Folder owned by another user; git's `safe.directory` check refused it. */
 "DubiousOwnership" | 
 /**  `user.name` / `user.email` not configured. */
-"IdentityMissing" | "BranchExists" | "BranchNotMerged" | "Unknown";
+"IdentityMissing" | "BranchExists" | "BranchNotMerged" | 
+/**  The server has no such repository, or hides it from this account. */
+"RepositoryNotFound" | "Unknown";
 
 /**  Result of the startup git check, sent to the UI. */
 export type GitInfo = {
@@ -315,6 +328,19 @@ export type PromptKind =
 { type: "Password"; host: string; username: string } | 
 /**  Anything else git asks; shown verbatim. */
 { type: "Other"; prompt: string };
+
+/**  A repository shown in the clone dialog. */
+export type RemoteRepository = {
+	/**  `owner/name`, unique per server. */
+	fullName: string,
+	owner: string,
+	name: string,
+	description: string,
+	private: boolean,
+	archived: boolean,
+	/**  HTTPS clone URL. */
+	cloneUrl: string,
+};
 
 /**  Emitted (debounced) when files or git state in a watched repository change. */
 export type RepoChanged = {

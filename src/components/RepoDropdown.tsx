@@ -66,6 +66,16 @@ export function RepoDropdown() {
             </button>
             <button
               type="button"
+              className="secondary"
+              onClick={() => {
+                close();
+                useUiStore.getState().openDialog("clone");
+              }}
+            >
+              Clone…
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 close();
                 void addLocal();

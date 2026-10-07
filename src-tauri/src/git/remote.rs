@@ -89,7 +89,8 @@ impl RemoteRun {
     }
 }
 
-async fn run(
+/// Runs a network git command in `root` with progress, auth env/config and cancellation.
+pub(super) async fn run_remote(
     git: &GitBinary,
     root: &Path,
     args: Vec<String>,
@@ -127,7 +128,7 @@ pub async fn fetch(
     remote: &str,
     r: RemoteRun,
 ) -> Result<(), GitError> {
-    run(
+    run_remote(
         git,
         root,
         vec![
@@ -144,7 +145,7 @@ pub async fn fetch(
 
 /// Fast-forward-only pull from the upstream. `--no-rebase` so `pull.rebase` config can't change behavior.
 pub async fn pull(git: &GitBinary, root: &Path, r: RemoteRun) -> Result<(), GitError> {
-    run(
+    run_remote(
         git,
         root,
         vec![
@@ -178,7 +179,7 @@ pub async fn push(
         remote.into(),
         format!("refs/heads/{local}:refs/heads/{remote_branch}"),
     ]);
-    run(git, root, args, r).await
+    run_remote(git, root, args, r).await
 }
 
 #[cfg(test)]

@@ -110,9 +110,19 @@ impl ForgejoClient {
         path: &str,
         token: Option<&Secret>,
     ) -> Result<T, ForgejoError> {
+        self.get_url(join(base, path), token).await
+    }
+
+    /// `GET url` with an optional token, parsing JSON. `url` must be on the server.
+    pub(crate) async fn get_url<T: DeserializeOwned>(
+        &self,
+        url: Url,
+        token: Option<&Secret>,
+    ) -> Result<T, ForgejoError> {
+        let path = url.path().to_owned();
         let mut req = self
             .http
-            .get(join(base, path))
+            .get(url)
             .header(reqwest::header::ACCEPT, "application/json");
         if let Some(token) = token {
             let mut value =

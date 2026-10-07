@@ -25,6 +25,8 @@ pub enum GitErrorKind {
     IdentityMissing,
     BranchExists,
     BranchNotMerged,
+    /// The server has no such repository, or hides it from this account.
+    RepositoryNotFound,
     Unknown,
 }
 
@@ -40,6 +42,14 @@ const PATTERNS: &[(&str, GitErrorKind)] = &[
         GitErrorKind::AuthFailed,
     ),
     ("could not read Username", GitErrorKind::AuthFailed),
+    // Forgejo: "remote: Repository not found"; git: "fatal: repository '<url>' not found";
+    // local paths: "fatal: '<path>' does not appear to be a git repository".
+    ("Repository not found", GitErrorKind::RepositoryNotFound),
+    ("' not found", GitErrorKind::RepositoryNotFound),
+    (
+        "does not appear to be a git repository",
+        GitErrorKind::RepositoryNotFound,
+    ),
     ("Host key verification failed", GitErrorKind::HostKeyUnknown),
     ("Permission denied (publickey", GitErrorKind::SshKeyRejected),
     ("Not possible to fast-forward", GitErrorKind::PullDiverged),
@@ -130,6 +140,14 @@ mod tests {
                 GitErrorKind::HostKeyUnknown,
             ),
             ("git@h: Permission denied (publickey).", GitErrorKind::SshKeyRejected),
+            (
+                "remote: Repository not found.\nfatal: repository 'https://h/team/x.git/' not found",
+                GitErrorKind::RepositoryNotFound,
+            ),
+            (
+                "fatal: '/tmp/nope.git' does not appear to be a git repository",
+                GitErrorKind::RepositoryNotFound,
+            ),
             (
                 " ! [rejected]        main -> main (non-fast-forward)",
                 GitErrorKind::PushRejected,

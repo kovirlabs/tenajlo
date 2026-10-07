@@ -237,7 +237,7 @@ When the credential helper protocol sends `erase`, delete the keychain entry. On
 |---|---|
 | Health/version | `GET /api/v1/version` |
 | Current user | `GET /api/v1/user` |
-| Repos for clone dialog | `GET /api/v1/user/repos?limit=50&page=N` and `GET /api/v1/repos/search?q=&uid=` for org repos |
+| Repos for clone dialog | `GET /api/v1/user/repos?limit=50&page=N`, plus `GET /api/v1/orgs/{org}/repos?limit=50&page=N` for each of the user's orgs (de-duplicated) |
 | User's orgs | `GET /api/v1/user/orgs` |
 | SSH keys (v1.1) | `GET/POST /api/v1/user/keys` |
 
@@ -268,7 +268,7 @@ The layout mirrors GitHub Desktop, which users may already know.
 ### 8.1 Screens and dialogs
 - **Welcome / first run:** sign in to Forgejo, or skip. Set git name and email (writes `user.name` and `user.email` globally only after confirmation, prefilled from the Forgejo profile).
 - **Repository list (dropdown):** recent repos, filter box, "Add local…", "Clone…", "Create new…" (`git init`).
-- **Clone dialog:** tabs for *Your Forgejo repos* (list from API) and *URL*. Choose HTTPS or SSH URL, then the local path. Default path is `~/Documents/Tenajlo/<repo>`, configurable.
+- **Clone dialog:** tabs for *Your Forgejo repos* (list from API) and *URL*. Choose HTTPS or SSH URL (SSH from M5; M4 clones HTTPS only), then the local path. Default path is `~/Documents/Tenajlo/<repo>`, configurable.
 - **Changes tab:** file list with checkboxes (stage state), status icons, and a right-click menu (discard, ignore, reveal in explorer, open in editor). Commit box at the bottom.
 - **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff.
 - **Branch dropdown:** filter, current, recent, other local, remote-only (check out creates a tracking branch), plus "New branch…". When switching with local changes, offer *Bring changes* or *Stash and switch* (GitHub Desktop behavior).

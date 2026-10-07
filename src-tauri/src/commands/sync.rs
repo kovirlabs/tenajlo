@@ -246,7 +246,7 @@ fn detached() -> AppError {
 }
 
 /// Emits progress at most every [`PROGRESS_INTERVAL`], plus every phase change and completion.
-fn progress_emitter(
+pub(crate) fn progress_emitter(
     app: AppHandle,
     repo_id: String,
     op_id: String,

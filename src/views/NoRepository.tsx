@@ -7,9 +7,12 @@ export function NoRepository() {
     <main className="centered">
       <div className="empty">
         <h1>No repository selected</h1>
-        <p>Add a folder on this computer that's already a Git repository.</p>
+        <p>Clone a repository from the server, or add a folder that's already a Git repository.</p>
         <div className="empty-actions">
-          <button type="button" onClick={() => void addLocal()}>
+          <button type="button" onClick={() => useUiStore.getState().openDialog("clone")}>
+            Clone a repository…
+          </button>
+          <button type="button" className="secondary" onClick={() => void addLocal()}>
             Add local repository…
           </button>
           <button

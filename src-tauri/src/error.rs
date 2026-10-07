@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::auth::accounts::AccountError;
 use crate::forgejo::ForgejoError;
+use crate::git::clone::CloneError;
 use crate::git::error::{GitError, GitErrorKind};
 use crate::repo_manager::RepoError;
 use crate::store::accounts::AccountEntry;
@@ -209,6 +210,32 @@ impl From<ForgejoError> for AppError {
     }
 }
 
+impl From<CloneError> for AppError {
+    fn from(err: CloneError) -> Self {
+        match err {
+            CloneError::Git(e) => e.into(),
+            other => AppError::with_details(
+                AppErrorKind::InvalidInput,
+                clone_message(&other),
+                other.to_string(),
+            ),
+        }
+    }
+}
+
+fn clone_message(err: &CloneError) -> String {
+    match err {
+        CloneError::InvalidUrl(_) => "Tenajlo can only clone https:// addresses for now (SSH comes in a later version). The address must not include a password.".to_owned(),
+        CloneError::DestinationExists(path) => format!(
+            "A folder already exists at {}. Choose another name or location.",
+            path.display()
+        ),
+        CloneError::InvalidDestination(_) => "Choose a folder for the repository.".to_owned(),
+        CloneError::Io { .. } => "Tenajlo couldn't create the folder for the repository.".to_owned(),
+        CloneError::Git(_) => git_message(GitErrorKind::Unknown).to_owned(),
+    }
+}
+
 impl From<AccountError> for AppError {
     fn from(err: AccountError) -> Self {
         match err {
@@ -257,6 +284,9 @@ fn git_message(kind: GitErrorKind) -> &'static str {
         GitErrorKind::IdentityMissing => "Git needs your name and email before you can commit.",
         GitErrorKind::BranchExists => "A branch with that name already exists.",
         GitErrorKind::BranchNotMerged => "This branch has commits that aren't on any other branch.",
+        GitErrorKind::RepositoryNotFound => {
+            "The server couldn't find that repository. Check the address, and that your account has access to it."
+        }
         GitErrorKind::Unknown => "Git reported a problem.",
     }
 }
