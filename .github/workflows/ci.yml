@@ -61,7 +61,12 @@ jobs:
 
   licenses:
     # Every shipped Rust crate and npm package must have an accepted license (about.toml).
-    runs-on: ubuntu-24.04
+    # Also runs on Windows because the release build runs this script there.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -76,6 +81,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/third-party-licenses.mjs --out target/THIRD_PARTY_LICENSES.html
       - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
         with:
           name: third-party-licenses
           path: target/THIRD_PARTY_LICENSES.html
