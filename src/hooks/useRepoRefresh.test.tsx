@@ -3,6 +3,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { useBranchStore } from "../stores/branchStore";
 import { useChangesStore } from "../stores/changesStore";
 import { useHistoryStore } from "../stores/historyStore";
+import { useSyncStore } from "../stores/syncStore";
 import { useRepoRefresh } from "./useRepoRefresh";
 
 let emit: ((repoId: string) => void) | null = null;
@@ -13,6 +14,10 @@ vi.mock("../api/watch", () => ({
     emit = cb;
     return unlisten;
   }),
+}));
+
+vi.mock("../api/sync", () => ({
+  onProgress: vi.fn(async () => unlisten),
 }));
 
 function Probe({ id }: { id: string }) {
@@ -32,6 +37,8 @@ describe("useRepoRefresh", () => {
     useChangesStore.setState({ refresh: changes, repoId: null, status: null });
     useBranchStore.setState({ refresh: branches });
     useHistoryStore.setState({ refresh: vi.fn(async () => {}) });
+    const sync = vi.fn(async () => {});
+    useSyncStore.setState({ refresh: sync });
 
     const { unmount } = render(<Probe id="r1" />);
     expect(changes).toHaveBeenCalledTimes(1);
@@ -42,6 +49,7 @@ describe("useRepoRefresh", () => {
     emit?.("r1");
     expect(changes).toHaveBeenCalledTimes(2);
     expect(branches).toHaveBeenCalledTimes(2);
+    expect(sync).toHaveBeenCalledTimes(2);
 
     window.dispatchEvent(new Event("focus"));
     expect(changes).toHaveBeenCalledTimes(3);
