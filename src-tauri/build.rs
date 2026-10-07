@@ -3,7 +3,25 @@ use std::path::PathBuf;
 fn main() {
     ensure_askpass_placeholder();
     ensure_mingit_placeholder();
-    tauri_build::build();
+    let target = std::env::var("TARGET").unwrap_or_default();
+    if target.contains("windows-msvc") {
+        // tauri-build embeds the Common Controls v6 manifest into the app executable only, so
+        // test executables fail to start (STATUS_ENTRYPOINT_NOT_FOUND: the dialog APIs need
+        // it). Embed the same manifest through the linker instead, which covers every
+        // executable this package builds, tests included.
+        println!("cargo:rerun-if-changed=windows-app-manifest.xml");
+        let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default())
+            .join("windows-app-manifest.xml");
+        println!("cargo:rustc-link-arg=/MANIFEST:EMBED");
+        println!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest.display());
+        let attributes = tauri_build::Attributes::new()
+            .windows_attributes(tauri_build::WindowsAttributes::new_without_app_manifest());
+        if let Err(e) = tauri_build::try_build(attributes) {
+            panic!("tauri-build failed: {e:#}");
+        }
+    } else {
+        tauri_build::build();
+    }
 }
 
 /// Windows builds bundle `resources/mingit` and `resources/THIRD_PARTY_LICENSES.html`
