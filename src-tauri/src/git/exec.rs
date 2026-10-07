@@ -368,6 +368,8 @@ fn base_config_flags() -> Vec<String> {
     #[cfg(windows)]
     {
         flags.push("http.sslBackend=schannel".to_owned());
+        // Paths beyond 260 characters (deep PLC/CAD trees), without the OS long-path setting.
+        flags.push("core.longpaths=true".to_owned());
         if let Some(ssh) = windows_openssh() {
             flags.push(format!("core.sshCommand={ssh}"));
         }

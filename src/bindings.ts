@@ -323,7 +323,23 @@ export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" |
 /**  `user.name` / `user.email` not configured. */
 "IdentityMissing" | "BranchExists" | "BranchNotMerged" | 
 /**  The server has no such repository, or hides it from this account. */
-"RepositoryNotFound" | "Unknown";
+"RepositoryNotFound" | 
+/**  Forgejo branch protection refused a direct push. */
+"ProtectedBranch" | 
+/**  A server-side hook refused the push for another reason (its message is in details). */
+"PushDeclined" | 
+/**  HTTP 413: the upload exceeded the server's size limit. */
+"PushTooLarge" | 
+/**  The branch being pulled no longer exists on the server. */
+"RemoteBranchMissing" | 
+/**  `.git/index.lock` (or another lock) exists: another git process, or a crashed one. */
+"RepositoryLocked" | 
+/**  A path exceeds Windows' length limit. */
+"PathTooLong" | "DiskFull" | 
+/**  Windows couldn't check the certificate's revocation status (internal CA, offline CRL). */
+"TlsRevocationCheck" | 
+/**  Git LFS couldn't transfer large files. */
+"LfsFailed" | "Unknown";
 
 /**  Result of the startup git check, sent to the UI. */
 export type GitInfo = {
