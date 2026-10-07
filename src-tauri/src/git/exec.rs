@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 
-use tokio::io::AsyncWriteExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 use tokio_util::sync::CancellationToken;
 
@@ -54,8 +54,10 @@ pub struct GitOutput {
     pub exit_code: Option<i32>,
 }
 
+/// Per-line stderr callback (progress parsing).
+type StderrCallback = Box<dyn FnMut(&str) + Send>;
+
 /// A single git invocation. Build with [`GitCommand::new`] and run with [`GitCommand::run`].
-#[derive(Debug)]
 pub struct GitCommand {
     args: Vec<OsString>,
     cwd: Option<PathBuf>,
@@ -65,6 +67,8 @@ pub struct GitCommand {
     cancel: Option<CancellationToken>,
     ok_exit_codes: &'static [i32],
     literal_pathspecs: bool,
+    extra_env: Vec<(OsString, OsString)>,
+    on_stderr_line: Option<StderrCallback>,
 }
 
 impl GitCommand {
@@ -85,6 +89,8 @@ impl GitCommand {
             timeout: DEFAULT_TIMEOUT,
             cancel: None,
             literal_pathspecs: false,
+            extra_env: Vec::new(),
+            on_stderr_line: None,
             ok_exit_codes: &[0],
         }
     }
@@ -131,6 +137,19 @@ impl GitCommand {
         self.stdin(buf).literal_pathspecs()
     }
 
+    /// Adds an environment variable for this invocation (e.g. the askpass trampoline).
+    pub fn env(mut self, key: impl Into<OsString>, value: impl Into<OsString>) -> Self {
+        self.extra_env.push((key.into(), value.into()));
+        self
+    }
+
+    /// Calls `f` for each stderr line as it arrives (`\r` and `\n` both end a line, as
+    /// git redraws progress with `\r`). Stderr is still collected in full.
+    pub fn on_stderr_line(mut self, f: impl FnMut(&str) + Send + 'static) -> Self {
+        self.on_stderr_line = Some(Box::new(f));
+        self
+    }
+
     /// Exit codes treated as success (default `[0]`), e.g. `[0, 1]` for `diff --no-index`.
     pub fn ok_exit_codes(mut self, codes: &'static [i32]) -> Self {
         self.ok_exit_codes = codes;
@@ -171,6 +190,7 @@ impl GitCommand {
         if self.literal_pathspecs {
             cmd.env("GIT_LITERAL_PATHSPECS", "1");
         }
+        cmd.envs(self.extra_env.iter().map(|(k, v)| (k, v)));
         if let Some(dir) = &self.cwd {
             cmd.current_dir(dir);
         }
@@ -184,8 +204,12 @@ impl GitCommand {
         cmd.process_group(0);
 
         let mut child = cmd.spawn().map_err(GitError::Spawn)?;
-        let pid = child.id();
+        // Capture the process tree immediately, before git can spawn helpers.
+        let mut tree = TreeKiller::new(&child);
+
         let stdin_pipe = child.stdin.take();
+        let stdout_pipe = child.stdout.take();
+        let stderr_pipe = child.stderr.take();
         let input = self.stdin;
         let write_stdin = async move {
             if let (Some(mut pipe), Some(data)) = (stdin_pipe, input) {
@@ -194,10 +218,19 @@ impl GitCommand {
                 let _ = pipe.shutdown().await;
             }
         };
-        // Write stdin concurrently with reading output so large payloads can't deadlock.
+        let read_stdout = async move {
+            let mut buf = Vec::new();
+            if let Some(mut pipe) = stdout_pipe {
+                pipe.read_to_end(&mut buf).await?;
+            }
+            Ok::<_, std::io::Error>(buf)
+        };
+        let read_stderr = read_stderr_lines(stderr_pipe, self.on_stderr_line);
+        // Feed stdin and drain both pipes concurrently so nothing can deadlock.
         let wait = async {
-            let ((), out) = tokio::join!(write_stdin, child.wait_with_output());
-            out
+            let ((), out, err, status) =
+                tokio::join!(write_stdin, read_stdout, read_stderr, child.wait());
+            Ok::<_, std::io::Error>((out?, err?, status?))
         };
         let cancelled = async {
             match &self.cancel {
@@ -206,22 +239,23 @@ impl GitCommand {
             }
         };
 
-        // `wait` is pinned so the child stays unreaped until the tree is killed;
-        // otherwise its process-group id could be recycled before `killpg`.
-        let wait = tokio::time::timeout(self.timeout, wait);
-        tokio::pin!(wait);
-        let mut tree = TreeKiller::new(pid);
         let finished = tokio::select! {
-            res = &mut wait => Some(res),
+            res = tokio::time::timeout(self.timeout, wait) => Some(res),
             () = cancelled => None,
         };
-        let output = match finished {
+        let (stdout, stderr_bytes, status) = match finished {
             Some(Ok(out)) => {
                 tree.disarm();
                 out.map_err(GitError::Spawn)?
             }
+            // Dropping `tree` (armed) kills the whole tree; `kill_on_drop` covers git itself.
             Some(Err(_elapsed)) => return Err(GitError::TimedOut),
             None => return Err(GitError::Cancelled),
+        };
+        let output = std::process::Output {
+            status,
+            stdout,
+            stderr: stderr_bytes,
         };
 
         let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
@@ -241,6 +275,42 @@ impl GitCommand {
             stderr,
         })
     }
+}
+
+/// Reads stderr to the end, invoking `on_line` per `\r`/`\n`-terminated line.
+async fn read_stderr_lines(
+    pipe: Option<tokio::process::ChildStderr>,
+    mut on_line: Option<StderrCallback>,
+) -> std::io::Result<Vec<u8>> {
+    let Some(mut pipe) = pipe else {
+        return Ok(Vec::new());
+    };
+    let mut all = Vec::new();
+    let mut line = Vec::new();
+    let mut buf = [0u8; 4096];
+    loop {
+        let n = pipe.read(&mut buf).await?;
+        if n == 0 {
+            break;
+        }
+        all.extend_from_slice(&buf[..n]);
+        if let Some(cb) = on_line.as_mut() {
+            for &b in &buf[..n] {
+                if b == b'\r' || b == b'\n' {
+                    if !line.is_empty() {
+                        cb(&String::from_utf8_lossy(&line));
+                        line.clear();
+                    }
+                } else {
+                    line.push(b);
+                }
+            }
+        }
+    }
+    if let (Some(cb), false) = (on_line.as_mut(), line.is_empty()) {
+        cb(&String::from_utf8_lossy(&line));
+    }
+    Ok(all)
 }
 
 /// `-c` flags applied to every invocation. Never written to the user's config.
@@ -388,6 +458,27 @@ mod tests {
             );
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn streams_stderr_lines_split_on_cr_and_lf() {
+        let lines = std::sync::Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
+        let sink = lines.clone();
+        let out = GitCommand::new(
+            ["-c", "alias.zz=!printf 'Receiving objects:  50%%\\rReceiving objects: 100%%\\nDone' >&2; echo out", "zz"],
+            Access::ReadOnly,
+        )
+        .on_stderr_line(move |l| sink.lock().unwrap().push(l.to_owned()))
+        .run(&git())
+        .await
+        .unwrap();
+        assert_eq!(
+            *lines.lock().unwrap(),
+            vec!["Receiving objects:  50%", "Receiving objects: 100%", "Done"]
+        );
+        assert!(out.stderr.contains("Done"));
+        assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "out");
     }
 
     #[cfg(unix)]

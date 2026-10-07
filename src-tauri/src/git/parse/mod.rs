@@ -3,5 +3,6 @@
 pub mod branches;
 pub mod diff;
 pub mod log;
+pub mod progress;
 pub mod status;
 pub mod version;
