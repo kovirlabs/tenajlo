@@ -9,7 +9,7 @@ import { CloneDialog } from "./CloneDialog";
 const account: Account = {
   id: "a1",
   kind: "forgejo",
-  baseUrl: "https://tmc-git01.tmus.local",
+  baseUrl: "https://git.example.com",
   login: "evan",
   displayName: "Evan",
   avatarUrl: null,
@@ -22,8 +22,8 @@ const repo = (owner: string, name: string): RemoteRepository => ({
   description: `${name} description`,
   private: true,
   archived: false,
-  cloneUrl: `https://tmc-git01.tmus.local/${owner}/${name}.git`,
-  sshUrl: `ssh://git@tmc-git01.tmus.local:2222/${owner}/${name}.git`,
+  cloneUrl: `https://git.example.com/${owner}/${name}.git`,
+  sshUrl: `ssh://git@git.example.com:2222/${owner}/${name}.git`,
 });
 
 let accounts: Account[] = [];
@@ -64,7 +64,7 @@ describe("CloneDialog", () => {
   it("clones a repository picked from the account's list", async () => {
     cloneApi.listForgejoRepositories.mockResolvedValue({
       status: "ok",
-      data: [repo("evan", "notes"), repo("TMC", "plc")],
+      data: [repo("evan", "notes"), repo("acme", "plc")],
     });
     cloneApi.cloneRepository.mockResolvedValue({ status: "ok", data: {} });
     render(<CloneDialog />);
@@ -82,7 +82,7 @@ describe("CloneDialog", () => {
     await waitFor(() =>
       expect(cloneApi.cloneRepository).toHaveBeenCalledWith(
         expect.any(String),
-        "https://tmc-git01.tmus.local/TMC/plc.git",
+        "https://git.example.com/acme/plc.git",
         "/Users/evan/Documents/Tenajlo/plc",
       ),
     );
@@ -93,7 +93,7 @@ describe("CloneDialog", () => {
   it("clones over SSH when chosen", async () => {
     cloneApi.listForgejoRepositories.mockResolvedValue({
       status: "ok",
-      data: [repo("TMC", "plc")],
+      data: [repo("acme", "plc")],
     });
     cloneApi.cloneRepository.mockResolvedValue({ status: "ok", data: {} });
     render(<CloneDialog />);
@@ -105,7 +105,7 @@ describe("CloneDialog", () => {
     await waitFor(() =>
       expect(cloneApi.cloneRepository).toHaveBeenCalledWith(
         expect.any(String),
-        "ssh://git@tmc-git01.tmus.local:2222/TMC/plc.git",
+        "ssh://git@git.example.com:2222/acme/plc.git",
         "/Users/evan/Documents/Tenajlo/plc",
       ),
     );

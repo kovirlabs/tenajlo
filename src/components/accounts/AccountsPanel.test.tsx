@@ -8,16 +8,16 @@ import { AccountsPanel } from "./AccountsPanel";
 const account: Account = {
   id: "a1",
   kind: "forgejo",
-  baseUrl: "https://tmc-git01.tmus.local",
+  baseUrl: "https://git.example.com",
   login: "evan",
   displayName: "Evan G",
   avatarUrl: null,
   needsSignIn: false,
 };
 const info: ServerInfo = {
-  baseUrl: "https://tmc-git01.tmus.local",
+  baseUrl: "https://git.example.com",
   version: "11.0.1",
-  tokenSettingsUrl: "https://tmc-git01.tmus.local/user/settings/applications",
+  tokenSettingsUrl: "https://git.example.com/user/settings/applications",
   requiredScopes: ["read:user", "read:repository", "write:repository"],
 };
 
@@ -53,10 +53,10 @@ describe("AccountsPanel", () => {
     render(<AccountsPanel onClose={() => {}} />);
 
     fireEvent.change(await screen.findByLabelText("Server address"), {
-      target: { value: "TMC-GIT01.tmus.local" },
+      target: { value: "GIT.EXAMPLE.COM" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-    expect(api.checkServer).toHaveBeenCalledWith("TMC-GIT01.tmus.local");
+    expect(api.checkServer).toHaveBeenCalledWith("GIT.EXAMPLE.COM");
 
     fireEvent.change(await screen.findByLabelText("Access token"), {
       target: { value: "pat-123" },

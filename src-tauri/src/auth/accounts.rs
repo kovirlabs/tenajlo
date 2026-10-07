@@ -263,7 +263,7 @@ mod tests {
         (dir, secrets, m)
     }
 
-    const BASE: &str = "https://tmc-git01.tmus.local";
+    const BASE: &str = "https://git.example.com";
 
     #[tokio::test]
     async fn sign_in_stores_token_in_keychain_only() {
@@ -342,13 +342,13 @@ mod tests {
     #[test]
     fn remote_matching() {
         let m = |b, r| hosts_remote(b, r);
-        assert!(m(BASE, "https://TMC-GIT01.tmus.local/team/plc.git"));
-        assert!(m(BASE, "https://evan@tmc-git01.tmus.local:443/team/plc"));
-        assert!(!m(BASE, "https://tmc-git01.tmus.local:3000/team/plc.git"));
-        assert!(!m(BASE, "http://tmc-git01.tmus.local/team/plc.git"));
-        assert!(!m(BASE, "https://evil.tmus.local/team/plc.git"));
-        assert!(!m(BASE, "git@tmc-git01.tmus.local:team/plc.git"));
-        assert!(!m(BASE, "ssh://git@tmc-git01.tmus.local/team/plc.git"));
+        assert!(m(BASE, "https://GIT.EXAMPLE.COM/team/plc.git"));
+        assert!(m(BASE, "https://evan@git.example.com:443/team/plc"));
+        assert!(!m(BASE, "https://git.example.com:3000/team/plc.git"));
+        assert!(!m(BASE, "http://git.example.com/team/plc.git"));
+        assert!(!m(BASE, "https://evil.example.com/team/plc.git"));
+        assert!(!m(BASE, "git@git.example.com:team/plc.git"));
+        assert!(!m(BASE, "ssh://git@git.example.com/team/plc.git"));
         assert!(m("https://h/forgejo", "https://h/forgejo/team/x.git"));
         assert!(!m("https://h/forgejo", "https://h/forgejoish/team/x.git"));
         assert!(!m("https://h/forgejo", "https://h/team/x.git"));

@@ -276,7 +276,7 @@ mod tests {
                 GitErrorKind::TlsUntrusted,
             ),
             (
-                "fatal: unable to access 'https://h/': Could not resolve host: TMC-GIT01.tmus.local",
+                "fatal: unable to access 'https://h/': Could not resolve host: GIT.EXAMPLE.COM",
                 GitErrorKind::HostUnreachable,
             ),
             (

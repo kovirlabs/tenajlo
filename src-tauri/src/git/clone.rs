@@ -141,11 +141,11 @@ mod tests {
 
     #[test]
     fn url_policy() {
-        assert!(validate_url("https://tmc-git01.tmus.local/team/plc.git").is_ok());
+        assert!(validate_url("https://git.example.com/team/plc.git").is_ok());
         assert!(validate_url(" https://evan@h/x.git ").is_ok());
         assert!(validate_url("http://localhost:3000/x.git").is_ok());
-        assert!(validate_url("ssh://git@tmc-git01.tmus.local:2222/team/plc.git").is_ok());
-        assert!(validate_url("git@tmc-git01.tmus.local:team/plc.git").is_ok());
+        assert!(validate_url("ssh://git@git.example.com:2222/team/plc.git").is_ok());
+        assert!(validate_url("git@git.example.com:team/plc.git").is_ok());
         for bad in [
             "http://h/x.git",
             "https://evan:pat@h/x.git",

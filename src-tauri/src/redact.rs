@@ -77,8 +77,8 @@ mod tests {
     #[test]
     fn masks_url_userinfo() {
         assert_eq!(
-            redact("fatal: unable to access 'https://evan:abc123@TMC-GIT01.tmus.local/a/b.git/'"),
-            "fatal: unable to access 'https://***@TMC-GIT01.tmus.local/a/b.git/'"
+            redact("fatal: unable to access 'https://evan:abc123@GIT.EXAMPLE.COM/a/b.git/'"),
+            "fatal: unable to access 'https://***@GIT.EXAMPLE.COM/a/b.git/'"
         );
     }
 
@@ -89,10 +89,10 @@ mod tests {
 
     #[test]
     fn leaves_plain_urls_alone() {
-        let s = "https://TMC-GIT01.tmus.local/org/repo.git and ssh://git@host:2222/r";
+        let s = "https://GIT.EXAMPLE.COM/org/repo.git and ssh://git@host:2222/r";
         assert_eq!(
             redact(s),
-            "https://TMC-GIT01.tmus.local/org/repo.git and ssh://***@host:2222/r"
+            "https://GIT.EXAMPLE.COM/org/repo.git and ssh://***@host:2222/r"
         );
     }
 

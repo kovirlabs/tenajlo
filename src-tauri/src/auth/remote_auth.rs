@@ -159,7 +159,7 @@ mod tests {
     use crate::forgejo::ForgejoUser;
     use std::sync::Arc;
 
-    const REMOTE: &str = "https://tmc-git01.tmus.local/team/plc.git";
+    const REMOTE: &str = "https://git.example.com/team/plc.git";
 
     async fn setup(
         base: &str,
@@ -207,7 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn account_hosts_get_the_helper_override() {
-        let (_d, _s, accounts, t) = setup("https://tmc-git01.tmus.local").await;
+        let (_d, _s, accounts, t) = setup("https://git.example.com").await;
         let auth = prep(&accounts, &t, REMOTE).await.unwrap();
         assert_eq!(auth.config.len(), 2);
         assert!(auth.account.is_some());
@@ -223,8 +223,8 @@ mod tests {
 
     #[tokio::test]
     async fn missing_or_rejected_token_requires_sign_in() {
-        let (_d, secrets, accounts, t) = setup("https://tmc-git01.tmus.local").await;
-        secrets.delete("https://tmc-git01.tmus.local|evan").unwrap();
+        let (_d, secrets, accounts, t) = setup("https://git.example.com").await;
+        secrets.delete("https://git.example.com|evan").unwrap();
         assert!(matches!(
             prep(&accounts, &t, REMOTE).await,
             Err(PrepareError::SignInRequired(_))
@@ -232,10 +232,7 @@ mod tests {
         assert!(accounts.list()[0].needs_sign_in);
         // Stays required (no network attempt) until the user signs in again.
         secrets
-            .set(
-                "https://tmc-git01.tmus.local|evan",
-                &Secret::new("x".into()),
-            )
+            .set("https://git.example.com|evan", &Secret::new("x".into()))
             .unwrap();
         assert!(matches!(
             prep(&accounts, &t, REMOTE).await,
@@ -245,7 +242,7 @@ mod tests {
 
     #[tokio::test]
     async fn locked_keychain_falls_back_to_user_helpers() {
-        let (_d, secrets, accounts, t) = setup("https://tmc-git01.tmus.local").await;
+        let (_d, secrets, accounts, t) = setup("https://git.example.com").await;
         secrets
             .fail
             .store(true, std::sync::atomic::Ordering::SeqCst);

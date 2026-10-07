@@ -90,8 +90,8 @@ mod tests {
     #[test]
     fn adds_https_and_strips_trailing_slash() {
         assert_eq!(
-            norm("  TMC-GIT01.tmus.local/ ").unwrap(),
-            "https://tmc-git01.tmus.local"
+            norm("  GIT.EXAMPLE.COM/ ").unwrap(),
+            "https://git.example.com"
         );
         assert_eq!(
             norm("https://git.example.com:3000/forgejo//").unwrap(),
@@ -111,7 +111,7 @@ mod tests {
         );
         assert_eq!(norm("http://[::1]:3000").unwrap(), "http://[::1]:3000");
         assert!(matches!(
-            norm("http://tmc-git01.tmus.local"),
+            norm("http://git.example.com"),
             Err(ForgejoError::InvalidUrl(_))
         ));
     }

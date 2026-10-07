@@ -83,7 +83,7 @@ mod tests {
     fn ignores_non_progress() {
         for line in [
             "",
-            "To https://TMC-GIT01.tmus.local/org/repo.git",
+            "To https://GIT.EXAMPLE.COM/org/repo.git",
             "   abc123..def456  main -> main",
             "fatal: Authentication failed for 'https://***@h/r.git/'",
             "error: failed to push some refs to 'x'",

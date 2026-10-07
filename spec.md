@@ -2,7 +2,7 @@
 
 **Status:** Draft v0.1 · **Owner:** Evan · **Name:** Tenajlo · **Bundle identifier:** `com.kovirlabs.tenajlo`
 
-A cross-platform desktop Git client in the spirit of GitHub Desktop, built for self-hosted Forgejo instances (first target: `TMC-GIT01.tmus.local`). Built with Tauri 2 (Rust backend) and TypeScript/React (frontend).
+A cross-platform desktop Git client in the spirit of GitHub Desktop, built for self-hosted Forgejo instances. Built with Tauri 2 (Rust backend) and TypeScript/React (frontend).
 
 ---
 
@@ -10,7 +10,7 @@ A cross-platform desktop Git client in the spirit of GitHub Desktop, built for s
 
 1. Let engineers who are not Git experts clone, commit, pull, push, and branch without the CLI.
 2. Make authentication painless and secure across all three methods: Git credentials over HTTPS, SSH keys, and Forgejo personal access tokens (PATs).
-3. Work reliably on an internal network: private DNS (`*.tmus.local`), internal or self-signed TLS certificates, and Windows domain-joined machines.
+3. Work reliably on internal company networks: private DNS names, internal or self-signed TLS certificates, and Windows domain-joined machines.
 4. Stay small, fast, and easy to maintain by one person in limited time.
 
 ## 2. Non-goals (v1)
@@ -25,7 +25,7 @@ A cross-platform desktop Git client in the spirit of GitHub Desktop, built for s
 
 | Platform | Priority | Notes |
 |---|---|---|
-| Windows 10/11 x64 | **P0** | Most TMC engineering workstations. Bundles MinGit. |
+| Windows 10/11 x64 | **P0** | Most target users' workstations. Bundles MinGit. |
 | Linux x64 (Ubuntu 24.04+) | P1 | Uses system git. Developer machines. |
 | macOS (arm64) | P2 | Uses system git. Best effort. |
 
@@ -181,12 +181,12 @@ Map git stderr patterns to typed errors. GitHub Desktop's `lib/git/core.ts` erro
 type Account = {
   id: string;                 // uuid
   kind: "forgejo";            // future: "generic-https"
-  baseUrl: string;            // https://TMC-GIT01.tmus.local
+  baseUrl: string;            // https://git.example.com
   login: string;              // from GET /api/v1/user
   displayName: string;
   avatarUrl?: string;
   tokenScopes?: string[];     // if discoverable
-  sshHost?: string;           // optional override, e.g. TMC-GIT01.tmus.local:2222
+  sshHost?: string;           // optional override, e.g. git.example.com:2222
 };
 // Secret stored separately in OS keychain:
 //   service = "tenajlo", user = `${baseUrl}|${login}` → PAT
@@ -350,8 +350,8 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 
 ## 13. Open questions
 
-1. ~~**LFS:**~~ **Answered:** yes, TMC repos will hold large binaries. Full LFS support is part of M6.
-2. ~~**SSH port:**~~ **Answered:** TMC-GIT01 serves SSH on **2222**. The clone dialog uses the `ssh_url` Forgejo reports (`ssh://git@host:2222/…`), so no `sshHost` override is needed unless that URL is misconfigured.
-3. **Internal CA:** Is TMC-GIT01's certificate issued by a domain CA pushed via GPO? If so, schannel handles Windows. Linux machines need the CA installed manually.
-4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs, Apache-2.0: NSIS installer built by GitHub Actions (unsigned until a certificate is chosen), public docs, no TMC-specific defaults in the UI.
+1. ~~**LFS:**~~ **Answered:** yes, target users' repositories hold large binaries (CAD, PLC archives). Full LFS support is part of M6.
+2. ~~**SSH port:**~~ **Answered:** self-hosted Forgejo often serves SSH on an alternate port such as **2222** (the dev server does). The clone dialog uses the `ssh_url` Forgejo reports (`ssh://git@host:2222/…`), so no `sshHost` override is needed unless that URL is misconfigured.
+3. **Internal CA:** When a server's certificate comes from a company CA deployed through Group Policy, schannel trusts it on Windows. On Linux and macOS the CA has to be installed in the OS trust store manually.
+4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs, Apache-2.0: NSIS installer built by GitHub Actions (unsigned until a certificate is chosen), public docs, no organization-specific defaults in the UI.
 5. ~~**Pull default:**~~ **Answered:** ff-only by default. On divergence, offer "Merge the server's changes" (a merge commit); conflicts go to the conflict banner. Rebase is a Settings option without guided conflict UI.

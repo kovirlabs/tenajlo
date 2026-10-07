@@ -21,13 +21,13 @@ pub enum AccountKind {
 pub struct AccountEntry {
     pub id: Uuid,
     pub kind: AccountKind,
-    /// Normalized, e.g. `https://tmc-git01.tmus.local` (no trailing slash).
+    /// Normalized, e.g. `https://git.example.com` (no trailing slash).
     pub base_url: String,
     pub login: String,
     pub display_name: String,
     pub avatar_url: Option<String>,
     pub token_scopes: Option<Vec<String>>,
-    /// SSH host override, e.g. `tmc-git01.tmus.local:2222` (M5).
+    /// SSH host override, e.g. `git.example.com:2222` (M5).
     pub ssh_host: Option<String>,
     /// The server rejected the token (401); the user must paste a new one. Defaults to
     /// `false` so files written before this field existed still load.

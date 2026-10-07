@@ -14,7 +14,8 @@ services:
       - FORGEJO__database__DB_TYPE=sqlite3
       - FORGEJO__security__INSTALL_LOCK=true
       - FORGEJO__server__ROOT_URL=http://localhost:3000/
-      # SSH on 2222 like TMC-GIT01 (spec §13.2); the container's sshd listens on 22.
+      # SSH on 2222, a common alternate port for self-hosted Forgejo (spec §13.2); the
+      # container's sshd listens on 22.
       - FORGEJO__server__SSH_DOMAIN=localhost
       - FORGEJO__server__SSH_PORT=2222
       - FORGEJO__service__DISABLE_REGISTRATION=true

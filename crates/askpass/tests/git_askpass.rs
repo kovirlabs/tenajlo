@@ -86,7 +86,7 @@ fn credential_fill(port: u16, token: &str) -> std::process::Output {
         .stdin
         .take()
         .unwrap()
-        .write_all(b"protocol=https\nhost=tmc-git01.tmus.local\n\n")
+        .write_all(b"protocol=https\nhost=git.example.com\n\n")
         .unwrap();
     child.wait_with_output().unwrap()
 }
@@ -104,11 +104,11 @@ fn git_gets_credentials_through_the_trampoline() {
     assert!(stdout.contains("username=ëvan\n"), "{stdout}");
     assert!(stdout.contains("password=s3cr3t token\n"), "{stdout}");
     let prompts = prompts.lock().unwrap();
-    assert_eq!(prompts[0], "Username for 'https://tmc-git01.tmus.local': ");
+    assert_eq!(prompts[0], "Username for 'https://git.example.com': ");
     // git percent-encodes the username inside the URL.
     assert_eq!(
         prompts[1],
-        "Password for 'https://%C3%ABvan@tmc-git01.tmus.local': "
+        "Password for 'https://%C3%ABvan@git.example.com': "
     );
 }
 
@@ -185,13 +185,13 @@ fn credential_helper_mode_answers_from_the_app_and_overrides_user_helpers() {
     let global = dir.join("gitconfig");
     std::fs::write(
         &global,
-        "[credential \"https://tmc-git01.tmus.local\"]\n\thelper = \"!f() { echo password=FROM-USER-HELPER; }; f\"\n",
+        "[credential \"https://git.example.com\"]\n\thelper = \"!f() { echo password=FROM-USER-HELPER; }; f\"\n",
     )
     .unwrap();
     let helper = credential_helper_config(&awkward_helper_path(&dir));
     let (port, seen) = fake_app("good-token");
 
-    let input = "protocol=https\nhost=tmc-git01.tmus.local\n\n";
+    let input = "protocol=https\nhost=git.example.com\n\n";
     let out = git_credential(port, "good-token", &helper, &global, "fill", input);
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
@@ -204,14 +204,14 @@ fn credential_helper_mode_answers_from_the_app_and_overrides_user_helpers() {
     assert!(!stdout.contains("FROM-USER-HELPER"), "{stdout}");
 
     let reject =
-        "protocol=https\nhost=tmc-git01.tmus.local\nusername=evan\npassword=pat-from-keychain\n\n";
+        "protocol=https\nhost=git.example.com\nusername=evan\npassword=pat-from-keychain\n\n";
     let out = git_credential(port, "good-token", &helper, &global, "reject", reject);
     assert!(out.status.success());
 
     let seen = seen.lock().unwrap();
-    assert_eq!(seen[0], "Get protocol=https host=tmc-git01.tmus.local");
+    assert_eq!(seen[0], "Get protocol=https host=git.example.com");
     assert!(
-        seen[1].starts_with("Erase protocol=https host=tmc-git01.tmus.local username=evan"),
+        seen[1].starts_with("Erase protocol=https host=git.example.com username=evan"),
         "{}",
         seen[1]
     );

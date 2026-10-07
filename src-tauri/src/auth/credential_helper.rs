@@ -63,7 +63,7 @@ mod tests {
     fn account() -> AccountCredential {
         AccountCredential {
             protocol: "https".into(),
-            host: "tmc-git01.tmus.local".into(),
+            host: "git.example.com".into(),
             login: "evan".into(),
             token: Secret::new("pat-123".into()),
         }
@@ -83,11 +83,11 @@ mod tests {
             ("username".into(), "evan".into()),
             ("password".into(), "pat-123".into()),
         ]);
-        let host = [("protocol", "https"), ("host", "tmc-git01.tmus.local")];
+        let host = [("protocol", "https"), ("host", "git.example.com")];
         assert_eq!(ask(CredentialOp::Get, &host), expected);
         let explicit = [
             ("protocol", "https"),
-            ("host", "TMC-GIT01.tmus.local:443"),
+            ("host", "GIT.EXAMPLE.COM:443"),
             ("username", "evan"),
         ];
         assert_eq!(ask(CredentialOp::Get, &explicit), expected);
@@ -96,23 +96,23 @@ mod tests {
     #[test]
     fn refuses_other_servers_users_and_ops() {
         for wrong in [
-            vec![("protocol", "http"), ("host", "tmc-git01.tmus.local")],
-            vec![("protocol", "https"), ("host", "tmc-git01.tmus.local:3000")],
+            vec![("protocol", "http"), ("host", "git.example.com")],
+            vec![("protocol", "https"), ("host", "git.example.com:3000")],
             vec![("protocol", "https"), ("host", "evil.example")],
             vec![
                 ("protocol", "https"),
-                ("host", "tmc-git01.tmus.local.evil.example"),
+                ("host", "git.example.com.evil.example"),
             ],
             vec![
                 ("protocol", "https"),
-                ("host", "tmc-git01.tmus.local"),
+                ("host", "git.example.com"),
                 ("username", "other"),
             ],
-            vec![("host", "tmc-git01.tmus.local")],
+            vec![("host", "git.example.com")],
         ] {
             assert_eq!(ask(CredentialOp::Get, &wrong), None, "{wrong:?}");
         }
-        let host = [("protocol", "https"), ("host", "tmc-git01.tmus.local")];
+        let host = [("protocol", "https"), ("host", "git.example.com")];
         assert_eq!(ask(CredentialOp::Store, &host), None);
         assert_eq!(ask(CredentialOp::Erase, &host), None);
         assert_eq!(answer(&account(), None, &Vec::new()), None);

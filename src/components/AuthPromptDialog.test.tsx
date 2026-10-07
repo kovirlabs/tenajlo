@@ -35,8 +35,8 @@ describe("AuthPromptDialog", () => {
   }
 
   it("asks for username and password in one dialog", async () => {
-    await show(prompt({ type: "Credentials", host: "TMC-GIT01.tmus.local" }));
-    expect(screen.getByText("Sign in to TMC-GIT01.tmus.local")).toBeTruthy();
+    await show(prompt({ type: "Credentials", host: "GIT.EXAMPLE.COM" }));
+    expect(screen.getByText("Sign in to GIT.EXAMPLE.COM")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Username"), { target: { value: "evan" } });
     fireEvent.change(screen.getByLabelText("Password or token"), { target: { value: "pat" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
@@ -69,12 +69,12 @@ describe("AuthPromptDialog", () => {
     await show(
       prompt({
         type: "HostKey",
-        host: "[tmc-git01.tmus.local]:2222",
+        host: "[git.example.com]:2222",
         key_type: "ED25519",
         fingerprint: "SHA256:abc",
       }),
     );
-    expect(screen.getByText("Connect to [tmc-git01.tmus.local]:2222?")).toBeTruthy();
+    expect(screen.getByText("Connect to [git.example.com]:2222?")).toBeTruthy();
     expect(screen.getByText("SHA256:abc")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Trust and connect" }));
     expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", { username: null, secret: "" });

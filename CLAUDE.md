@@ -81,11 +81,11 @@ dev/forgejo.yml            # docker compose for integration tests
 - **HTTPS without an account:** leave the user's `credential.helper` chain alone (e.g. Git Credential Manager), and fall back to a trampoline UI prompt.
 - **SSH:** system OpenSSH (on Windows, use `System32\OpenSSH` so the Windows ssh-agent works). Passphrase and host-key prompts go through `SSH_ASKPASS` and the trampoline to a UI dialog.
 - **Trampoline:** `tenajlo-askpass` connects to a loopback port with a per-operation random token. Treat an unknown or expired token as an attack: reject it and log without the token.
-- **Forgejo API:** `Authorization: token <PAT>`. The base URL comes from the account. The first deployment is `https://TMC-GIT01.tmus.local`.
+- **Forgejo API:** `Authorization: token <PAT>`. The base URL comes from the account.
 
 ## Environment notes
 
-- Target network uses an internal domain (`tmus.local`) with an internal CA. On Windows, pass `-c http.sslBackend=schannel`. `reqwest` uses rustls with `rustls-platform-verifier` (the OS verifier). If you hit TLS errors in dev, fix the trust store and never the verification flag.
+- Users are often on company networks with private DNS names and an internal CA. On Windows, pass `-c http.sslBackend=schannel`. `reqwest` uses rustls with `rustls-platform-verifier` (the OS verifier). If you hit TLS errors in dev, fix the trust store and never the verification flag.
 - Windows is the P0 platform. Test path handling with backslashes, spaces, long paths, and CRLF. MinGit ships as a Tauri sidecar on Windows only.
 - Minimum git version is 2.40. Use modern porcelain (`switch`, `restore`, `status --porcelain=v2`).
 

@@ -135,15 +135,15 @@ mod tests {
     #[test]
     fn parses_git_prompts() {
         assert_eq!(
-            parse_prompt("Username for 'https://TMC-GIT01.tmus.local': "),
+            parse_prompt("Username for 'https://GIT.EXAMPLE.COM': "),
             PromptKind::Credentials {
-                host: "TMC-GIT01.tmus.local".into()
+                host: "GIT.EXAMPLE.COM".into()
             }
         );
         assert_eq!(
-            parse_prompt("Password for 'https://%C3%ABvan@TMC-GIT01.tmus.local:3000': "),
+            parse_prompt("Password for 'https://%C3%ABvan@GIT.EXAMPLE.COM:3000': "),
             PromptKind::Password {
-                host: "TMC-GIT01.tmus.local:3000".into(),
+                host: "GIT.EXAMPLE.COM:3000".into(),
                 username: "ëvan".into()
             }
         );
@@ -168,11 +168,11 @@ mod tests {
             }
         );
         // Older OpenSSH (e.g. Windows' 8.x/9.x builds).
-        let old = "The authenticity of host 'tmc-git01.tmus.local (10.1.2.3)' can't be established.\r\nECDSA key fingerprint is SHA256:abc+/def.\r\nAre you sure you want to continue connecting (yes/no/[fingerprint])? ";
+        let old = "The authenticity of host 'git.example.com (10.1.2.3)' can't be established.\r\nECDSA key fingerprint is SHA256:abc+/def.\r\nAre you sure you want to continue connecting (yes/no/[fingerprint])? ";
         assert_eq!(
             parse_prompt(old),
             PromptKind::HostKey {
-                host: "tmc-git01.tmus.local".into(),
+                host: "git.example.com".into(),
                 key_type: "ECDSA".into(),
                 fingerprint: "SHA256:abc+/def".into(),
             }

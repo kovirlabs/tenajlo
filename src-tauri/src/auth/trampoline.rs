@@ -553,7 +553,7 @@ mod tests {
     fn account() -> AccountCredential {
         AccountCredential {
             protocol: "https".into(),
-            host: "tmc-git01.tmus.local".into(),
+            host: "git.example.com".into(),
             login: "evan".into(),
             token: Secret::new("pat-123".into()),
         }
@@ -578,7 +578,7 @@ mod tests {
             .is_empty());
         assert!(!op.account_used());
 
-        let right = [("protocol", "https"), ("host", "tmc-git01.tmus.local")];
+        let right = [("protocol", "https"), ("host", "git.example.com")];
         assert!(ask_credential(&t, "nope", CredentialOp::Get, &right)
             .await
             .is_empty());
@@ -596,7 +596,7 @@ mod tests {
             .register("repo", "op1", CancellationToken::new(), None)
             .unwrap();
         assert!(op.config(Path::new("/x")).is_empty());
-        let fields = [("protocol", "https"), ("host", "tmc-git01.tmus.local")];
+        let fields = [("protocol", "https"), ("host", "git.example.com")];
         assert!(
             ask_credential(&t, &token_of(&op), CredentialOp::Get, &fields)
                 .await

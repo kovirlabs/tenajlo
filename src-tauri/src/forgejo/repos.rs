@@ -121,7 +121,7 @@ mod tests {
     #[tokio::test]
     async fn lists_repos_across_pages() {
         let page1: Vec<String> = (0..50).map(|i| repo("evan", &format!("r{i:02}"))).collect();
-        let page2 = [repo("TMC Controls", "plc"), repo("evan", "r00")].join(",");
+        let page2 = [repo("Zenith Controls", "plc"), repo("evan", "r00")].join(",");
         let (base, seen) = fake_server(vec![
             (
                 "/api/v1/user/repos?limit=50&page=1",
@@ -144,7 +144,7 @@ mod tests {
         .unwrap();
         assert_eq!(repos.len(), 51, "duplicate across pages dropped");
         assert_eq!(repos[0].full_name, "evan/r00");
-        assert_eq!(repos[50].full_name, "TMC Controls/plc");
+        assert_eq!(repos[50].full_name, "Zenith Controls/plc");
         assert!(repos.iter().all(|r| r.private));
         assert_eq!(repos[0].ssh_url, "ssh://git@h:2222/evan/r00.git");
         assert_eq!(seen.lock().unwrap().len(), 2);
