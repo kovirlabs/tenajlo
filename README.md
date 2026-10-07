@@ -81,3 +81,6 @@ use.
 
 Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE). Bundled third-party software
 is listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Tenajlo is an independent project by Kovir Labs. It is not affiliated with, endorsed by or
+sponsored by GitHub, Inc. "GitHub" and "GitHub Desktop" are trademarks of GitHub, Inc.
