@@ -6,7 +6,9 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
-First public release (1.0) in preparation:
+## [1.0.0] - 2026-10-07
+
+First public release:
 
 - Sign in to Forgejo with an access token, kept in the OS password store; HTTPS remotes on
   that server then work without passwords.
@@ -21,3 +23,6 @@ First public release (1.0) in preparation:
 - Settings: accounts, name and email, Git program, pull behaviour, background fetch, editor,
   theme.
 - First-run welcome, plain-language error messages, daily log files.
+
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/kovirlabs/tenajlo/releases/tag/v1.0.0
