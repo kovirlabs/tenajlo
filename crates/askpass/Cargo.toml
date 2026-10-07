@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Askpass trampoline for Tenajlo: forwards git prompts to the app over loopback"
 edition.workspace = true
 license.workspace = true
+publish = false
 
 [lib]
 name = "tenajlo_askpass"

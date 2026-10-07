@@ -6,14 +6,19 @@ fn main() {
     tauri_build::build();
 }
 
-/// Windows builds bundle `resources/mingit` (tauri.windows.conf.json), which must exist for
-/// this build script. `scripts/fetch-mingit.mjs` (run by `pnpm tauri dev/build` on Windows)
-/// fills it; an empty folder keeps plain cargo commands working, and debug builds then fall
-/// back to git on PATH.
+/// Windows builds bundle `resources/mingit` and `resources/THIRD_PARTY_LICENSES.html`
+/// (tauri.windows.conf.json), which must exist for this build script. `pnpm tauri build`
+/// generates them (scripts/fetch-mingit.mjs, scripts/third-party-licenses.mjs); placeholders
+/// keep plain cargo commands and `tauri dev` working, and debug builds then fall back to
+/// git on PATH.
 fn ensure_mingit_placeholder() {
     let target = std::env::var("TARGET").unwrap_or_default();
     if target.contains("windows") {
         let _ = std::fs::create_dir_all("resources/mingit");
+        let licenses = std::path::Path::new("resources/THIRD_PARTY_LICENSES.html");
+        if !licenses.exists() {
+            let _ = std::fs::write(licenses, b"");
+        }
     }
 }
 

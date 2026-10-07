@@ -87,4 +87,5 @@ header comment and are listed here.
 
 Tenajlo is built with Rust crates and npm packages under permissive licenses (MIT,
 Apache-2.0, BSD, ISC, Unicode, Zlib, MPL-2.0 for some). The complete list with license
-texts is generated for each release (see `docs/releasing.md`).
+texts is generated for each release by `scripts/third-party-licenses.mjs` and ships with
+Tenajlo as `THIRD_PARTY_LICENSES.html`.

@@ -1,0 +1,23 @@
+# cargo-about: licenses of the Rust crates shipped in Tenajlo (scripts/third-party-licenses.mjs).
+# Only permissive licenses (and file-level MPL-2.0) are accepted; anything else fails the build.
+accepted = [
+    "0BSD",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "OpenSSL",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+# The installer is Windows-only; build and dev dependencies aren't shipped.
+targets = ["x86_64-pc-windows-msvc"]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+# Tenajlo's own crates (publish = false) are covered by LICENSE.
+private = { ignore = true }

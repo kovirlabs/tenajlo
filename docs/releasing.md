@@ -10,11 +10,13 @@ land in a **draft** GitHub Release, so a person checks them before anyone can do
    - `src-tauri/tauri.conf.json` → `version`
    - `src-tauri/Cargo.toml` → `[package] version`
    - `package.json` → `version`
-3. Regenerate the dependency license list and check it for anything that isn't permissive.
-   Rust: `cargo about generate` (with an `about.hbs` template); npm:
-   `pnpm licenses list --prod`. Attach the result to the release as
-   `THIRD_PARTY_LICENSES.html`. _(Not automated yet: do this by hand until it is.)_
-4. Commit: `Release v1.2.3`.
+3. Commit: `Release v1.2.3`.
+
+The dependency license list is automatic: `scripts/third-party-licenses.mjs` (cargo-about for
+Rust crates, `pnpm licenses` for npm packages) runs in CI on every push and fails if a
+dependency's license isn't accepted in `about.toml`. The release build bundles the result as
+`THIRD_PARTY_LICENSES.html` and attaches it to the release. If CI rejects a new dependency,
+check its license before adding it to the allow-list.
 
 ## 2. Build
 
@@ -25,7 +27,8 @@ git push origin main v1.2.3
 
 The release workflow checks the tag matches `tauri.conf.json`, builds `tenajlo-askpass`,
 downloads the pinned MinGit and git-lfs (`scripts/fetch-mingit.mjs` verifies their SHA-256),
-and builds the NSIS installer. It then creates a draft release with the installer attached.
+generates `THIRD_PARTY_LICENSES.html`, and builds the NSIS installer. It then creates a draft
+release with the installer and the license list attached.
 
 ## 3. Check on Windows before publishing
 
