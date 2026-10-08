@@ -157,13 +157,24 @@ mod tests {
             script
         };
         let file = dir.path().join("ünï file.txt");
-        open(
-            &Editor::Custom {
-                path: program.to_string_lossy().into_owned(),
-            },
-            &file,
-        )
-        .unwrap();
+        let editor = Editor::Custom {
+            path: program.to_string_lossy().into_owned(),
+        };
+        // A process another test forks while the script is still open for writing inherits
+        // that handle until it execs, and Linux then refuses to run the script ("Text file
+        // busy"). Retry briefly until the handle is gone.
+        let mut attempts = 0;
+        loop {
+            match open(&editor, &file) {
+                Err(EditorError::Spawn { source, .. })
+                    if source.kind() == std::io::ErrorKind::ExecutableFileBusy && attempts < 50 =>
+                {
+                    attempts += 1;
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                }
+                result => break result.unwrap(),
+            }
+        }
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
         while !log.exists() && std::time::Instant::now() < deadline {
             std::thread::sleep(std::time::Duration::from_millis(20));
