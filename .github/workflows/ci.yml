@@ -80,7 +80,7 @@ jobs:
           tool: cargo-about@0.9.2
       - run: pnpm install --frozen-lockfile
       - run: node scripts/third-party-licenses.mjs --out target/THIRD_PARTY_LICENSES.html
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: runner.os == 'Linux'
         with:
           name: third-party-licenses
