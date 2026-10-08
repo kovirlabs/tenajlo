@@ -18,7 +18,7 @@ jobs:
     outputs:
       release-id: ${{ steps.create.outputs.id }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check the tag matches the app version
         run: |
           version=$(node -p "require('./src-tauri/tauri.conf.json').version")
@@ -59,7 +59,7 @@ jobs:
             bundles: dmg
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Linux libraries for Tauri
         if: runner.os == 'Linux'
         run: |
