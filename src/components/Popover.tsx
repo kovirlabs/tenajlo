@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { clampShift } from "../lib/viewport";
 
 type Props = {
@@ -18,11 +18,14 @@ type Props = {
 export function Popover({ label, ariaLabel, children, open: controlled, onOpenChange }: Props) {
   const [uncontrolled, setUncontrolled] = useState(false);
   const open = controlled ?? uncontrolled;
-  const setOpen = (next: boolean | ((o: boolean) => boolean)) => {
-    const value = typeof next === "function" ? next(open) : next;
-    if (controlled === undefined) setUncontrolled(value);
-    onOpenChange?.(value);
-  };
+  const setOpen = useCallback(
+    (next: boolean | ((o: boolean) => boolean)) => {
+      const value = typeof next === "function" ? next(open) : next;
+      if (controlled === undefined) setUncontrolled(value);
+      onOpenChange?.(value);
+    },
+    [open, controlled, onOpenChange],
+  );
   const ref = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +60,7 @@ export function Popover({ label, ariaLabel, children, open: controlled, onOpenCh
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   return (
     <div className="popover" ref={ref}>
