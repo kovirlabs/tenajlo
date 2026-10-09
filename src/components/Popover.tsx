@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { clampShift } from "../lib/viewport";
 
 type Props = {
   label: ReactNode;
@@ -10,7 +11,10 @@ type Props = {
   onOpenChange?: (open: boolean) => void;
 };
 
-/** A toolbar button that opens a panel. Closes on Escape or outside click. */
+/**
+ * A toolbar button that opens a panel. Closes on Escape or outside click.
+ * The panel shifts sideways as needed to stay inside the window.
+ */
 export function Popover({ label, ariaLabel, children, open: controlled, onOpenChange }: Props) {
   const [uncontrolled, setUncontrolled] = useState(false);
   const open = controlled ?? uncontrolled;
@@ -20,6 +24,24 @@ export function Popover({ label, ariaLabel, children, open: controlled, onOpenCh
     onOpenChange?.(value);
   };
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !panel) return;
+    const place = () => {
+      panel.style.translate = "";
+      const { dx } = clampShift(
+        panel.getBoundingClientRect(),
+        window.innerWidth,
+        window.innerHeight,
+      );
+      panel.style.translate = dx ? `${dx}px 0` : "";
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,7 +71,11 @@ export function Popover({ label, ariaLabel, children, open: controlled, onOpenCh
         {label}
         <span aria-hidden="true"> ▾</span>
       </button>
-      {open && <div className="popover-panel">{children(() => setOpen(false))}</div>}
+      {open && (
+        <div className="popover-panel" ref={panelRef}>
+          {children(() => setOpen(false))}
+        </div>
+      )}
     </div>
   );
 }
