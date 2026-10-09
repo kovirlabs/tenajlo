@@ -1,6 +1,6 @@
 [package]
 name = "tenajlo"
-version = "1.0.1"
+version = "1.0.2"
 description = "Desktop Git client for self-hosted Forgejo"
 edition.workspace = true
 license.workspace = true
