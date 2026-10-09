@@ -201,6 +201,10 @@ button:focus-visible {
   left: 0;
   z-index: 10;
   width: 340px;
+  /* Never wider or taller than the window; Popover also shifts it sideways to fit. */
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 0 0 6px 6px;
@@ -251,6 +255,7 @@ button:focus-visible {
 
 .picker-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   padding: 8px;
@@ -640,6 +645,9 @@ button.link {
   position: fixed;
   z-index: 20;
   min-width: 200px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
   margin: 0;
   padding: 4px 0;
   list-style: none;

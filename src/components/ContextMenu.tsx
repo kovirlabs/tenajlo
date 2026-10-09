@@ -1,12 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { clampShift } from "../lib/viewport";
 
 export type MenuItem = { label: string; onSelect: () => void; disabled?: boolean };
 
 type Props = { x: number; y: number; items: MenuItem[]; onClose: () => void };
 
-/** Right-click menu at a screen position. Closes on outside click, Escape, or selection. */
+/**
+ * Right-click menu at a screen position, nudged to stay inside the window.
+ * Closes on outside click, Escape, or selection.
+ */
 export function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null);
+
+  useLayoutEffect(() => {
+    const menu = ref.current;
+    if (!menu) return;
+    const { width, height } = menu.getBoundingClientRect();
+    const { dx, dy } = clampShift(
+      { left: x, top: y, width, height },
+      window.innerWidth,
+      window.innerHeight,
+    );
+    menu.style.left = `${x + dx}px`;
+    menu.style.top = `${y + dy}px`;
+  }, [x, y]);
 
   useEffect(() => {
     ref.current?.querySelector("button")?.focus();
