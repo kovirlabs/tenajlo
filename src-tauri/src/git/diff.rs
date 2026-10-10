@@ -4,7 +4,7 @@ use std::path::Path;
 
 use super::error::GitError;
 use super::exec::{Access, GitBinary, GitCommand};
-use super::parse::diff::{parse_diff, FileDiff};
+use super::parse::diff::{parse_diff, FileDiff, MAX_DIFF_BYTES};
 use super::parse::status::{FileChange, FileStatusKind};
 
 const DIFF_FLAGS: [&str; 4] = ["--no-ext-diff", "--patience", "--no-color", "-M"];
@@ -29,6 +29,9 @@ pub async fn working_dir_diff(
             return Ok(FileDiff::Unchanged);
         }
         reject_escaping_path(&file.path)?;
+        if is_large_text_file(&root.join(&file.path)).await {
+            return Ok(FileDiff::TooLarge);
+        }
         // --no-index takes real paths (no pathspec magic) and exits 1 when files differ.
         let mut args = vec!["diff", "--no-index"];
         args.extend(DIFF_FLAGS);
@@ -72,6 +75,28 @@ pub async fn commit_file_diff(
         .run(git)
         .await?;
     Ok(parse_diff(&out.stdout))
+}
+
+/// True when a new file is too big to diff and is not binary. Checked before spawning git
+/// so a huge untracked file is never buffered whole just to be rejected by `parse_diff`.
+/// Large binary files fall through: git prints a one-line "Binary files differ" for them.
+async fn is_large_text_file(path: &Path) -> bool {
+    use tokio::io::AsyncReadExt;
+
+    // Symlinks are diffed as their (short) target text, so they are never large.
+    let Ok(meta) = tokio::fs::symlink_metadata(path).await else {
+        return false;
+    };
+    if !meta.is_file() || meta.len() <= MAX_DIFF_BYTES as u64 {
+        return false;
+    }
+    // Same heuristic as git: a NUL byte in the first 8000 bytes means binary.
+    let mut head = Vec::with_capacity(8000);
+    let read = match tokio::fs::File::open(path).await {
+        Ok(f) => f.take(8000).read_to_end(&mut head).await,
+        Err(e) => Err(e),
+    };
+    read.is_ok() && !head.contains(&0)
 }
 
 /// `--no-index` paths are real filesystem paths, so they must stay inside the repository.
@@ -179,6 +204,24 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(added_lines(&d), vec!["a", "b", "c", "d"]);
+    }
+
+    #[tokio::test]
+    async fn large_new_files_skip_git_unless_binary() {
+        let (_tmp, repo) = init_repo().await;
+        let git = resolve(None, None).unwrap();
+        let mut text = "line\n".repeat(MAX_DIFF_BYTES / 5 + 1);
+        write(&repo, "big.csv", &text);
+        text.insert(0, '\0');
+        write(&repo, "big.bin", &text);
+
+        let s = status(&git, &repo).await.unwrap();
+        let get = |p: &str| s.files.iter().find(|f| f.path == p).unwrap().clone();
+        let (csv, bin) = (get("big.csv"), get("big.bin"));
+        let csv = working_dir_diff(&git, &repo, &csv, false).await.unwrap();
+        let bin = working_dir_diff(&git, &repo, &bin, false).await.unwrap();
+        assert_eq!(csv, FileDiff::TooLarge);
+        assert_eq!(bin, FileDiff::Binary);
     }
 
     #[test]
