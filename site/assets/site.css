@@ -81,6 +81,11 @@ img {
   color: var(--fg);
 }
 
+.nav nav a[aria-current="page"] {
+  color: var(--fg);
+  font-weight: 600;
+}
+
 main > section {
   max-width: 72rem;
   margin: 0 auto;
@@ -232,6 +237,136 @@ footer {
   color: var(--fg-muted);
 }
 
+/* User guide (guide/index.html, built from docs/user-guide.md). */
+.guide {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+}
+
+.guide-toc {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  font-size: 0.9rem;
+}
+
+.guide-toc-title {
+  margin: 0 0 0.5rem;
+  font-weight: 700;
+}
+
+.guide-toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guide-toc ol ol {
+  padding-left: 0.9rem;
+}
+
+.guide-toc a {
+  display: block;
+  padding: 0.2rem 0;
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.guide-toc a:hover {
+  color: var(--fg);
+}
+
+.guide-body {
+  max-width: 46rem;
+}
+
+/* Grid items otherwise grow to fit their widest line (a long code block) and overflow. */
+.guide-toc,
+.guide-body {
+  min-width: 0;
+}
+
+.guide-body h2 {
+  margin: 2.5rem 0 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.guide-body h3 {
+  margin: 1.75rem 0 0.5rem;
+}
+
+.guide-body h1,
+.guide-body h2,
+.guide-body h3 {
+  scroll-margin-top: 1rem;
+}
+
+.guide-body .anchor {
+  float: left;
+  margin-left: -1.1em;
+  width: 1.1em;
+  color: var(--fg-muted);
+  text-decoration: none;
+  opacity: 0;
+}
+
+.guide-body :is(h1, h2, h3):hover .anchor,
+.guide-body .anchor:focus {
+  opacity: 1;
+}
+
+.guide-body li + li {
+  margin-top: 0.35rem;
+}
+
+.guide-body code {
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.88em;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
+.guide-body pre {
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.guide-body pre code {
+  padding: 0;
+  border: 0;
+}
+
+.guide-body blockquote {
+  margin: 1rem 0;
+  padding: 0.25rem 1rem;
+  color: var(--fg-muted);
+  border-left: 3px solid var(--accent);
+}
+
+.guide-body table {
+  border-collapse: collapse;
+}
+
+.guide-body th,
+.guide-body td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
 @media (max-width: 860px) {
   .hero,
   .grid,
@@ -241,5 +376,18 @@ footer {
 
   .hero {
     gap: 2rem;
+  }
+
+  .guide {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+
+  .guide-toc {
+    position: static;
+    max-height: none;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
   }
 }

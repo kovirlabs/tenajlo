@@ -40,8 +40,8 @@ Windows 10/11 is the main platform; Linux and macOS work too.
 
 ## Documentation
 
-- [User guide](docs/user-guide.md): install, sign in, clone, commit, share, conflicts,
-  troubleshooting
+- [User guide](docs/user-guide.md) (also [on the website](https://kovirlabs.github.io/tenajlo/guide/)):
+  install, sign in, clone, commit, share, conflicts, troubleshooting
 - [Releasing](docs/releasing.md): how installers are built and checked
 - [Specification](spec.md): scope, architecture and security model
 

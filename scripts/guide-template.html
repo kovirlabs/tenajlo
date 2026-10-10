@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- Template for site/guide/ (built by scripts/build-site.mjs from docs/user-guide.md).
+     The contents and guide placeholders below are filled in at build time. Edit the guide in
+     docs/user-guide.md. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>User guide · Tenajlo</title>
+    <meta
+      name="description"
+      content="How to install Tenajlo, sign in to Forgejo, clone, commit, push and pull, handle conflicts, use Git LFS and SSH keys, and fix common problems."
+    />
+    <link rel="canonical" href="https://kovirlabs.github.io/tenajlo/guide/" />
+    <link rel="icon" href="../assets/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="apple-touch-icon" href="../assets/icon-128.png" />
+    <meta name="theme-color" content="#2b3a4a" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Tenajlo" />
+    <meta property="og:title" content="Tenajlo user guide" />
+    <meta
+      property="og:description"
+      content="Install Tenajlo and use it with your Forgejo server: clone, commit, share changes, conflicts, large files and SSH keys."
+    />
+    <meta property="og:url" content="https://kovirlabs.github.io/tenajlo/guide/" />
+    <meta
+      property="og:image"
+      content="https://kovirlabs.github.io/tenajlo/assets/social-card.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="../assets/site.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="brand" href="../">
+        <img src="../assets/icon.svg" alt="" width="32" height="32" />
+        Tenajlo
+      </a>
+      <nav aria-label="Main">
+        <a href="../#features">Features</a>
+        <a href="./" aria-current="page">User guide</a>
+        <a href="../#get">Get Tenajlo</a>
+        <a href="https://github.com/kovirlabs/tenajlo">GitHub</a>
+      </nav>
+    </header>
+
+    <main class="guide">
+      <nav class="guide-toc" aria-label="Contents">
+        <p class="guide-toc-title">Contents</p>
+        {{toc}}
+      </nav>
+      <article class="guide-body">
+        {{content}}
+        <p class="fineprint">
+          This guide is
+          <a href="https://github.com/kovirlabs/tenajlo/blob/main/docs/user-guide.md"
+            >docs/user-guide.md</a
+          >
+          in the Tenajlo repository. Spotted a mistake?
+          <a href="https://github.com/kovirlabs/tenajlo/issues">Open an issue</a>.
+        </p>
+      </article>
+    </main>
+
+    <footer>
+      <p>
+        Tenajlo is open source under the
+        <a href="https://github.com/kovirlabs/tenajlo/blob/main/LICENSE">Apache License 2.0</a>
+        · Made by Kovir Labs ·
+        <a href="https://github.com/kovirlabs/tenajlo/discussions">Discussions</a> ·
+        <a href="https://github.com/kovirlabs/tenajlo/security/policy">Security</a>
+      </p>
+      <p class="fineprint">
+        Tenajlo is an independent project, not affiliated with, endorsed by or sponsored by GitHub,
+        Inc. or the Forgejo project. Forgejo is a trademark of its respective owners.
+      </p>
+    </footer>
+  </body>
+</html>
