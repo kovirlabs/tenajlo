@@ -5,7 +5,7 @@
 //! so the user can at least abort it.
 
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
@@ -67,35 +67,45 @@ pub async fn operation_state(
         .run(git)
         .await?;
     let text = String::from_utf8_lossy(&out.stdout);
-    let paths: Vec<_> = text.lines().map(|l| root.join(l)).collect();
-    let operation = MARKERS
-        .iter()
-        .zip(&paths)
-        .find(|(_, p)| p.exists())
-        .map(|((_, kind), _)| *kind);
-    let merge_summary = (operation == Some(OperationKind::Merge))
-        .then(|| paths.last().and_then(|p| std::fs::read_to_string(p).ok()))
-        .flatten()
-        .and_then(|msg| {
-            msg.lines()
-                .find(|l| !l.trim().is_empty())
-                .map(str::to_owned)
-        });
-
-    let conflicts = status
+    let paths: Vec<PathBuf> = text.lines().map(|l| root.join(l)).collect();
+    let conflicted: Vec<String> = status
         .files
         .iter()
         .filter(|f| f.kind == FileStatusKind::Conflicted)
-        .map(|f| ConflictedFile {
-            markers: count_markers(&root.join(&f.path)),
-            path: f.path.clone(),
-        })
+        .map(|f| f.path.clone())
         .collect();
-    Ok(OperationState {
-        operation,
-        conflicts,
-        merge_summary,
+    let root = root.to_path_buf();
+
+    // Marker checks and the conflict scan (up to MAX_SCAN_BYTES per file) are blocking I/O.
+    tokio::task::spawn_blocking(move || {
+        let operation = MARKERS
+            .iter()
+            .zip(&paths)
+            .find(|(_, p)| p.exists())
+            .map(|((_, kind), _)| *kind);
+        let merge_summary = (operation == Some(OperationKind::Merge))
+            .then(|| paths.last().and_then(|p| std::fs::read_to_string(p).ok()))
+            .flatten()
+            .and_then(|msg| {
+                msg.lines()
+                    .find(|l| !l.trim().is_empty())
+                    .map(str::to_owned)
+            });
+        let conflicts = conflicted
+            .into_iter()
+            .map(|path| ConflictedFile {
+                markers: count_markers(&root.join(&path)),
+                path,
+            })
+            .collect();
+        OperationState {
+            operation,
+            conflicts,
+            merge_summary,
+        }
     })
+    .await
+    .map_err(|e| GitError::Spawn(std::io::Error::other(e)))
 }
 
 /// Counts `<<<<<<< ` lines. `None` for unreadable, binary or very large files.

@@ -79,12 +79,16 @@ impl RepoManager {
 
     /// Current list, most recently opened first.
     pub fn list(&self) -> RepositoryList {
-        let file = self.data();
-        let mut entries: Vec<&RepositoryEntry> = file.repositories.iter().collect();
+        // Snapshot, then release the lock: `to_dto` stats each folder, which can stall on an
+        // unreachable network drive and must not block other repository calls.
+        let (mut entries, selected) = {
+            let file = self.data();
+            (file.repositories.clone(), file.selected)
+        };
         entries.sort_by_key(|e| std::cmp::Reverse(e.last_opened));
         RepositoryList {
-            repositories: entries.into_iter().map(to_dto).collect(),
-            selected_id: file.selected.map(|id| id.to_string()),
+            repositories: entries.iter().map(to_dto).collect(),
+            selected_id: selected.map(|id| id.to_string()),
         }
     }
 
