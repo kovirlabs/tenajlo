@@ -1,27 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createBranch, previewBranchName } from "../../api/branches";
 import { useChangesStore } from "../../stores/changesStore";
-import { useUiStore } from "../../stores/uiStore";
 import { Modal } from "../Modal";
+import { useAsyncEffect } from "../../hooks/useAsyncEffect";
+import { useDialog } from "../../hooks/useDialog";
 
 /** "New branch…" — created from the current commit; local changes come along. */
 export function NewBranchDialog() {
-  const open = useUiStore((s) => s.dialog === "newBranch");
-  const close = () => useUiStore.getState().openDialog(null);
+  const { open, close } = useDialog("newBranch");
   const mutate = useChangesStore((s) => s.mutate);
   const from = useChangesStore((s) => s.status?.branch.name);
   const [name, setName] = useState("");
   const [preview, setPreview] = useState("");
 
-  useEffect(() => {
-    let live = true;
-    void previewBranchName(name).then((p) => {
-      if (live) setPreview(p);
-    });
-    return () => {
-      live = false;
-    };
-  }, [name]);
+  useAsyncEffect(
+    async (live) => {
+      const p = await previewBranchName(name);
+      if (live()) setPreview(p);
+    },
+    [name],
+  );
 
   const create = async () => {
     // Recompute rather than use `preview`: Enter can land before the preview for the

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { AppError, Editor, EditorOption, PullStrategy, Theme } from "../../bindings";
 import { chooseFile, chooseFolder, listEditors } from "../../api/settings";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { InlineError } from "../InlineError";
+import { useAsyncEffect } from "../../hooks/useAsyncEffect";
 
 const THEMES: { id: Theme; label: string }[] = [
   { id: "System", label: "Same as this computer" },
@@ -129,14 +130,9 @@ function EditorChoice({ onError }: { onError: (e: AppError | null) => void }) {
   const update = useSettingsStore((s) => s.update);
   const [options, setOptions] = useState<EditorOption[]>([]);
 
-  useEffect(() => {
-    let live = true;
-    void listEditors().then((o) => {
-      if (live) setOptions(o);
-    });
-    return () => {
-      live = false;
-    };
+  useAsyncEffect(async (live) => {
+    const o = await listEditors();
+    if (live()) setOptions(o);
   }, []);
 
   const save = async (next: Editor) => onError(await update({ editor: next }));

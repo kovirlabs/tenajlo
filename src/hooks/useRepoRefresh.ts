@@ -8,6 +8,7 @@ import "../stores/conflictStore";
 import { useHistoryStore } from "../stores/historyStore";
 import { refreshRepo } from "../stores/refreshRepo";
 import { useSyncStore } from "../stores/syncStore";
+import { useTauriEvent } from "./useTauriEvent";
 
 /**
  * Loads repository data and keeps it fresh: on open, on `repo-changed` events from the
@@ -23,25 +24,16 @@ export function useRepoRefresh(repoId: string) {
     refresh();
     void watchRepository(repoId);
 
-    const unlisteners: (() => void)[] = [];
-    let disposed = false;
-    const keep = (fn: () => void) => {
-      if (disposed) fn();
-      else unlisteners.push(fn);
-    };
-    void onRepoChanged((id) => {
-      if (id === repoId) refresh();
-    }).then(keep);
-    void onProgress((p) => {
-      if (p.repoId === repoId) useSyncStore.getState().onProgress(p.opId, p.progress);
-    }).then(keep);
     window.addEventListener("focus", refresh);
-    return () => {
-      disposed = true;
-      unlisteners.forEach((fn) => fn());
-      window.removeEventListener("focus", refresh);
-    };
+    return () => window.removeEventListener("focus", refresh);
   }, [repoId]);
+
+  useTauriEvent(onRepoChanged, (id) => {
+    if (id === repoId) void refreshRepo(repoId);
+  });
+  useTauriEvent(onProgress, (p) => {
+    if (p.repoId === repoId) useSyncStore.getState().onProgress(p.opId, p.progress);
+  });
 
   useEffect(() => {
     // `undefined` = status not loaded yet; `null` = no commits yet (still worth loading: empty).

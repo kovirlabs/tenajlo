@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import type { AppError } from "../bindings";
+import type { Identity } from "../bindings";
 import { getAccountIdentity } from "../api/accounts";
-import { setGlobalIdentity } from "../api/changes";
 import { getGlobalIdentity } from "../api/settings";
+import { IdentityFields } from "../components/IdentityFields";
 import { InlineError } from "../components/InlineError";
+import { useIdentityForm } from "../hooks/useIdentityForm";
 import { SignInForm } from "../components/accounts/SignInForm";
 import { useAccountStore } from "../stores/accountStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -50,77 +51,38 @@ export function Welcome() {
 }
 
 function IdentityStep({ accountId, onDone }: { accountId: string | null; onDone: () => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState<AppError | null>(null);
-
   // Prefill: the global git config first, then the Forgejo profile for anything missing.
-  useEffect(() => {
-    let live = true;
-    void (async () => {
-      const global = await getGlobalIdentity();
-      let n = global.status === "ok" ? (global.data.name ?? "") : "";
-      let e = global.status === "ok" ? (global.data.email ?? "") : "";
-      if (accountId && (!n || !e)) {
-        const profile = await getAccountIdentity(accountId);
-        if (profile.status === "ok") {
-          n ||= profile.data.name ?? "";
-          e ||= profile.data.email ?? "";
-        }
-      }
-      if (!live) return;
-      setName(n);
-      setEmail(e);
-      setLoaded(true);
-    })();
-    return () => {
-      live = false;
+  const form = useIdentityForm(async () => {
+    const global = await getGlobalIdentity();
+    const known: Partial<Identity> = global.status === "ok" ? global.data : {};
+    if (!accountId || (known.name && known.email)) return known;
+    const profile = await getAccountIdentity(accountId);
+    if (profile.status !== "ok") return known;
+    return {
+      name: known.name || profile.data.name,
+      email: known.email || profile.data.email,
     };
-  }, [accountId]);
-
-  const save = async () => {
-    const res = await setGlobalIdentity(name, email);
-    if (res.status === "error") return setError(res.error);
-    onDone();
-  };
+  });
 
   return (
     <form
       className="form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (name.trim() && email.trim()) void save();
+        if (form.valid) void form.save().then((ok) => ok && onDone());
       }}
     >
       <p>Git records your name and email on every commit you make.</p>
-      <label>
-        Name
-        <input
-          value={name}
-          disabled={!loaded}
-          onChange={(e) => setName(e.target.value)}
-          autoFocus
-        />
-      </label>
-      <label>
-        Email
-        <input
-          type="email"
-          value={email}
-          disabled={!loaded}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </label>
+      <IdentityFields form={form} autoFocus />
       <p className="muted">
         Saving updates your global Git settings, so every repository on this computer uses them.
       </p>
-      <InlineError error={error} />
+      <InlineError error={form.error} />
       <div className="dialog-actions">
         <button type="button" className="secondary" onClick={onDone}>
           Skip for now
         </button>
-        <button type="submit" disabled={!loaded || !name.trim() || !email.trim()}>
+        <button type="submit" disabled={!form.loaded || !form.valid || form.saving}>
           Save and continue
         </button>
       </div>

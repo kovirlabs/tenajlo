@@ -1,23 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { AppError, AppInfo } from "../../bindings";
 import { getAppInfo, openLogsFolder } from "../../api/git";
 import { InlineError } from "../InlineError";
+import { useAsyncEffect } from "../../hooks/useAsyncEffect";
 
 /** Version, log files (for bug reports), and where licenses are listed. */
 export function AboutPanel() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [error, setError] = useState<AppError | null>(null);
 
-  useEffect(() => {
-    let live = true;
-    void getAppInfo().then((res) => {
-      if (!live) return;
-      if (res.status === "ok") setInfo(res.data);
-      else setError(res.error);
-    });
-    return () => {
-      live = false;
-    };
+  useAsyncEffect(async (live) => {
+    const res = await getAppInfo();
+    if (!live()) return;
+    if (res.status === "ok") setInfo(res.data);
+    else setError(res.error);
   }, []);
 
   const showLogs = async () => {

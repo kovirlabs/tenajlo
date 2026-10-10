@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Identity } from "../bindings";
 import { commitChanges, getIdentity, undoCommit } from "../api/changes";
 import { IdentityDialog } from "../components/IdentityDialog";
 import { useChangesStore } from "../stores/changesStore";
 import { useMerging } from "../stores/conflictStore";
+import { useAsyncEffect } from "../hooks/useAsyncEffect";
 
 /** Summary + description + "Commit to <branch>" (spec §8). Ctrl/Cmd+Enter commits. */
 export function CommitBox({ repoId }: { repoId: string }) {
@@ -22,15 +23,13 @@ export function CommitBox({ repoId }: { repoId: string }) {
 
   const [identityVersion, setIdentityVersion] = useState(0);
 
-  useEffect(() => {
-    let live = true;
-    void getIdentity(repoId).then((res) => {
-      if (live && res.status === "ok") setIdentity(res.data);
-    });
-    return () => {
-      live = false;
-    };
-  }, [repoId, identityVersion]);
+  useAsyncEffect(
+    async (live) => {
+      const res = await getIdentity(repoId);
+      if (live() && res.status === "ok") setIdentity(res.data);
+    },
+    [repoId, identityVersion],
+  );
 
   const anyStaged = status?.files.some((f) => f.staged !== "None") ?? false;
   const conflicts = status?.hasConflicts ?? false;

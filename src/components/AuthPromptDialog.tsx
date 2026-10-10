@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { AuthPromptRequested } from "../bindings";
 import { answerAuthPrompt, onAuthPrompt } from "../api/sync";
 import { useCloneStore } from "../stores/cloneStore";
 import { useSyncStore } from "../stores/syncStore";
 import { Modal } from "./Modal";
+import { useTauriEvent } from "../hooks/useTauriEvent";
 
 /**
  * Sign-in prompts from git (via the askpass trampoline). One dialog covers git's separate
@@ -12,18 +13,7 @@ import { Modal } from "./Modal";
 export function AuthPromptDialog() {
   const [queue, setQueue] = useState<AuthPromptRequested[]>([]);
 
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    let disposed = false;
-    void onAuthPrompt((p) => setQueue((q) => [...q, p])).then((fn) => {
-      if (disposed) fn();
-      else unlisten = fn;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
+  useTauriEvent(onAuthPrompt, (p) => setQueue((q) => [...q, p]));
 
   // Prompts for an operation that has finished or been cancelled are stale.
   const syncOp = useSyncStore((s) => s.running?.opId);
