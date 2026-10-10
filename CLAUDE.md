@@ -14,6 +14,7 @@ pnpm typecheck               # tsc --noEmit
 pnpm lint                    # eslint + prettier --check
 pnpm test                    # vitest
 pnpm bindings                # regenerate src/bindings.ts from Rust (tauri-specta)
+pnpm site                    # build the website (site/ + guide/ from docs/user-guide.md) into target/site
 node scripts/build-askpass.mjs [--release]  # build the tenajlo-askpass sidecar (tauri dev/build run this for you)
 node scripts/third-party-licenses.mjs --out target/THIRD_PARTY_LICENSES.html  # dependency license check (needs cargo-about; CI runs it)
 

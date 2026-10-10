@@ -28,6 +28,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
+      # Builds the website, failing on links in the user guide to headings that don't exist.
+      - run: pnpm site
 
   rust:
     strategy:
