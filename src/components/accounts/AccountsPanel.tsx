@@ -80,9 +80,6 @@ export function AccountsPanel({ onClose }: { onClose: () => void }) {
         <button type="button" className="secondary" onClick={() => setSigningIn(true)}>
           Sign in to another server…
         </button>
-        <button type="button" onClick={onClose}>
-          Done
-        </button>
       </div>
     </div>
   );

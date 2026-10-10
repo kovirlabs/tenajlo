@@ -24,7 +24,9 @@ export function RepoDropdown() {
       label={
         <span className="toolbar-label">
           <small>Current repository</small>
-          {selected?.name ?? "None"}
+          <span className="toolbar-value" title={selected?.name}>
+            {selected?.name ?? "None"}
+          </span>
         </span>
       }
     >

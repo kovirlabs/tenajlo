@@ -60,7 +60,7 @@ export function SyncButton() {
       <div className="sync-button running" role="status" aria-live="polite">
         <span className="toolbar-label">
           <small>{formatProgress(p)}</small>
-          {RUNNING_TITLE[running.request]}
+          <span className="toolbar-value">{RUNNING_TITLE[running.request]}</span>
         </span>
         <progress max={100} value={p?.percent ?? undefined} aria-label="Progress" />
         <button type="button" className="secondary" onClick={cancel}>
@@ -81,7 +81,7 @@ export function SyncButton() {
     >
       <span className="toolbar-label">
         <small>{label.detail}</small>
-        {label.title}
+        <span className="toolbar-value">{label.title}</span>
       </span>
       {label.badge && <span className="sync-badge">{label.badge}</span>}
     </button>

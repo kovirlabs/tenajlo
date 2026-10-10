@@ -1,11 +1,11 @@
 // Renders the real Tenajlo UI with Tauri's IPC mocked and invented data, for screenshots.
-// Open /demo/?scene=changes|history|clone|conflict|welcome|ssh|passwords|update[&theme=dark]
-// on the Vite dev server. Not part of the app build.
+// Open /demo/?scene=changes|history|clone|conflict|welcome|update[&theme=dark][&settings=<tab>]
+// on the Vite dev server (`settings` opens that Settings tab). Not part of the app build.
 import { createRoot } from "react-dom/client";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import { App } from "../src/App";
 import { useHistoryStore } from "../src/stores/historyStore";
-import { useUiStore } from "../src/stores/uiStore";
+import { useUiStore, type SettingsTab } from "../src/stores/uiStore";
 import * as f from "./fixtures";
 import "../src/styles.css";
 
@@ -76,6 +76,16 @@ mockIPC(
         return "C:\\Users\\sam\\Documents\\Tenajlo\\packaging-cell";
       case "check_server":
         return null;
+      case "list_editors":
+        return [
+          {
+            editor: { kind: "SystemDefault" },
+            label: "Default app for the file type",
+            available: true,
+          },
+          { editor: { kind: "VsCode" }, label: "Visual Studio Code", available: true },
+          { editor: { kind: "NotepadPlusPlus" }, label: "Notepad++", available: false },
+        ];
       case "list_ssh_keys":
         return f.sshKeys;
       case "get_account_ssh_keys":
@@ -144,11 +154,8 @@ if (scene === "clone") {
   );
 }
 
-if (scene === "ssh") useUiStore.getState().openSettings("ssh");
-if (scene === "passwords") useUiStore.getState().openSettings("passwords");
-if (scene === "update") {
-  useUiStore.getState().openSettings("about");
-}
+const settingsTab = params.get("settings") ?? (scene === "update" ? "about" : null);
+if (settingsTab) useUiStore.getState().openSettings(settingsTab as SettingsTab);
 
 if (scene === "changes") {
   // Type a commit summary the way a user would, so the commit button is ready.

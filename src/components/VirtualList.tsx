@@ -13,6 +13,9 @@ type Props<T> = {
   /** Called when the last rendered row is within `overscan` of the end. Pass a stable
    *  function: a new one each render re-fires the call. */
   onNearEnd?: () => unknown;
+  /** CSS width of the scrolled content, for rows wider than the list (long diff lines).
+   *  Rows are absolutely positioned, so they can't widen it themselves. */
+  contentWidth?: string | undefined;
 };
 
 /** Fixed-row-height virtualized list. Renders only the rows in view. */
@@ -25,6 +28,7 @@ export function VirtualList<T>({
   ariaLabel,
   role,
   onNearEnd,
+  contentWidth,
 }: Props<T>) {
   const ref = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -65,7 +69,10 @@ export function VirtualList<T>({
       aria-label={ariaLabel}
       role={role}
     >
-      <div className="vlist-inner" style={{ height: items.length * rowHeight }}>
+      <div
+        className="vlist-inner"
+        style={{ height: items.length * rowHeight, ...(contentWidth && { width: contentWidth }) }}
+      >
         {rows}
       </div>
     </div>

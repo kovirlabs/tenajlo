@@ -46,7 +46,9 @@ export function BranchDropdown() {
         label={
           <span className="toolbar-label">
             <small>Current branch</small>
-            {current}
+            <span className="toolbar-value" title={current}>
+              {current}
+            </span>
           </span>
         }
       >
