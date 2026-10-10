@@ -151,9 +151,18 @@ export const commands = {
 	answerAuthPrompt: (promptId: string, answer: {
 	username: string | null,
 	secret: string,
+	/**
+	 *  Save this password or passphrase in the keychain (only once it's known to work, for
+	 *  HTTPS logins). Ignored for other prompts.
+	 */
+	remember?: boolean,
 } | null) => __TAURI_INVOKE<void>("answer_auth_prompt", { promptId, answer }),
 	/**  Cancels a running fetch, pull or push. Unknown ids are ignored. */
 	cancelOperation: (opId: string) => __TAURI_INVOKE<void>("cancel_operation", { opId }),
+	/**  Passwords and SSH passphrases the user chose to remember (names only, never the secrets). */
+	listSavedSecrets: () => __TAURI_INVOKE<SavedSecretInfo[]>("list_saved_secrets"),
+	/**  Forgets a remembered password or passphrase: deletes it from the keychain. */
+	forgetSavedSecret: (id: string) => typedError<null, AppError>(__TAURI_INVOKE("forget_saved_secret", { id })),
 	/**  The toolbar sync button state for the current branch. */
 	getSyncState: (repoId: string) => typedError<SyncState, AppError>(__TAURI_INVOKE("get_sync_state", { repoId })),
 	/**
@@ -243,6 +252,11 @@ export type AppInfo = {
 export type AuthAnswer = {
 	username: string | null,
 	secret: string,
+	/**
+	 *  Save this password or passphrase in the keychain (only once it's known to work, for
+	 *  HTTPS logins). Ignored for other prompts.
+	 */
+	remember?: boolean,
 };
 
 /**  Ask the user something on behalf of a running git operation. */
@@ -560,6 +574,13 @@ export type RepositoryList = {
 export type SavedChanges = {
 	branch: string,
 };
+
+/**  A remembered secret, for Settings. Never includes the secret itself. */
+export type SavedSecretInfo = 
+/**  A password for `username` on `host`. */
+{ type: "Login"; id: string; host: string; username: string } | 
+/**  The passphrase of the SSH key at `key`. */
+{ type: "Passphrase"; id: string; key: string };
 
 /**  A reachable Forgejo (or Gitea-compatible) server. */
 export type ServerInfo = {

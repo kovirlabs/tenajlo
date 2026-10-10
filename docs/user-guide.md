@@ -70,6 +70,11 @@ offers **Sign in again**. Paste a new token; nothing else changes.
 You can also paste an address on the **URL** tab, for example
 `https://git.example.com/team/project.git` or `git@git.example.com:team/project.git`.
 
+For an HTTPS address on a server you haven't signed in to, Tenajlo asks for a username and
+password (or access token) when it's needed. Tick **Remember this password** to keep it in
+your computer's password store. Tenajlo only saves it once the server accepts it, and forgets
+it if the server later rejects it.
+
 To open a repository that's already on your computer, use **Current repository → Add local…**. To start a brand-new one, use **Current repository → New…**. Press **Ctrl+T** (⌘T on a Mac) to open the repository list quickly.
 
 ## Save your changes (commit)
@@ -153,7 +158,9 @@ Your SSH key needs to be added to your Forgejo account. Tenajlo can do this for 
 
 Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its ssh-agent).
 
-- **Passphrase:** Tenajlo asks for it when needed.
+- **Passphrase:** Tenajlo asks for it when needed. Tick **Remember this passphrase** to keep
+  it in your computer's password store so Tenajlo doesn't ask again. If you change the
+  passphrase later, Tenajlo notices the saved one no longer works and asks you again.
 - **"Connect to <server>?"** appears the first time you connect to a server. Check the
   fingerprint with your IT team before choosing **Trust and connect**. If it doesn't match,
   cancel.
@@ -164,6 +171,8 @@ Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its s
 
 - **Accounts:** sign in and out of Forgejo servers.
 - **SSH keys:** create an SSH key and add it to your Forgejo account.
+- **Passwords:** passwords and SSH passphrases you chose to remember. **Forget** removes one;
+  Tenajlo asks for it next time.
 - **Git:** your name and email for commits, and which Git program to use.
 - **Repositories:** where new clones go, what Pull does, how often to check the server, and
   which editor opens files.

@@ -5,6 +5,7 @@ pub mod broker;
 pub mod credential_helper;
 pub mod prompt;
 pub mod remote_auth;
+pub mod saved_secrets;
 pub mod secrets;
 pub mod ssh_keys;
 pub mod trampoline;

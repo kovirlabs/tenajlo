@@ -4,12 +4,14 @@ import { Modal } from "../Modal";
 import { AboutPanel } from "./AboutPanel";
 import { GitPanel } from "./GitPanel";
 import { SshKeysPanel } from "./SshKeysPanel";
+import { PasswordsPanel } from "./PasswordsPanel";
 import { AppearancePanel, RepositoriesPanel } from "./PreferencePanels";
 import { useDialog } from "../../hooks/useDialog";
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: "accounts", label: "Accounts" },
   { id: "ssh", label: "SSH keys" },
+  { id: "passwords", label: "Passwords" },
   { id: "git", label: "Git" },
   { id: "repositories", label: "Repositories" },
   { id: "appearance", label: "Appearance" },
@@ -41,6 +43,7 @@ export function SettingsDialog() {
         <div className="settings-panel" role="tabpanel">
           {tab === "accounts" && <AccountsPanel onClose={close} />}
           {tab === "ssh" && <SshKeysPanel />}
+          {tab === "passwords" && <PasswordsPanel />}
           {tab === "git" && <GitPanel />}
           {tab === "repositories" && <RepositoriesPanel />}
           {tab === "appearance" && <AppearancePanel />}

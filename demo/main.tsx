@@ -1,5 +1,5 @@
 // Renders the real Tenajlo UI with Tauri's IPC mocked and invented data, for screenshots.
-// Open /demo/?scene=changes|history|clone|conflict|welcome|ssh[&theme=dark] on the Vite dev
+// Open /demo/?scene=changes|history|clone|conflict|welcome|ssh|passwords[&theme=dark] on the Vite dev
 // server. Not part of the app build.
 import { createRoot } from "react-dom/client";
 import { mockIPC } from "@tauri-apps/api/mocks";
@@ -84,6 +84,8 @@ mockIPC(
           fingerprints: [f.sshKeys[0]?.fingerprint],
           requiredScopes: ["write:user", "read:repository", "write:repository"],
         };
+      case "list_saved_secrets":
+        return f.savedSecrets;
       default:
         return null;
     }
@@ -128,6 +130,7 @@ if (scene === "clone") {
 }
 
 if (scene === "ssh") useUiStore.getState().openSettings("ssh");
+if (scene === "passwords") useUiStore.getState().openSettings("passwords");
 
 if (scene === "changes") {
   // Type a commit summary the way a user would, so the commit button is ready.

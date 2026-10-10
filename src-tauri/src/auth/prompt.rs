@@ -30,6 +30,10 @@ pub enum PromptKind {
 pub struct AuthAnswer {
     pub username: Option<String>,
     pub secret: String,
+    /// Save this password or passphrase in the keychain (only once it's known to work, for
+    /// HTTPS logins). Ignored for other prompts.
+    #[serde(default)]
+    pub remember: bool,
 }
 
 impl fmt::Debug for AuthAnswer {
@@ -37,6 +41,7 @@ impl fmt::Debug for AuthAnswer {
         f.debug_struct("AuthAnswer")
             .field("username", &self.username)
             .field("secret", &"***")
+            .field("remember", &self.remember)
             .finish()
     }
 }
@@ -203,6 +208,7 @@ mod tests {
         let a = AuthAnswer {
             username: Some("evan".into()),
             secret: "hunter2".into(),
+            remember: false,
         };
         assert!(!format!("{a:?}").contains("hunter2"));
     }

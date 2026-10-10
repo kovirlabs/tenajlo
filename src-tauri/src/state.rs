@@ -1,11 +1,12 @@
 //! Application-wide state managed by Tauri.
 
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use crate::auth::accounts::AccountManager;
 use crate::auth::broker::PromptBroker;
 use crate::auth::remote_auth::{self, AuthRequest, PrepareError, RemoteAuth};
+use crate::auth::saved_secrets::SavedSecrets;
 use crate::auth::trampoline::Trampoline;
 use crate::forgejo::ForgejoClient;
 use crate::git::error::GitError;
@@ -23,6 +24,8 @@ pub struct AppState {
     git: RwLock<Option<GitBinary>>,
     pub repos: RepoManager,
     pub accounts: AccountManager,
+    /// Passwords and SSH passphrases the user chose to remember.
+    pub saved_secrets: Arc<SavedSecrets>,
     pub settings: SettingsManager,
     pub forgejo: ForgejoClient,
     pub watcher: RepoWatcher,
@@ -41,6 +44,7 @@ impl AppState {
         bundled_git_dir: Option<PathBuf>,
         repos: RepoManager,
         accounts: AccountManager,
+        saved_secrets: Arc<SavedSecrets>,
         settings: SettingsManager,
         forgejo: ForgejoClient,
         prompts: PromptBroker,
@@ -52,6 +56,7 @@ impl AppState {
             git: RwLock::new(None),
             repos,
             accounts,
+            saved_secrets,
             settings,
             forgejo,
             watcher: RepoWatcher::default(),

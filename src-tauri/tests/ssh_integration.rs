@@ -83,6 +83,7 @@ async fn ssh_env(dir: &Path, key: &Path, user: User) -> Ssh {
             answer.map(|secret| AuthAnswer {
                 username: None,
                 secret,
+                remember: false,
             })
         })
     });

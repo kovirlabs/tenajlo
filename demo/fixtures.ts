@@ -9,6 +9,7 @@ import type {
   LocalSshKey,
   OperationState,
   RemoteRepository,
+  SavedSecretInfo,
   Repository,
   Settings,
   SyncState,
@@ -62,6 +63,20 @@ export const sshKeys: LocalSshKey[] = [
     keyType: "ssh-rsa",
     comment: "sam@old-pc",
     fingerprint: "SHA256:q3Ad8mNVh2vXcP0yL7kR1sTbG9wEoZuJ4fHiK6nMxY0",
+  },
+];
+
+export const savedSecrets: SavedSecretInfo[] = [
+  {
+    type: "Login",
+    id: "login|https|builds.example.com|sam",
+    host: "builds.example.com",
+    username: "sam",
+  },
+  {
+    type: "Passphrase",
+    id: "ssh-passphrase|C:\\Users\\sam\\.ssh\\id_ed25519",
+    key: "C:\\Users\\sam\\.ssh\\id_ed25519",
   },
 ];
 

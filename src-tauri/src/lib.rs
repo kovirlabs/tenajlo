@@ -77,6 +77,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::settings::list_editors,
             commands::auth::answer_auth_prompt,
             commands::auth::cancel_operation,
+            commands::auth::list_saved_secrets,
+            commands::auth::forget_saved_secret,
             commands::sync::get_sync_state,
             commands::sync::sync,
             commands::branches::preview_branch_name,
@@ -110,16 +112,15 @@ pub fn run() {
             }
             tracing::info!(version = env!("CARGO_PKG_VERSION"), "Tenajlo starting");
             let repos = repo_manager::RepoManager::load(&data_dir);
-            let accounts = auth::accounts::AccountManager::load(
-                &data_dir,
-                std::sync::Arc::new(auth::secrets::KeyringStore),
-            );
+            let keychain: std::sync::Arc<dyn auth::secrets::SecretStore> = std::sync::Arc::new(auth::secrets::KeyringStore);
+            let accounts = auth::accounts::AccountManager::load(&data_dir, keychain.clone());
+            let saved_secrets = std::sync::Arc::new(auth::saved_secrets::SavedSecrets::load(&data_dir, keychain));
             let settings = settings::SettingsManager::load(&data_dir);
             let forgejo = forgejo::ForgejoClient::new()?;
 
             let prompts = auth::broker::PromptBroker::default();
             let prompt_fn = prompts.prompt_fn(app.handle().clone());
-            let trampoline = match tauri::async_runtime::block_on(auth::trampoline::Trampoline::start(prompt_fn)) {
+            let trampoline = match tauri::async_runtime::block_on(auth::trampoline::Trampoline::start_with_saved(prompt_fn, saved_secrets.clone())) {
                 Ok(t) => Some(t),
                 Err(e) => {
                     tracing::error!(error = %e, "askpass trampoline failed to start; sign-in prompts unavailable");
@@ -130,7 +131,7 @@ pub fn run() {
             if askpass.is_none() {
                 tracing::error!("tenajlo-askpass sidecar missing; run `node scripts/build-askpass.mjs`");
             }
-            app.manage(state::AppState::new(bundled_git_dir, repos, accounts, settings, forgejo, prompts, trampoline, askpass));
+            app.manage(state::AppState::new(bundled_git_dir, repos, accounts, saved_secrets, settings, forgejo, prompts, trampoline, askpass));
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -6,6 +6,7 @@
 
 pub mod accounts;
 pub mod repositories;
+pub mod saved_secrets;
 pub mod settings;
 
 use std::fs;
