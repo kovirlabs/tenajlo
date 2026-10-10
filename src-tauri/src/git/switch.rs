@@ -115,11 +115,10 @@ pub async fn delete(git: &GitBinary, root: &Path, name: &str, force: bool) -> Re
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::branches::branches;
     use crate::git::error::GitErrorKind;
     use crate::git::status::status;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, with_bare_origin, write};
 
     async fn head(repo: &Path) -> String {
         git_in(repo, &["branch", "--show-current"])
@@ -131,10 +130,9 @@ mod tests {
     #[tokio::test]
     async fn create_switch_leave_and_bring() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         write(&repo, "a.txt", "1\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "init"]).await;
+        commit_all(&repo, "init").await;
 
         create(&git, &repo, "feature/ü").await.unwrap();
         assert_eq!(head(&repo).await, "feature/ü");
@@ -178,7 +176,7 @@ mod tests {
     #[tokio::test]
     async fn failed_switch_restores_left_changes() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         git_in(&repo, &["commit", "-q", "--allow-empty", "-m", "init"]).await;
         write(&repo, "a.txt", "wip\n");
         let missing = Target::Local("does-not-exist".into());
@@ -202,10 +200,9 @@ mod tests {
     #[tokio::test]
     async fn bring_blocked_by_conflicting_changes() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         write(&repo, "a.txt", "1\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "init"]).await;
+        commit_all(&repo, "init").await;
         git_in(&repo, &["switch", "-q", "-c", "other"]).await;
         write(&repo, "a.txt", "other\n");
         git_in(&repo, &["commit", "-q", "-am", "other"]).await;
@@ -221,20 +218,10 @@ mod tests {
 
     #[tokio::test]
     async fn tracks_remote_only_and_deletes() {
-        let (tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let (_tmp, repo) = init_repo().await;
+        let git = git();
         git_in(&repo, &["commit", "-q", "--allow-empty", "-m", "init"]).await;
-        let origin = tmp.path().join("origin.git");
-        git_in(
-            tmp.path(),
-            &["init", "-q", "--bare", origin.to_str().unwrap()],
-        )
-        .await;
-        git_in(
-            &repo,
-            &["remote", "add", "origin", origin.to_str().unwrap()],
-        )
-        .await;
+        with_bare_origin(&repo).await;
         git_in(&repo, &["push", "-q", "origin", "main:remote-feature"]).await;
         git_in(&repo, &["fetch", "-q", "origin"]).await;
 

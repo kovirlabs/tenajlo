@@ -80,13 +80,13 @@ pub async fn init(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::status::status;
+    use crate::git::test_support::git;
 
     #[tokio::test]
     async fn creates_a_repository_on_main_with_a_readme() {
         let dir = tempfile::tempdir().unwrap();
-        let git = resolve(None, None).unwrap();
+        let git = git();
         let parent = dir.path().join("New Projects");
         let repo = init(&git, &parent, " Pump Station ", true).await.unwrap();
         assert_eq!(repo, parent.join("Pump Station"));
@@ -102,7 +102,7 @@ mod tests {
     #[tokio::test]
     async fn uses_an_empty_folder_but_refuses_one_with_files() {
         let dir = tempfile::tempdir().unwrap();
-        let git = resolve(None, None).unwrap();
+        let git = git();
         std::fs::create_dir(dir.path().join("empty")).unwrap();
         init(&git, dir.path(), "empty", false).await.unwrap();
         assert!(dir.path().join("empty/.git").is_dir());

@@ -65,13 +65,7 @@ pub fn open_token_settings(app: AppHandle, server: String) -> Result<(), AppErro
     let url = join(&base, "user/settings/applications");
     app.opener()
         .open_url(url.as_str(), None::<&str>)
-        .map_err(|e| {
-            AppError::with_details(
-                crate::error::AppErrorKind::Internal,
-                "Tenajlo couldn't open your web browser.",
-                e.to_string(),
-            )
-        })
+        .map_err(|e| AppError::internal("Tenajlo couldn't open your web browser.", e.to_string()))
 }
 
 /// Name and email from the account's Forgejo profile, to prefill the git identity on first
@@ -82,22 +76,13 @@ pub async fn get_account_identity(
     state: State<'_, AppState>,
     account_id: String,
 ) -> Result<Identity, AppError> {
-    let unknown = || AppError::from(crate::auth::accounts::AccountError::UnknownAccount);
-    let account = account_id
-        .parse()
-        .ok()
-        .and_then(|id| state.accounts.entry(id))
-        .ok_or_else(unknown)?;
-    let token = state
-        .accounts
-        .token(&account)
-        .await
-        .map_err(|e| AppError::from(crate::auth::accounts::AccountError::Secret(e)))?
-        .ok_or_else(|| AppError::sign_in_required(&account, None))?;
+    let account = super::account(&state, &account_id)?;
+    let token = state.accounts.usable_token(&account).await?;
     let user = state
         .forgejo
         .current_user(&normalize_base_url(&account.base_url)?, &token)
-        .await?;
+        .await
+        .map_err(|e| super::account_api_error(&state, &account, e))?;
     let name = Some(user.full_name.trim().to_owned()).filter(|n| !n.is_empty());
     // A hidden email is a placeholder that shouldn't end up on commits.
     let email =

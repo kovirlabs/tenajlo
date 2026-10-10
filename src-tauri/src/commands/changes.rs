@@ -4,13 +4,11 @@ use std::collections::HashSet;
 
 use tauri::State;
 
-use super::repos::parse_id;
+use super::parse_id;
 use crate::error::AppError;
 use crate::git::discard::{self, DiscardError};
 use crate::git::identity::{self, Identity};
-use crate::git::merge::{self, OperationKind};
-use crate::git::parse::status::FileStatusKind;
-use crate::git::parse::status::{FileChange, StagedState};
+use crate::git::parse::status::{FileChange, FileStatusKind};
 use crate::git::undo::{self, UndoError, UndoneCommit};
 use crate::git::{commit, ignore, stage, status};
 use crate::state::AppState;
@@ -62,31 +60,8 @@ pub async fn commit_changes(
     let (root, _guard) = state.repos.lock_repo(parse_id(&repo_id)?).await?;
     let git = state.git()?;
     let current = status::status(&git, &root).await?;
-    if current.has_conflicts {
-        return Err(AppError::invalid_input(
-            "Resolve the conflicted files before committing.",
-        ));
-    }
-    if crate::git::lfs::status(&git, &root).missing() {
-        return Err(super::sync::lfs_missing());
-    }
-    // A merge can be committed with nothing staged (e.g. every conflict resolved as "ours").
-    let operation = merge::operation_state(&git, &root, &current)
-        .await?
-        .operation;
-    match operation {
-        Some(OperationKind::Merge) => {}
-        Some(_) => {
-            return Err(AppError::invalid_input(
-                "Finish or abort the operation in progress before committing.",
-            ))
-        }
-        None if current.files.iter().all(|f| f.staged == StagedState::None) => {
-            return Err(AppError::invalid_input(
-                "Select at least one file to include in the commit.",
-            ));
-        }
-        None => {}
+    if let Some(blocker) = commit::check_ready(&git, &root, &current).await? {
+        return Err(blocker.into());
     }
     let message = commit::build_message(&summary, &description);
     Ok(commit::commit(&git, &root, &message).await?)
@@ -153,8 +128,7 @@ pub async fn discard_changes(
                 .map(|(p, e)| format!("{p}: {e}"))
                 .collect::<Vec<_>>()
                 .join("\n");
-            Err(AppError::with_details(
-                crate::error::AppErrorKind::Internal,
+            Err(AppError::internal(
                 "Some files couldn't be moved to the Trash, so their changes were kept. They may be open in another program.",
                 details,
             ))
@@ -190,8 +164,7 @@ pub async fn ignore_file(
         ignore::exact_pattern(&path)
     };
     ignore::append(&root, &pattern).map_err(|e| {
-        AppError::with_details(
-            crate::error::AppErrorKind::Internal,
+        AppError::internal(
             "Tenajlo couldn't update the .gitignore file.",
             e.to_string(),
         )

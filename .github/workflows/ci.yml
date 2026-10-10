@@ -55,9 +55,9 @@ jobs:
       - run: node scripts/build-askpass.mjs
         working-directory: .
       - run: cargo fmt --all -- --check
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets --locked -- -D warnings
       # Tests need git >= 2.40 and git-lfs on PATH (preinstalled on GitHub's images).
-      - run: cargo test --workspace
+      - run: cargo test --workspace --locked
 
   licenses:
     # Every shipped Rust crate and npm package must have an accepted license (about.toml).
@@ -109,7 +109,7 @@ jobs:
           docker compose -f dev/forgejo.yml up -d
           until curl -sf http://localhost:3000/api/v1/version; do sleep 1; done
           dev/seed-forgejo.sh
-      - run: cargo test --features integration
+      - run: cargo test --features integration --locked
       - name: Forgejo logs
         if: failure()
         working-directory: .

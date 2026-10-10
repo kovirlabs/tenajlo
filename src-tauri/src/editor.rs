@@ -77,10 +77,15 @@ pub fn open(editor: &Editor, file: &Path) -> Result<(), EditorError> {
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
-    cmd.spawn().map(drop).map_err(|source| EditorError::Spawn {
+    let mut child = cmd.spawn().map_err(|source| EditorError::Spawn {
         program: program.display().to_string(),
         source,
-    })
+    })?;
+    // Reap the editor when it exits so it doesn't linger as a zombie process on Unix.
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
 }
 
 /// VS Code: the app bundle on macOS, `Code.exe` on Windows, `code` on PATH on Linux.
@@ -99,7 +104,7 @@ fn vs_code() -> Option<PathBuf> {
         ];
         first_existing(&candidates)
     } else {
-        on_path("code")
+        crate::which::on_path("code")
     }
 }
 
@@ -119,12 +124,6 @@ fn first_existing(candidates: &[(&str, &str)]) -> Option<PathBuf> {
         let path = Path::new(&std::env::var_os(var)?).join(rel);
         path.is_file().then_some(path)
     })
-}
-
-fn on_path(name: &str) -> Option<PathBuf> {
-    std::env::split_paths(&std::env::var_os("PATH")?)
-        .map(|dir| dir.join(name))
-        .find(|p| p.is_file())
 }
 
 #[cfg(test)]

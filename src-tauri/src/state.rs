@@ -5,6 +5,7 @@ use std::sync::RwLock;
 
 use crate::auth::accounts::AccountManager;
 use crate::auth::broker::PromptBroker;
+use crate::auth::remote_auth::{self, AuthRequest, PrepareError, RemoteAuth};
 use crate::auth::trampoline::Trampoline;
 use crate::forgejo::ForgejoClient;
 use crate::git::error::GitError;
@@ -70,6 +71,17 @@ impl AppState {
             .ok_or(GitError::NotFound {
                 searched: Vec::new(),
             })
+    }
+
+    /// Credentials for one remote operation (spec §6.2). Keep the result alive until git exits.
+    pub async fn prepare_auth(&self, request: AuthRequest<'_>) -> Result<RemoteAuth, PrepareError> {
+        remote_auth::prepare(
+            &self.accounts,
+            self.trampoline.as_ref(),
+            self.askpass.as_deref(),
+            request,
+        )
+        .await
     }
 
     /// Records the git binary after a successful version check.

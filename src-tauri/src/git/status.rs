@@ -27,14 +27,13 @@ pub async fn status(git: &GitBinary, root: &Path) -> Result<WorkingDirectoryStat
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::parse::status::{FileStatusKind, StagedState};
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
 
     #[tokio::test]
     async fn reports_real_repository_changes() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
 
         let empty = status(&git, &repo).await.unwrap();
         assert_eq!(empty.branch.name.as_deref(), Some("main"));
@@ -42,8 +41,7 @@ mod tests {
 
         write(&repo, "keep.txt", "one\n");
         write(&repo, "move me.txt", "move\ncontent\nhere\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "init"]).await;
+        commit_all(&repo, "init").await;
 
         write(&repo, "keep.txt", "two\n");
         write(&repo, "ünï/new file.txt", "x\n");

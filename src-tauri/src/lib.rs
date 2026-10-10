@@ -15,6 +15,7 @@ pub mod settings;
 pub mod state;
 pub mod store;
 pub mod watcher;
+pub mod which;
 
 use tauri::Manager;
 use tauri_specta::{collect_commands, collect_events, Builder};
@@ -82,7 +83,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         .events(collect_events![
             watcher::RepoChanged,
             auth::broker::AuthPromptRequested,
-            commands::sync::GitProgress
+            commands::remote_op::GitProgress
         ])
 }
 

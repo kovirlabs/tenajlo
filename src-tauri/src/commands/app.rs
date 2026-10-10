@@ -49,24 +49,12 @@ pub fn open_logs_folder(app: AppHandle) -> Result<(), AppError> {
     let _ = std::fs::create_dir_all(&dir);
     app.opener()
         .open_path(dir.to_string_lossy(), None::<&str>)
-        .map_err(|e| {
-            AppError::with_details(
-                crate::error::AppErrorKind::Internal,
-                "Tenajlo couldn't open the log folder.",
-                e.to_string(),
-            )
-        })
+        .map_err(|e| AppError::internal("Tenajlo couldn't open the log folder.", e.to_string()))
 }
 
 fn logs_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
     app.path()
         .app_data_dir()
         .map(|d| d.join("logs"))
-        .map_err(|e| {
-            AppError::with_details(
-                crate::error::AppErrorKind::Internal,
-                "Tenajlo couldn't find its data folder.",
-                e.to_string(),
-            )
-        })
+        .map_err(|e| AppError::internal("Tenajlo couldn't find its data folder.", e.to_string()))
 }

@@ -147,9 +147,8 @@ pub async fn clone(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::error::GitErrorKind;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
     use std::sync::{Arc, Mutex};
 
     #[test]
@@ -221,8 +220,7 @@ mod tests {
     async fn origin() -> (tempfile::TempDir, String) {
         let (tmp, repo) = init_repo().await;
         write(&repo, "a.txt", "hello\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "first"]).await;
+        commit_all(&repo, "first").await;
         let bare = tmp.path().join("origin.git");
         git_in(tmp.path(), &["clone", "-q", "--bare", "repo", "origin.git"]).await;
         let url = Url::from_file_path(&bare).unwrap().to_string();
@@ -239,9 +237,7 @@ mod tests {
             on_progress: Box::new(move |p| sink.lock().unwrap().push(p.phase)),
             ..RemoteRun::quiet()
         };
-        clone(&resolve(None, None).unwrap(), &url, &dest, run)
-            .await
-            .unwrap();
+        clone(&git(), &url, &dest, run).await.unwrap();
         assert_eq!(
             crate::git::test_support::read_text(&dest.join("a.txt")),
             "hello\n"
@@ -254,13 +250,7 @@ mod tests {
         let (tmp, url) = origin().await;
         let dest = tmp.path().join("taken");
         std::fs::create_dir(&dest).unwrap();
-        let res = clone(
-            &resolve(None, None).unwrap(),
-            &url,
-            &dest,
-            RemoteRun::quiet(),
-        )
-        .await;
+        let res = clone(&git(), &url, &dest, RemoteRun::quiet()).await;
         assert!(matches!(res, Err(CloneError::DestinationExists(_))));
         assert!(dest.exists(), "left untouched");
     }
@@ -272,13 +262,7 @@ mod tests {
             .unwrap()
             .to_string();
         let dest = tmp.path().join("out");
-        let res = clone(
-            &resolve(None, None).unwrap(),
-            &missing,
-            &dest,
-            RemoteRun::quiet(),
-        )
-        .await;
+        let res = clone(&git(), &missing, &dest, RemoteRun::quiet()).await;
         assert!(
             matches!(
                 res,

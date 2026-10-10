@@ -22,13 +22,12 @@ pub async fn branches(git: &GitBinary, root: &Path) -> Result<BranchList, GitErr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
-    use crate::git::test_support::{git_in, init_repo};
+    use crate::git::test_support::{git, git_in, init_repo, with_bare_origin};
 
     #[tokio::test]
     async fn lists_branches_with_bare_origin() {
-        let (tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let (_tmp, repo) = init_repo().await;
+        let git = git();
         assert_eq!(
             branches(&git, &repo).await.unwrap(),
             BranchList::default(),
@@ -37,17 +36,7 @@ mod tests {
 
         git_in(&repo, &["commit", "-q", "--allow-empty", "-m", "init"]).await;
         git_in(&repo, &["branch", "topic"]).await;
-        let origin = tmp.path().join("origin.git");
-        git_in(
-            tmp.path(),
-            &["init", "-q", "--bare", origin.to_str().unwrap()],
-        )
-        .await;
-        git_in(
-            &repo,
-            &["remote", "add", "origin", origin.to_str().unwrap()],
-        )
-        .await;
+        with_bare_origin(&repo).await;
         git_in(&repo, &["push", "-q", "-u", "origin", "main"]).await;
         git_in(&repo, &["push", "-q", "origin", "topic:remote-only"]).await;
         git_in(&repo, &["fetch", "-q", "origin"]).await;

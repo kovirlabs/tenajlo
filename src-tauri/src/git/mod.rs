@@ -23,6 +23,7 @@ pub mod stage;
 pub mod stash;
 pub mod status;
 pub mod switch;
+pub mod sync_plan;
 pub mod sync_state;
 #[cfg(test)]
 pub mod test_support;

@@ -69,8 +69,7 @@ pub async fn validate(git: &GitBinary, root: &Path, name: &str) -> Result<(), Gi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
-    use crate::git::test_support::init_repo;
+    use crate::git::test_support::{git, init_repo};
 
     #[test]
     fn sanitizes() {
@@ -84,7 +83,7 @@ mod tests {
     #[tokio::test]
     async fn validates() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         for ok in ["main", "feature/ü-x", "fix-123"] {
             assert!(validate(&git, &repo, ok).await.is_ok(), "{ok}");
         }

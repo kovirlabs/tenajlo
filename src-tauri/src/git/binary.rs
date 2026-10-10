@@ -56,13 +56,7 @@ pub fn resolve(
 
 /// Finds `git` on `PATH`, recording each candidate checked.
 fn search_path(searched: &mut Vec<PathBuf>) -> Option<PathBuf> {
-    let path_var = std::env::var_os("PATH")?;
-    for dir in std::env::split_paths(&path_var) {
-        // Relative PATH entries would resolve against an arbitrary cwd; skip them.
-        if !dir.is_absolute() {
-            continue;
-        }
-        let candidate = dir.join(GIT_EXE);
+    for candidate in crate::which::path_candidates(GIT_EXE) {
         if candidate.is_file() {
             return Some(candidate);
         }

@@ -131,14 +131,11 @@ pub async fn mark_resolved(git: &GitBinary, root: &Path, paths: &[String]) -> Re
     if paths.is_empty() {
         return Ok(());
     }
-    GitCommand::new(
-        ["add", "--pathspec-from-file=-", "--pathspec-file-nul"],
-        Access::Mutating,
-    )
-    .cwd(root)
-    .pathspecs_on_stdin(paths)
-    .run(git)
-    .await?;
+    GitCommand::new(["add"], Access::Mutating)
+        .cwd(root)
+        .pathspecs_on_stdin(paths)
+        .run(git)
+        .await?;
     Ok(())
 }
 
@@ -160,24 +157,22 @@ pub async fn abort(git: &GitBinary, root: &Path, kind: OperationKind) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::status::status;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
 
     /// `main` and `other` both change `a.txt` → merging `other` conflicts.
     async fn conflicted_merge() -> (tempfile::TempDir, std::path::PathBuf) {
         let (tmp, repo) = init_repo().await;
         write(&repo, "a.txt", "base\n");
         write(&repo, "ünï b.txt", "same\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "base"]).await;
+        commit_all(&repo, "base").await;
         git_in(&repo, &["switch", "-q", "-c", "other"]).await;
         write(&repo, "a.txt", "theirs\n");
         git_in(&repo, &["commit", "-q", "-am", "theirs"]).await;
         git_in(&repo, &["switch", "-q", "main"]).await;
         write(&repo, "a.txt", "ours\n");
         git_in(&repo, &["commit", "-q", "-am", "ours"]).await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         // CI machines have no global identity; the merge needs one to start.
         let args = [
             "-c",
@@ -208,7 +203,7 @@ mod tests {
     #[tokio::test]
     async fn detects_merge_conflicts_and_resolves_them() {
         let (_tmp, repo) = conflicted_merge().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         let st = status(&git, &repo).await.unwrap();
         let state = operation_state(&git, &repo, &st).await.unwrap();
         assert_eq!(state.operation, Some(OperationKind::Merge));
@@ -237,7 +232,7 @@ mod tests {
     #[tokio::test]
     async fn abort_restores_the_branch() {
         let (_tmp, repo) = conflicted_merge().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         abort(&git, &repo, OperationKind::Merge).await.unwrap();
         let st = status(&git, &repo).await.unwrap();
         assert!(st.files.is_empty());

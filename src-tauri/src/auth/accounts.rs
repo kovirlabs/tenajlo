@@ -33,6 +33,9 @@ pub struct Account {
 pub enum AccountError {
     #[error("unknown account id")]
     UnknownAccount,
+    /// The account's token was rejected or is missing from the keychain.
+    #[error("sign-in required for {}", .0.base_url)]
+    SignInRequired(Box<AccountEntry>),
     #[error("accounts.json can't be changed this session")]
     ReadOnly,
     #[error(transparent)]
@@ -178,6 +181,26 @@ impl AccountManager {
     pub async fn token(&self, account: &AccountEntry) -> Result<Option<Secret>, SecretError> {
         let key = account.keychain_key();
         self.blocking(move |s| s.get(&key)).await
+    }
+
+    /// The account's token, if it can still be used. `SignInRequired` when the server
+    /// rejected it earlier or it's gone from the keychain (which marks the account).
+    pub async fn usable_token(&self, account: &AccountEntry) -> Result<Secret, AccountError> {
+        if account.needs_sign_in {
+            return Err(AccountError::SignInRequired(Box::new(account.clone())));
+        }
+        self.token(account)
+            .await?
+            .ok_or_else(|| self.token_rejected(account))
+    }
+
+    /// Records that the server rejected the account's token (or it's gone) and returns the
+    /// `SignInRequired` error to report.
+    pub fn token_rejected(&self, account: &AccountEntry) -> AccountError {
+        if let Err(e) = self.mark_needs_sign_in(account.id) {
+            tracing::warn!(error = %e, "could not record that sign-in is required");
+        }
+        AccountError::SignInRequired(Box::new(account.clone()))
     }
 
     /// Records that the server rejected the account's token. The token is kept until the

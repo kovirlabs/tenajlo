@@ -10,7 +10,7 @@ use std::path::Path;
 use reqwest::Url;
 use tokio_util::sync::CancellationToken;
 
-use super::accounts::AccountManager;
+use super::accounts::{AccountError, AccountManager};
 use super::credential_helper::AccountCredential;
 use super::secrets::Secret;
 use super::trampoline::{OpToken, Trampoline};
@@ -59,37 +59,38 @@ pub enum AuthDiagnosis {
     Unknown,
 }
 
-/// Registers the operation with the trampoline and, if an account hosts `remote_url`,
+/// One remote operation that needs credentials.
+#[derive(Debug, Clone)]
+pub struct AuthRequest<'a> {
+    /// Repository the prompts belong to; empty for a clone.
+    pub repo_id: &'a str,
+    pub op_id: &'a str,
+    /// Cancelled when the user cancels a prompt.
+    pub cancel: CancellationToken,
+    /// The URL git will talk to, if known.
+    pub remote_url: Option<&'a str>,
+    /// False for background operations: they never prompt.
+    pub interactive: bool,
+}
+
+/// Registers the operation with the trampoline and, if an account hosts the remote URL,
 /// arranges for git to use its token.
-#[allow(clippy::too_many_arguments)]
 pub async fn prepare(
     accounts: &AccountManager,
     trampoline: Option<&Trampoline>,
     askpass: Option<&Path>,
-    repo_id: &str,
-    op_id: &str,
-    cancel: CancellationToken,
-    remote_url: Option<&str>,
-    interactive: bool,
+    request: AuthRequest<'_>,
 ) -> Result<RemoteAuth, PrepareError> {
-    let account = remote_url.and_then(|u| accounts.for_remote(u));
+    let account = request.remote_url.and_then(|u| accounts.for_remote(u));
     let (Some(trampoline), Some(askpass)) = (trampoline, askpass) else {
         // Already logged at startup; git falls back to the user's own helpers.
         return Ok(RemoteAuth::default());
     };
 
     let credential = match &account {
-        Some(a) if a.needs_sign_in => {
-            return Err(PrepareError::SignInRequired(Box::new(a.clone())))
-        }
-        Some(a) => match accounts.token(a).await {
-            Ok(Some(token)) => account_credential(a, token),
-            Ok(None) => {
-                if let Err(e) = accounts.mark_needs_sign_in(a.id) {
-                    tracing::warn!(error = %e, "could not record that sign-in is required");
-                }
-                return Err(PrepareError::SignInRequired(Box::new(a.clone())));
-            }
+        Some(a) => match accounts.usable_token(a).await {
+            Ok(token) => account_credential(a, token),
+            Err(AccountError::SignInRequired(a)) => return Err(PrepareError::SignInRequired(a)),
             Err(e) => {
                 // Don't block the operation: the user's helpers or a prompt can still work.
                 tracing::warn!(error = %e, "keychain unavailable; not using the account token");
@@ -99,8 +100,8 @@ pub async fn prepare(
         None => None,
     };
     let has_credential = credential.is_some();
-    let token = trampoline.register(repo_id, op_id, cancel, credential)?;
-    token.set_interactive(interactive);
+    let token = trampoline.register(request.repo_id, request.op_id, request.cancel, credential)?;
+    token.set_interactive(request.interactive);
     Ok(RemoteAuth {
         env: token.env(askpass),
         config: token.config(askpass),
@@ -124,9 +125,7 @@ pub async fn diagnose(
     };
     match forgejo.current_user(&base, &token).await {
         Err(ForgejoError::Unauthorized) => {
-            if let Err(e) = accounts.mark_needs_sign_in(account.id) {
-                tracing::warn!(error = %e, "could not record that sign-in is required");
-            }
+            accounts.token_rejected(account);
             AuthDiagnosis::TokenRejected
         }
         // A token without read:user is still a valid token.
@@ -193,17 +192,14 @@ mod tests {
         url: &str,
     ) -> Result<RemoteAuth, PrepareError> {
         let askpass = Path::new("/opt/tenajlo-askpass");
-        prepare(
-            accounts,
-            Some(t),
-            Some(askpass),
-            "r",
-            "op",
-            CancellationToken::new(),
-            Some(url),
-            true,
-        )
-        .await
+        let request = AuthRequest {
+            repo_id: "r",
+            op_id: "op",
+            cancel: CancellationToken::new(),
+            remote_url: Some(url),
+            interactive: true,
+        };
+        prepare(accounts, Some(t), Some(askpass), request).await
     }
 
     #[tokio::test]

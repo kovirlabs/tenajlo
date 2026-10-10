@@ -78,6 +78,7 @@ impl Default for Settings {
 impl Versioned for Settings {
     const VERSION: u64 = 1;
 
+    // Not `#[serde(default)]`: specta would then mark every field optional in bindings.ts.
     fn normalize(mut doc: serde_json::Value) -> serde_json::Value {
         if let (Some(map), Ok(serde_json::Value::Object(defaults))) = (
             doc.as_object_mut(),

@@ -1,7 +1,7 @@
 //! Owns the repository list and per-repository state.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -41,6 +41,8 @@ pub struct RepositoryList {
 pub enum RepoError {
     #[error("unknown repository id")]
     UnknownRepository,
+    #[error("path is outside the repository")]
+    OutsideRepository,
     #[error(transparent)]
     Git(#[from] GitError),
     #[error(transparent)]
@@ -135,6 +137,11 @@ impl RepoManager {
             file.selected = None;
         }
         self.save(&file)?;
+        // A running operation keeps its own handle to the lock, so dropping ours is safe.
+        self.locks
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .remove(&id);
         Ok(())
     }
 
@@ -161,6 +168,11 @@ impl RepoManager {
             .find(|r| r.id == id)
             .map(|r| r.path.clone())
             .ok_or(RepoError::UnknownRepository)
+    }
+
+    /// `root/rel` for a file path from the UI, if it stays inside the repository (spec §10.9).
+    pub fn file(&self, id: Uuid, rel: &str) -> Result<PathBuf, RepoError> {
+        inside_repo(&self.root(id)?, rel).ok_or(RepoError::OutsideRepository)
     }
 
     /// Waits for and takes the repository's mutation lock. Hold it for the whole
@@ -205,6 +217,23 @@ fn to_dto(entry: &RepositoryEntry) -> Repository {
     }
 }
 
+/// `root/rel` if `rel` is a plain relative path that stays inside `root`.
+fn inside_repo(root: &Path, rel: &str) -> Option<PathBuf> {
+    let rel = Path::new(rel);
+    let plain = rel
+        .components()
+        .all(|c| matches!(c, Component::Normal(_) | Component::CurDir));
+    if !plain || rel.as_os_str().is_empty() {
+        return None;
+    }
+    let full = root.join(rel);
+    // Symlinks could still point outside; compare canonical paths when the file exists.
+    match (dunce::canonicalize(&full), dunce::canonicalize(root)) {
+        (Ok(f), Ok(r)) if !f.starts_with(&r) => None,
+        _ => Some(full),
+    }
+}
+
 fn now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -214,14 +243,13 @@ fn now() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
-    use crate::git::test_support::init_repo;
+    use crate::git::test_support::{git, init_repo};
 
     #[tokio::test]
     async fn add_select_remove_persist() {
         let data = tempfile::tempdir().unwrap();
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
 
         let mgr = RepoManager::load(data.path());
         let added = mgr.add(&git, &repo.join(".")).await.unwrap();
@@ -255,7 +283,7 @@ mod tests {
         let plain = tempfile::tempdir().unwrap();
         let mgr = RepoManager::load(data.path());
         assert!(matches!(
-            mgr.add(&resolve(None, None).unwrap(), plain.path()).await,
+            mgr.add(&git(), plain.path()).await,
             Err(RepoError::Git(GitError::Failed { .. }))
         ));
         assert!(mgr.list().repositories.is_empty());
@@ -266,13 +294,7 @@ mod tests {
         let data = tempfile::tempdir().unwrap();
         let (_tmp, repo) = init_repo().await;
         let mgr = std::sync::Arc::new(RepoManager::load(data.path()));
-        let id: Uuid = mgr
-            .add(&resolve(None, None).unwrap(), &repo)
-            .await
-            .unwrap()
-            .id
-            .parse()
-            .unwrap();
+        let id: Uuid = mgr.add(&git(), &repo).await.unwrap().id.parse().unwrap();
 
         let (_root, guard) = mgr.lock_repo(id).await.unwrap();
         let waiter = {
@@ -287,6 +309,27 @@ mod tests {
             mgr.lock_repo(Uuid::new_v4()).await,
             Err(RepoError::UnknownRepository)
         ));
+    }
+
+    #[test]
+    fn only_paths_inside_the_repo() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("repo");
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        std::fs::write(root.join("sub/a.txt"), "").unwrap();
+        assert_eq!(
+            inside_repo(&root, "sub/a.txt"),
+            Some(root.join("sub/a.txt"))
+        );
+        for bad in ["../x", "/etc/passwd", "sub/../../x", ""] {
+            assert_eq!(inside_repo(&root, bad), None, "{bad}");
+        }
+        #[cfg(unix)]
+        {
+            std::fs::write(dir.path().join("secret"), "").unwrap();
+            std::os::unix::fs::symlink(dir.path().join("secret"), root.join("link")).unwrap();
+            assert_eq!(inside_repo(&root, "link"), None);
+        }
     }
 
     #[test]

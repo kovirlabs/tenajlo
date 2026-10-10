@@ -16,36 +16,34 @@ pub struct Identity {
 
 /// Reads the identity git would use in `root`.
 pub async fn identity(git: &GitBinary, root: &Path) -> Result<Identity, GitError> {
+    read(git, Some(root)).await
+}
+
+/// Reads the identity from the user's global git config (Settings).
+pub async fn global(git: &GitBinary) -> Result<Identity, GitError> {
+    read(git, None).await
+}
+
+/// `root`'s effective config, or the global config when `root` is `None`.
+async fn read(git: &GitBinary, root: Option<&Path>) -> Result<Identity, GitError> {
     Ok(Identity {
         name: get(git, root, "user.name").await?,
         email: get(git, root, "user.email").await?,
     })
 }
 
-async fn get(git: &GitBinary, root: &Path, key: &str) -> Result<Option<String>, GitError> {
+async fn get(git: &GitBinary, root: Option<&Path>, key: &str) -> Result<Option<String>, GitError> {
+    let mut args = vec!["config"];
+    if root.is_none() {
+        args.push("--global");
+    }
+    args.extend(["--get", key]);
     // `config --get` exits 1 when the key is unset.
-    let out = GitCommand::new(["config", "--get", key], Access::ReadOnly)
-        .ok_exit_codes(&[0, 1])
-        .cwd(root)
-        .run(git)
-        .await?;
-    let value = String::from_utf8_lossy(&out.stdout).trim().to_owned();
-    Ok((!value.is_empty()).then_some(value))
-}
-
-/// Reads the identity from the user's global git config (Settings).
-pub async fn global(git: &GitBinary) -> Result<Identity, GitError> {
-    Ok(Identity {
-        name: get_global(git, "user.name").await?,
-        email: get_global(git, "user.email").await?,
-    })
-}
-
-async fn get_global(git: &GitBinary, key: &str) -> Result<Option<String>, GitError> {
-    let out = GitCommand::new(["config", "--global", "--get", key], Access::ReadOnly)
-        .ok_exit_codes(&[0, 1])
-        .run(git)
-        .await?;
+    let mut cmd = GitCommand::new(args, Access::ReadOnly).ok_exit_codes(&[0, 1]);
+    if let Some(root) = root {
+        cmd = cmd.cwd(root);
+    }
+    let out = cmd.run(git).await?;
     let value = String::from_utf8_lossy(&out.stdout).trim().to_owned();
     Ok((!value.is_empty()).then_some(value))
 }
@@ -72,13 +70,12 @@ pub async fn set_global(git: &GitBinary, name: &str, email: &str) -> Result<(), 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
-    use crate::git::test_support::{git_in, init_repo};
+    use crate::git::test_support::{git, git_in, init_repo};
 
     #[tokio::test]
     async fn reads_local_identity() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         git_in(&repo, &["config", "user.name", "Ëvan"]).await;
         git_in(&repo, &["config", "user.email", ""]).await;
         let id = identity(&git, &repo).await.unwrap();

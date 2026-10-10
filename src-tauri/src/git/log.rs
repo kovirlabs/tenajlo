@@ -44,12 +44,7 @@ pub async fn history(
         if UNBORN.iter().any(|m| out.stderr.contains(m)) {
             return Ok(Vec::new());
         }
-        let stderr = crate::redact::redact(&out.stderr);
-        return Err(GitError::Failed {
-            kind: super::error::classify(&stderr),
-            exit_code: out.exit_code,
-            stderr,
-        });
+        return Err(GitError::failed(&out.stderr, &out.stdout, out.exit_code));
     }
     Ok(parse_log(&out.stdout))
 }
@@ -89,26 +84,23 @@ pub fn is_commit_hash(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::parse::status::FileStatusKind;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
 
     #[tokio::test]
     async fn history_and_files() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         assert!(
             history(&git, &repo, 0, 50).await.unwrap().is_empty(),
             "unborn HEAD is empty, not an error"
         );
 
         write(&repo, "a.txt", "1\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "first"]).await;
+        commit_all(&repo, "first").await;
         git_in(&repo, &["switch", "-q", "-c", "side"]).await;
         write(&repo, "side.txt", "s\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "side work"]).await;
+        commit_all(&repo, "side work").await;
         git_in(&repo, &["switch", "-q", "main"]).await;
         write(&repo, "ü dir/b.txt", "2\n");
         git_in(&repo, &["add", "-A"]).await;

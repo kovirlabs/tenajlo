@@ -62,9 +62,8 @@ pub fn append(root: &Path, pattern: &str) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::status::status;
-    use crate::git::test_support::{init_repo, write};
+    use crate::git::test_support::{git, init_repo, write};
 
     #[test]
     fn escapes_patterns() {
@@ -92,7 +91,7 @@ mod tests {
     #[tokio::test]
     async fn git_honours_written_patterns() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         // `[a]` is a glob that would also match xay.txt; the pattern must match only the
         // literal name. (A name with `*`, or ending in a space, isn't valid on Windows.)
         for p in ["x[a]y.txt", "xay.txt", "sub/z.tmp", "other.tmp"] {

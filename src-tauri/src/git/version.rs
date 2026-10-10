@@ -49,11 +49,11 @@ async fn lfs_version(git: &GitBinary) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
+    use crate::git::test_support::git;
 
     #[tokio::test]
     async fn detects_installed_git() {
-        let info = detect(&resolve(None, None).unwrap()).await.unwrap();
+        let info = detect(&git()).await.unwrap();
         // CLAUDE.md: tests need git >= 2.40 on PATH.
         assert!(
             info.supported,

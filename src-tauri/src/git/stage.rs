@@ -6,8 +6,6 @@ use super::error::GitError;
 use super::exec::{Access, GitBinary, GitCommand};
 use super::parse::status::{FileChange, FileStatusKind, StagedState};
 
-const FROM_STDIN: [&str; 2] = ["--pathspec-from-file=-", "--pathspec-file-nul"];
-
 /// Stages `files` completely (content, additions and deletions).
 /// Conflicted files are skipped: resolving them is an explicit action (spec §8.1, M6).
 pub async fn stage(git: &GitBinary, root: &Path, files: &[&FileChange]) -> Result<(), GitError> {
@@ -53,9 +51,7 @@ async fn run_with_pathspecs(
     if specs.is_empty() {
         return Ok(());
     }
-    let mut full = args.to_vec();
-    full.extend(FROM_STDIN);
-    GitCommand::new(full, Access::Mutating)
+    GitCommand::new(args, Access::Mutating)
         .pathspecs_on_stdin(specs)
         .cwd(root)
         .run(git)
@@ -66,9 +62,8 @@ async fn run_with_pathspecs(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::status::status;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{git, git_in, init_repo, write};
 
     async fn staged_of(git: &GitBinary, root: &Path) -> Vec<(String, StagedState)> {
         let mut v: Vec<_> = status(git, root)
@@ -85,7 +80,7 @@ mod tests {
     #[tokio::test]
     async fn stage_and_unstage_round_trip() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
 
         // Before the first commit (no HEAD): uses rm --cached to unstage.
         write(&repo, "a[b].txt", "1\n");
