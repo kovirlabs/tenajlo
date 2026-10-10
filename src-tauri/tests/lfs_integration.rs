@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use tenajlo_lib::auth::accounts::AccountManager;
-use tenajlo_lib::auth::remote_auth::{self, RemoteAuth};
+use tenajlo_lib::auth::remote_auth::{self, AuthRequest, RemoteAuth};
 use tenajlo_lib::auth::trampoline::{PromptFn, Trampoline};
 use tenajlo_lib::forgejo::ForgejoUser;
 use tenajlo_lib::git::binary::resolve;
@@ -69,11 +69,13 @@ async fn large_files_round_trip_through_lfs_with_the_account() {
             &accounts,
             Some(&trampoline),
             Some(&askpass),
-            "repo",
-            &uuid::Uuid::new_v4().to_string(),
-            cancel.clone(),
-            Some(&url),
-            true,
+            AuthRequest {
+                repo_id: "repo",
+                op_id: &uuid::Uuid::new_v4().to_string(),
+                cancel: cancel.clone(),
+                remote_url: Some(&url),
+                interactive: true,
+            },
         )
         .await
         .unwrap();

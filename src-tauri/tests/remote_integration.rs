@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use tenajlo_lib::auth::accounts::AccountManager;
-use tenajlo_lib::auth::remote_auth::{self, AuthDiagnosis, RemoteAuth};
+use tenajlo_lib::auth::remote_auth::{self, AuthDiagnosis, AuthRequest, RemoteAuth};
 use tenajlo_lib::auth::secrets::Secret;
 use tenajlo_lib::auth::trampoline::{PromptFn, Trampoline};
 use tenajlo_lib::forgejo::address::normalize_base_url;
@@ -71,11 +71,13 @@ impl Env {
             &self.accounts,
             Some(&self.trampoline),
             Some(&self.askpass),
-            "repo",
-            &uuid::Uuid::new_v4().to_string(),
-            cancel.clone(),
-            Some(url),
-            true,
+            AuthRequest {
+                repo_id: "repo",
+                op_id: &uuid::Uuid::new_v4().to_string(),
+                cancel: cancel.clone(),
+                remote_url: Some(url),
+                interactive: true,
+            },
         )
         .await
         .unwrap();
