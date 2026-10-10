@@ -7,6 +7,8 @@ import { ErrorDialog } from "../components/ErrorDialog";
 import { NewBranchDialog } from "../components/branches/NewBranchDialog";
 import { useShortcuts } from "../hooks/useShortcuts";
 import { Toolbar } from "../components/Toolbar";
+import { UpdateBanner } from "../components/UpdateBanner";
+import { useUpdateStore } from "../stores/updateStore";
 import { useRepoStore, useSelectedRepository } from "../stores/repoStore";
 import { MissingRepository } from "./MissingRepository";
 import { NoRepository } from "./NoRepository";
@@ -20,6 +22,12 @@ export function AppShell() {
   const repo = useSelectedRepository();
   const repoCount = useRepoStore((s) => s.repositories.length);
   const welcomeCompleted = useSettingsStore((s) => s.settings?.welcomeCompleted ?? true);
+  const checkForUpdates = useSettingsStore((s) => s.settings?.checkForUpdates ?? false);
+
+  // Once per start, if the user allows it. Builds that can't update themselves just say no.
+  useEffect(() => {
+    if (checkForUpdates) void useUpdateStore.getState().check(true);
+  }, [checkForUpdates]);
 
   // People who already have repositories (e.g. from an earlier version) skip the welcome.
   useEffect(() => {
@@ -44,6 +52,7 @@ export function AppShell() {
   return (
     <div className="shell">
       <Toolbar />
+      <UpdateBanner />
       {body}
       {repo && !repo.missing && <NewBranchDialog key={repo.id} />}
       <CloneDialog />

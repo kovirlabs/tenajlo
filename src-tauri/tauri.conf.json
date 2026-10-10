@@ -41,5 +41,16 @@
     "licenseFile": "../LICENSE",
     "copyright": "Copyright 2026 Kovir Labs",
     "publisher": "Kovir Labs"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/kovirlabs/tenajlo/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

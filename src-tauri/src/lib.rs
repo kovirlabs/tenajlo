@@ -14,6 +14,7 @@ pub mod repo_manager;
 pub mod settings;
 pub mod state;
 pub mod store;
+pub mod updates;
 pub mod watcher;
 pub mod which;
 
@@ -87,11 +88,15 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::branches::delete_branch,
             commands::branches::get_saved_changes,
             commands::branches::restore_saved_changes,
+            commands::updates::check_for_update,
+            commands::updates::install_update,
+            commands::updates::open_release_page,
         ])
         .events(collect_events![
             watcher::RepoChanged,
             auth::broker::AuthPromptRequested,
-            commands::remote_op::GitProgress
+            commands::remote_op::GitProgress,
+            commands::updates::UpdateProgress
         ])
 }
 
@@ -102,6 +107,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // Rust-side only (token settings link); the WebView gets no opener permissions.
         .plugin(tauri_plugin_opener::init())
+        // Rust-side only (commands::updates); the WebView gets no updater permissions.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);

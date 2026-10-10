@@ -185,6 +185,23 @@ export const commands = {
 } | null, AppError>(__TAURI_INVOKE("get_saved_changes", { repoId })),
 	/**  Re-applies the changes saved for the current branch. */
 	restoreSavedChanges: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("restore_saved_changes", { repoId })),
+	/**  Whether a newer Tenajlo is available. `None` means this is the newest. */
+	checkForUpdate: () => typedError<{
+	version: string,
+	/**  Release notes from the release, if any. */
+	notes: string | null,
+	releaseUrl: string,
+} | null, AppError>(__TAURI_INVOKE("check_for_update")),
+	/**
+	 *  Downloads and installs the newest version, then restarts Tenajlo. Refused while a fetch,
+	 *  pull, push or clone is running.
+	 */
+	installUpdate: () => typedError<null, AppError>(__TAURI_INVOKE("install_update")),
+	/**
+	 *  Opens the latest release on GitHub in the browser (for installs that can't update
+	 *  themselves).
+	 */
+	openReleasePage: () => typedError<null, AppError>(__TAURI_INVOKE("open_release_page")),
 };
 
 /** Events */
@@ -192,6 +209,7 @@ export const events = {
 	authPromptRequested: makeEvent<AuthPromptRequested>("auth-prompt-requested"),
 	gitProgress: makeEvent<GitProgress>("git-progress"),
 	repoChanged: makeEvent<RepoChanged>("repo-changed"),
+	updateProgress: makeEvent<UpdateProgress>("update-progress"),
 };
 
 /* Types */
@@ -246,6 +264,8 @@ export type AppInfo = {
 	version: string,
 	/**  Folder with the daily log files. */
 	logsDir: string,
+	/**  This copy can check for and install updates itself (Windows and macOS release builds). */
+	canUpdate: boolean,
 };
 
 /**  The user's answer. Flows UI → Rust only (CLAUDE.md rule 2). Debug output is redacted. */
@@ -265,6 +285,14 @@ export type AuthPromptRequested = {
 	repoId: string,
 	opId: string,
 	kind: PromptKind,
+};
+
+/**  A newer Tenajlo than the one running. */
+export type AvailableUpdate = {
+	version: string,
+	/**  Release notes from the release, if any. */
+	notes: string | null,
+	releaseUrl: string,
 };
 
 export type Branch = {
@@ -608,6 +636,8 @@ export type Settings = {
 	editor: Editor,
 	/**  The first-run welcome (sign in, name and email) was finished or skipped. */
 	welcomeCompleted: boolean,
+	/**  Check GitHub Releases for a newer Tenajlo at startup (spec §10 item 8). */
+	checkForUpdates: boolean,
 };
 
 /**  How much of a file's change is staged. */
@@ -643,6 +673,12 @@ export type Theme = "System" | "Light" | "Dark";
 export type UndoneCommit = {
 	summary: string,
 	description: string,
+};
+
+/**  Download progress while an update installs. */
+export type UpdateProgress = {
+	/**  0–100, or `None` when the server didn't say how big the download is. */
+	percent: number | null,
 };
 
 /**  A working-directory file's diff with its line staging state. */

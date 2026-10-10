@@ -1,6 +1,8 @@
 # Builds the installers for a version tag (e.g. v1.0.0) and attaches them to a draft GitHub
 # Release for review: Windows NSIS, Linux .deb and macOS (Apple Silicon) .dmg. See
-# docs/releasing.md. Builds are unsigned for now.
+# docs/releasing.md. Installers are not code-signed yet. When the TAURI_SIGNING_PRIVATE_KEY
+# secret is set, Windows and macOS builds also sign update packages and the release gets the
+# latest.json feed that installed copies check.
 name: Release
 
 on:
@@ -76,15 +78,37 @@ jobs:
         with:
           tool: cargo-about@0.9.2
       - run: pnpm install --frozen-lockfile
+      # Update packages need the signing key; without the secret, builds are as before.
+      # Linux .deb installs don't update themselves (they're pointed to the release page).
+      - name: Choose bundles and update signing
+        id: bundle
+        shell: bash
+        env:
+          HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          args="--bundles ${{ matrix.bundles }}"
+          if [ "$HAS_UPDATER_KEY" = "true" ] && [ "$RUNNER_OS" != "Linux" ]; then
+            pubkey=$(node -p "require('./src-tauri/tauri.conf.json').plugins.updater.pubkey")
+            if [ -z "$pubkey" ]; then
+              echo "TAURI_SIGNING_PRIVATE_KEY is set but tauri.conf.json has no updater pubkey" >&2
+              exit 1
+            fi
+            # macOS updates replace the .app, so build it alongside the .dmg.
+            if [ "$RUNNER_OS" = "macOS" ]; then args="--bundles app,dmg"; fi
+            args="$args --config src-tauri/tauri.updater.conf.json"
+          fi
+          echo "args=$args" >> "$GITHUB_OUTPUT"
       # Runs `pnpm tauri build`; beforeBuildCommand (tauri.<platform>.conf.json) builds
       # tenajlo-askpass, generates THIRD_PARTY_LICENSES.html and, on Windows, fetches the
       # pinned, checksum-verified MinGit + git-lfs.
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.release-id }}
-          args: --bundles ${{ matrix.bundles }}
+          args: ${{ steps.bundle.outputs.args }}
       - name: Attach the license list to the release
         if: runner.os == 'Windows'
         shell: bash

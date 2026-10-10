@@ -16,6 +16,7 @@ const defaults: Settings = {
   gitPath: null,
   editor: { kind: "SystemDefault" },
   welcomeCompleted: true,
+  checkForUpdates: false,
 };
 let stored: Settings = defaults;
 const saveSettings = vi.fn(async (s: Settings) => {

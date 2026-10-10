@@ -107,6 +107,6 @@ dev/forgejo.yml            # docker compose for integration tests
 ## Do not
 
 - Edit `src/bindings.ts` by hand.
-- Add telemetry, analytics, or any network call other than to the user's configured Forgejo host(s).
+- Add telemetry, analytics, or any network call other than to the user's configured Forgejo host(s) and Tenajlo's own update check. The update check talks only to the project's GitHub Releases (the `latest.json` feed and the signed installers it lists; see `src-tauri/src/updates.rs`), sends nothing about the user or their repositories, and can be turned off in Settings → About.
 - Implement features outside the current milestone without asking (see spec §12).
 - Copy GitHub Desktop branding, icons, or name.

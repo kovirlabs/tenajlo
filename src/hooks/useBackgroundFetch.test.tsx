@@ -19,6 +19,7 @@ const settings = (minutes: number): Settings => ({
   gitPath: null,
   editor: { kind: "SystemDefault" },
   welcomeCompleted: true,
+  checkForUpdates: false,
 });
 
 function Probe() {

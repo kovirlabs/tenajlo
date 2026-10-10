@@ -314,7 +314,7 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 5. Never pass a shell. Use argument arrays only, with `--` before paths, and validate refs (§5.2).
 6. The trampoline listener binds to loopback only, uses per-operation random tokens, and rejects everything else.
 7. Never auto-accept SSH host keys. Never set `http.sslVerify=false`, and offer no UI toggle for it. Untrusted certs are fixed in the OS trust store.
-8. Updates (v1.1) use Tauri updater with signature verification, from the public GitHub Releases endpoint.
+8. Updates (v1.1) use the Tauri updater with signature verification, from the public GitHub Releases endpoint (`https://github.com/kovirlabs/tenajlo/releases/latest/download/latest.json`; drafts are never served). The updater runs in Rust only; the WebView gets no updater permissions. Tenajlo checks once at startup if Settings → About → "Check for updates when Tenajlo starts" is on (the default), shows a banner, and installs only when the user clicks "Install and restart", never during a fetch, pull, push or clone. The public key is in `tauri.conf.json` (`plugins.updater.pubkey`); a build without it never checks. Windows (NSIS, passive install) and macOS update in place; Linux `.deb` installs show a link to the release page instead.
 9. Repository paths opened by the user are canonicalized. Tenajlo operates only inside the selected repo root.
 
 ---

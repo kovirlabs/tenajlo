@@ -25,6 +25,7 @@ pub mod repos;
 pub mod settings;
 pub mod ssh_keys;
 pub mod sync;
+pub mod updates;
 
 /// Parses a repository id from the frontend.
 pub(crate) fn parse_id(id: &str) -> Result<Uuid, AppError> {

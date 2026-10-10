@@ -921,6 +921,13 @@ button.danger {
   border-bottom: 1px solid var(--border);
 }
 
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .conflict-banner p {
   margin: 0 0 8px;
 }
