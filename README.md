@@ -10,6 +10,11 @@ and would rather not learn the Git command line.
 
 **Website:** <https://kovirlabs.github.io/tenajlo/>
 
+> [!NOTE]
+> Designed, reviewed, and maintained by me, [@evangress](https://github.com/evangress). I use AI coding tools heavily for implementation,
+> but I own the architecture, read the changes, and use this app daily against my own Forgejo server.
+> Bug reports go to a human.
+
 ![Tenajlo's Changes view: changed files including a PLC program and a CAD part, the highlighted changes, and a commit box](site/assets/screenshots/changes.png)
 
 - **Clone** your Forgejo repositories from a list, over HTTPS or SSH.
