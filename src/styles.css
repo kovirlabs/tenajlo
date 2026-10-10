@@ -474,6 +474,27 @@ code {
   padding-left: 112px;
 }
 
+/* Line staging: a checkbox column on the left of hunks and changed lines. */
+.diff-stageable {
+  padding-left: 0;
+}
+
+.diff-stageable .diff-hunk-text {
+  padding-left: 112px;
+}
+
+.diff-gutter {
+  width: 24px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diff-gutter input {
+  margin: 0;
+}
+
 .diff-eof {
   color: var(--danger);
   padding-left: 4px;

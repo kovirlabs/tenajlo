@@ -80,6 +80,12 @@ To open a repository that's already on your computer, use **Current repository â
 3. Write a short **Summary** of what you changed (for example, "Adjust pump timer to 5 s").
 4. Click **Commit to <branch>** (or press Ctrl+Enter).
 
+To commit only part of a file, click the file, then use the boxes beside the changed lines
+in the diff. Tick a line to include it, or tick the box on a block's header to include the
+whole block. Shift+click includes or leaves out every line since the last one you clicked.
+The rest stays in your files for a later commit. Renamed files, links, and files stored with
+Git LFS can only be included whole.
+
 Made a mistake? Right after committing, click **Undo** in the commit box. Your changes stay
 there, ready to commit again.
 

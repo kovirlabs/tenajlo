@@ -135,6 +135,7 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 | Status | `status --porcelain=v2 --branch -z --untracked-files=all` | `WorkingDirectoryStatus` |
 | Diff (file) | `diff --no-ext-diff --patience -M -z` / `diff --cached` / `diff --no-index` for untracked | `FileDiff` (hunks, lines, binary flag) |
 | Stage / unstage | `add -- <paths>` / `restore --staged -- <paths>` | — |
+| Stage / unstage lines (v1.1) | Index entry rebuilt as HEAD + selected changes: `cat-file blob HEAD:<path>`, `hash-object -w --path=<path> --stdin`, `update-index --cacheinfo` (or `--force-remove`) | `LineStaging` (per-line staged flags + diff token) |
 | Commit | `commit -F -` (message on stdin) | commit SHA |
 | Log | `log --format=<NUL-delimited custom> -z --max-count=N --skip=M` | `Commit[]` |
 | Commit detail | `show --format=... --numstat -z <sha>` + per-file diff | `CommitDetail` |
@@ -269,7 +270,7 @@ The layout mirrors GitHub Desktop, which users may already know.
 - **Welcome / first run:** sign in to Forgejo, or skip. Set git name and email (writes `user.name` and `user.email` globally only after confirmation, prefilled from the Forgejo profile).
 - **Repository list (dropdown):** recent repos, filter box, "Add local…", "Clone…", "Create new…" (`git init`).
 - **Clone dialog:** tabs for *Your Forgejo repos* (list from API) and *URL*. Choose HTTPS or SSH URL (SSH from M5; M4 clones HTTPS only), then the local path. Default path is `~/Documents/Tenajlo/<repo>`, configurable.
-- **Changes tab:** file list with checkboxes (stage state), status icons, and a right-click menu (discard, ignore, reveal in explorer, open in editor). Commit box at the bottom.
+- **Changes tab:** file list with checkboxes (stage state), status icons, and a right-click menu (discard, ignore, reveal in explorer, open in editor). Commit box at the bottom. From v1.1, the diff has a checkbox per changed line and per hunk (Shift+click for a range), which stages those lines in the real index. Each line's staged state comes from comparing the HEAD → index and index → working tree diffs. Rename, conflict, symlink, submodule, and filtered or re-encoded files (LFS, `working-tree-encoding`) stay whole-file only.
 - **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff.
 - **Branch dropdown:** filter, current, recent, other local, remote-only (check out creates a tracking branch), plus "New branch…". When switching with local changes, offer *Bring changes* or *Stash and switch* (GitHub Desktop behavior).
 - **Toolbar sync button:** context-aware label: *Publish branch* / *Fetch origin* / *Pull origin (↓3)* / *Push origin (↑2)*, with a progress bar during the operation.

@@ -46,7 +46,10 @@ mockIPC(
       case "get_status":
         return conflict ? f.conflictStatus : f.status;
       case "get_working_diff":
-        return path?.endsWith(".SLDPRT") ? { type: "Binary" } : f.pumpControlDiff;
+        return {
+          diff: path?.endsWith(".SLDPRT") ? { type: "Binary" } : f.pumpControlDiff,
+          lines: null,
+        };
       case "get_history":
         return f.history;
       case "get_commit_files":

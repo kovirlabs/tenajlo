@@ -42,6 +42,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::repo::watch_repository,
             commands::repo::get_lfs_status,
             commands::changes::set_staged,
+            commands::changes::set_lines_staged,
             commands::changes::commit_changes,
             commands::changes::get_identity,
             commands::changes::set_global_identity,

@@ -23,6 +23,8 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   const setTab = useUiStore((s) => s.setTab);
   const selectedPath = useChangesStore((s) => s.selectedPath);
   const status = useChangesStore((s) => s.status);
+  const busy = useChangesStore((s) => s.busy);
+  const setLinesStaged = useChangesStore((s) => s.setLinesStaged);
   useRepoRefresh(repo.id);
   useBackgroundFetch(repo.id);
 
@@ -68,6 +70,10 @@ export function RepositoryView({ repo }: { repo: Repository }) {
             }
             version={status}
             empty="No changes to show."
+            busy={busy}
+            onStageLines={(token, lines, staged) => {
+              if (selectedPath !== null) void setLinesStaged(selectedPath, token, lines, staged);
+            }}
           />
         )}
         {tab === "history" && <CommitDetail repoId={repo.id} />}
