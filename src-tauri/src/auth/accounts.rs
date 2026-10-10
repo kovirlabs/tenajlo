@@ -114,17 +114,18 @@ impl AccountManager {
         let key = entry.keychain_key();
         self.blocking(move |s| s.set(&key, &token)).await?;
 
-        let mut next = self.data().clone();
-        next.accounts.retain(|a| a.base_url != base_url);
-        next.accounts.push(entry.clone());
-        if let Err(e) = store::save(&self.path, &next) {
+        let saved = self.write(|file| {
+            file.accounts.retain(|a| a.base_url != base_url);
+            file.accounts.push(entry.clone());
+            Ok(true)
+        });
+        if let Err(e) = saved {
             if previous.as_ref().map(AccountEntry::keychain_key) != Some(entry.keychain_key()) {
                 let key = entry.keychain_key();
                 let _ = self.blocking(move |s| s.delete(&key)).await;
             }
-            return Err(e.into());
+            return Err(e);
         }
-        *self.data() = next;
 
         if let Some(old) = previous.filter(|p| p.login != entry.login) {
             let key = old.keychain_key();
@@ -151,10 +152,10 @@ impl AccountManager {
         let key = entry.keychain_key();
         self.blocking(move |s| s.delete(&key)).await?;
 
-        let mut next = self.data().clone();
-        next.accounts.retain(|a| a.id != id);
-        store::save(&self.path, &next)?;
-        *self.data() = next;
+        self.write(|file| {
+            file.accounts.retain(|a| a.id != id);
+            Ok(true)
+        })?;
         tracing::info!(server = %crate::redact::redact(&entry.base_url), login = %entry.login, "signed out");
         Ok(())
     }
@@ -182,22 +183,19 @@ impl AccountManager {
     /// Records that the server rejected the account's token. The token is kept until the
     /// user signs in again or signs out.
     pub fn mark_needs_sign_in(&self, id: Uuid) -> Result<(), AccountError> {
-        let mut next = self.data().clone();
-        let entry = next
-            .accounts
-            .iter_mut()
-            .find(|a| a.id == id)
-            .ok_or(AccountError::UnknownAccount)?;
-        if entry.needs_sign_in {
-            return Ok(());
-        }
-        entry.needs_sign_in = true;
-        tracing::info!(server = %crate::redact::redact(&entry.base_url), "token rejected; sign-in required");
-        if !self.read_only {
-            store::save(&self.path, &next)?;
-        }
-        *self.data() = next;
-        Ok(())
+        self.write(|file| {
+            let entry = file
+                .accounts
+                .iter_mut()
+                .find(|a| a.id == id)
+                .ok_or(AccountError::UnknownAccount)?;
+            if entry.needs_sign_in {
+                return Ok(false);
+            }
+            entry.needs_sign_in = true;
+            tracing::info!(server = %crate::redact::redact(&entry.base_url), "token rejected; sign-in required");
+            Ok(true)
+        })
     }
 
     /// Runs a keychain call off the async runtime (the OS store may block or show UI).
@@ -209,6 +207,25 @@ impl AccountManager {
         tokio::task::spawn_blocking(move || f(secrets.as_ref()))
             .await
             .map_err(|e| SecretError(e.to_string()))?
+    }
+
+    /// Applies `change` to a copy of the accounts, saves it, then publishes it, all under one
+    /// lock so concurrent writers can't drop each other's updates. `change` returns false
+    /// when it changed nothing, which skips the save. A read-only manager updates memory only.
+    fn write(
+        &self,
+        change: impl FnOnce(&mut AccountsFile) -> Result<bool, AccountError>,
+    ) -> Result<(), AccountError> {
+        let mut data = self.data();
+        let mut next = data.clone();
+        if !change(&mut next)? {
+            return Ok(());
+        }
+        if !self.read_only {
+            store::save(&self.path, &next)?;
+        }
+        *data = next;
+        Ok(())
     }
 
     fn data(&self) -> std::sync::MutexGuard<'_, AccountsFile> {
@@ -310,6 +327,41 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(m.list().len(), 2);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn concurrent_writes_keep_every_update() {
+        let (dir, secrets, m) = setup();
+        let m = Arc::new(m);
+        let first = m
+            .sign_in(BASE, user("evan"), Secret::new("a".into()))
+            .await
+            .unwrap();
+        let first_id: Uuid = first.id.parse().unwrap();
+
+        let mut tasks = Vec::new();
+        for i in 0..32 {
+            let m = m.clone();
+            tasks.push(tokio::spawn(async move {
+                let server = format!("https://git{i}.example.com");
+                m.sign_in(&server, user("evan"), Secret::new("t".into()))
+                    .await
+                    .unwrap();
+            }));
+        }
+        let marker = m.clone();
+        tasks.push(tokio::spawn(async move {
+            marker.mark_needs_sign_in(first_id).unwrap();
+        }));
+        for t in tasks {
+            t.await.unwrap();
+        }
+
+        for list in [m.list(), AccountManager::load(dir.path(), secrets).list()] {
+            assert_eq!(list.len(), 33);
+            let first = list.iter().find(|a| a.base_url == BASE).unwrap();
+            assert!(first.needs_sign_in, "flag survived concurrent sign-ins");
+        }
     }
 
     #[tokio::test]

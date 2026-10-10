@@ -52,12 +52,14 @@ impl SettingsManager {
     /// Validates and saves `next`, returning what was stored.
     pub fn save(&self, next: Settings) -> Result<Settings, SettingsError> {
         let next = validate(next)?;
+        // Hold the lock across the write so two saves can't interleave on disk.
+        let mut current = self.lock();
         if self.read_only {
             tracing::warn!("settings were written by a newer Tenajlo; not saving");
         } else {
             store::save(&self.path, &next)?;
         }
-        *self.lock() = next.clone();
+        *current = next.clone();
         Ok(next)
     }
 
