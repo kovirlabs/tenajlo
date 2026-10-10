@@ -23,7 +23,7 @@ export function HistoryList() {
       ariaLabel="Commits"
       items={commits}
       rowHeight={ROW_HEIGHT}
-      onNearEnd={() => void loadMore()}
+      onNearEnd={loadMore}
       renderRow={(c) => (
         <CommitRow
           commit={c}

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { clampShift } from "../lib/viewport";
 
 export type MenuItem = { label: string; onSelect: () => void; disabled?: boolean };
@@ -25,13 +25,17 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
     menu.style.top = `${y + dy}px`;
   }, [x, y]);
 
+  // Callers pass an inline onClose, so read it through an effect event: the listeners and
+  // the initial focus must not reset each time the parent re-renders.
+  const close = useEffectEvent(onClose);
+
   useEffect(() => {
     ref.current?.querySelector("button")?.focus();
     const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onClose();
+      if (!ref.current?.contains(e.target as Node)) close();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -39,7 +43,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <ul ref={ref} role="menu" className="context-menu" style={{ left: x, top: y }}>

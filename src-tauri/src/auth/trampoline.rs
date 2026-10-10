@@ -101,7 +101,11 @@ impl Trampoline {
                         let inner = server.clone();
                         tokio::spawn(async move { handle(&inner, stream).await });
                     }
-                    Err(e) => tracing::warn!(error = %e, "trampoline accept failed"),
+                    Err(e) => {
+                        // Errors like EMFILE persist; back off instead of spinning the loop.
+                        tracing::warn!(error = %e, "trampoline accept failed");
+                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    }
                 }
             }
         });

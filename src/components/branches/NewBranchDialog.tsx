@@ -24,8 +24,11 @@ export function NewBranchDialog() {
   }, [name]);
 
   const create = async () => {
-    if (!preview) return;
-    const ok = await mutate((id) => createBranch(id, preview));
+    // Recompute rather than use `preview`: Enter can land before the preview for the
+    // latest keystroke arrives, which would create the previous name.
+    const branch = await previewBranchName(name);
+    if (!branch) return;
+    const ok = await mutate((id) => createBranch(id, branch));
     if (ok) {
       setName("");
       close();

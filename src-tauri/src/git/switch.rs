@@ -84,12 +84,21 @@ pub async fn switch(
         .await;
 
     if let (Err(_), Some(branch)) = (&result, stashed) {
-        // Put the user's changes back where they were.
-        if let Some(saved) = stash::find(git, root, branch).await? {
-            stash::restore(git, root, &saved).await?;
+        // Put the user's changes back where they were. If that fails too, report the switch
+        // error, which explains what happened; the changes stay saved for this branch and
+        // the saved-changes banner offers to restore them.
+        if let Err(e) = restore_saved(git, root, branch).await {
+            tracing::warn!(error = %e, "could not restore changes after a failed switch");
         }
     }
     result.map(|_| ())
+}
+
+async fn restore_saved(git: &GitBinary, root: &Path, branch: &str) -> Result<(), GitError> {
+    if let Some(saved) = stash::find(git, root, branch).await? {
+        stash::restore(git, root, &saved).await?;
+    }
+    Ok(())
 }
 
 /// Deletes local branch `name`. Without `force`, git refuses if it has unmerged commits

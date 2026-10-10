@@ -50,14 +50,17 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   },
 
   loadMore: async () => {
-    const { repoId, loading, complete, commits } = get();
-    if (!repoId || loading || complete) return;
+    const { repoId, loading, complete, error, commits } = get();
+    // After a failure, wait for the next refresh instead of retrying on every render.
+    if (!repoId || loading || complete || error) return;
+    const offset = commits.length;
     set({ loading: true });
-    const res = await getHistory(repoId, commits.length, PAGE_SIZE);
-    if (get().repoId !== repoId) return;
+    const res = await getHistory(repoId, offset, PAGE_SIZE);
+    // A refresh replaced the list meanwhile; this page no longer lines up with it.
+    if (get().repoId !== repoId || get().commits.length !== offset) return;
     if (res.status === "error") return set({ error: res.error, loading: false });
     set({
-      commits: [...commits, ...res.data],
+      commits: [...get().commits, ...res.data],
       complete: res.data.length < PAGE_SIZE,
       loading: false,
     });

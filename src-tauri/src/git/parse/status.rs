@@ -1,5 +1,7 @@
 //! Parser for `git status --porcelain=v2 --branch -z`.
 
+use std::collections::HashSet;
+
 use serde::Serialize;
 
 /// What happened to a file, as shown in the Changes list.
@@ -66,6 +68,7 @@ pub fn parse_status(output: &[u8]) -> WorkingDirectoryStatus {
     let mut tokens = text.split('\0');
     let mut status = WorkingDirectoryStatus::default();
     let mut saw_ab = false;
+    let mut seen: HashSet<String> = HashSet::new();
 
     while let Some(token) = tokens.next() {
         if let Some(header) = token.strip_prefix("# ") {
@@ -83,7 +86,10 @@ pub fn parse_status(output: &[u8]) -> WorkingDirectoryStatus {
         };
         if let Some(entry) = entry {
             // An untracked file can share a path with a staged deletion; the untracked entry wins.
-            status.files.retain(|f| f.path != entry.path);
+            // Collisions are rare, so only they pay for the linear removal.
+            if !seen.insert(entry.path.clone()) {
+                status.files.retain(|f| f.path != entry.path);
+            }
             status.files.push(entry);
         }
     }
@@ -334,6 +340,22 @@ mod tests {
         let f = files(&raw);
         assert_eq!(f.len(), 1);
         assert_eq!(f[0].kind, FileStatusKind::Untracked);
+    }
+
+    #[test]
+    fn many_untracked_files_keep_order() {
+        // Large untracked trees (build or CAD output) must stay linear to parse.
+        let mut raw = format!("{}\0{}\0", ordinary(".M", "a.txt"), ordinary("D.", "z.txt"));
+        for i in 0..50_000 {
+            raw.push_str(&format!("? out/{i}.bin\0"));
+        }
+        raw.push_str("? z.txt\0");
+        let f = files(&raw);
+        assert_eq!(f.len(), 50_002);
+        assert_eq!(f[0].path, "a.txt");
+        assert_eq!(f[1].path, "out/0.bin");
+        let last = f.last().map(|c| (c.path.as_str(), c.kind));
+        assert_eq!(last, Some(("z.txt", FileStatusKind::Untracked)));
     }
 
     #[test]

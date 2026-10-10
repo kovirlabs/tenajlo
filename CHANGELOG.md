@@ -6,6 +6,18 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- History no longer retries loading older commits forever after a failed load.
+- Right-click menus keep keyboard focus where you put it while the app refreshes.
+- Pressing Enter right after typing a branch name creates the name you typed.
+- If switching branches fails, Tenajlo shows why, even when it can't put your changes back
+  (they stay saved and can be restored from the banner).
+- Signing in to one server while another account's token is being rejected no longer loses
+  either change.
+- The Changes list loads faster for folders with many untracked files, and very large new
+  files are reported as too large to show without being read first.
+
 ## [1.0.1] - 2026-10-07
 
 - Linux: a `.deb` package for Debian and Ubuntu (x64). It uses the system's Git.
