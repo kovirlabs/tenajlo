@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import type { Progress, SyncRequest, SyncState } from "../bindings";
 import { cancelOperation, getSyncState, sync } from "../api/sync";
-import { useBranchStore } from "./branchStore";
-import { useConflictStore } from "./conflictStore";
-import { useChangesStore } from "./changesStore";
+import { refreshRepo, registerRefresh } from "./refreshRepo";
 import { useUiStore } from "./uiStore";
 
 type Running = { opId: string; request: SyncRequest; progress: Progress | null };
@@ -43,12 +41,7 @@ export const useSyncStore = create<SyncStoreState>((set, get) => ({
     if (res.status === "error" && !quiet) {
       useUiStore.getState().showError(res.error);
     }
-    await Promise.all([
-      get().refresh(repoId),
-      useChangesStore.getState().refresh(repoId),
-      useBranchStore.getState().refresh(repoId),
-      useConflictStore.getState().refresh(repoId),
-    ]);
+    await refreshRepo(repoId);
   },
 
   cancel: () => {
@@ -61,3 +54,5 @@ export const useSyncStore = create<SyncStoreState>((set, get) => ({
     if (running?.opId === opId) set({ running: { ...running, progress } });
   },
 }));
+
+registerRefresh("sync", (repoId) => useSyncStore.getState().refresh(repoId));

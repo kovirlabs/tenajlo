@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AppError, BranchList } from "../bindings";
 import { getBranches } from "../api/branches";
+import { registerRefresh } from "./refreshRepo";
 
 type BranchState = {
   repoId: string | null;
@@ -22,3 +23,5 @@ export const useBranchStore = create<BranchState>((set, get) => ({
     else set({ branches: res.data, error: null });
   },
 }));
+
+registerRefresh("branches", (repoId) => useBranchStore.getState().refresh(repoId));

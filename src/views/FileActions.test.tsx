@@ -27,10 +27,8 @@ const file = (path: string, kind: FileChange["kind"]): FileChange => ({
 });
 
 function setup(files: FileChange[]) {
-  const mutate = vi.fn(async (op: (id: string) => Promise<unknown>) => {
-    await op("r1");
-    return true;
-  });
+  // Like the real one: runs the operation and resolves to its result.
+  const mutate = vi.fn((op: (id: string) => Promise<unknown>) => op("r1"));
   useChangesStore.setState({
     repoId: "r1",
     busy: false,

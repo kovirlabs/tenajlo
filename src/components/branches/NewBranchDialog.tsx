@@ -28,8 +28,8 @@ export function NewBranchDialog() {
     // latest keystroke arrives, which would create the previous name.
     const branch = await previewBranchName(name);
     if (!branch) return;
-    const ok = await mutate((id) => createBranch(id, branch));
-    if (ok) {
+    const res = await mutate((id) => createBranch(id, branch));
+    if (res?.status === "ok") {
       setName("");
       close();
     }

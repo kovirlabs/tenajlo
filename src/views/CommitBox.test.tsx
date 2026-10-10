@@ -28,10 +28,8 @@ const file = (staged: FileChange["staged"]): FileChange => ({
 
 function setup(staged: FileChange["staged"], id: Identity = { name: "E", email: "e@x" }) {
   identity.mockResolvedValue({ status: "ok", data: id });
-  const mutate = vi.fn(async (op: (id: string) => Promise<unknown>) => {
-    await op("r1");
-    return true;
-  });
+  // Like the real one: runs the operation and resolves to its result.
+  const mutate = vi.fn((op: (id: string) => Promise<unknown>) => op("r1"));
   useChangesStore.setState({
     repoId: "r1",
     busy: false,

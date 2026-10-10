@@ -43,14 +43,9 @@ export function CommitBox({ repoId }: { repoId: string }) {
     if (!canCommit) return;
     if (missingIdentity) return setAskIdentity(true);
     const committedSummary = summary.trim();
-    const committed: { sha?: string } = {};
-    await mutate(async (id) => {
-      const res = await commitChanges(id, summary, description);
-      if (res.status === "ok") committed.sha = res.data;
-      return res;
-    });
-    if (committed.sha) {
-      setLastCommit({ sha: committed.sha, summary: committedSummary });
+    const res = await mutate((id) => commitChanges(id, summary, description));
+    if (res?.status === "ok") {
+      setLastCommit({ sha: res.data, summary: committedSummary });
       setSummary("");
       setSummaryTouched(false);
       setDescription("");
@@ -60,15 +55,12 @@ export function CommitBox({ repoId }: { repoId: string }) {
   const undo = async () => {
     if (!lastCommit) return;
     const { sha } = lastCommit;
-    await mutate(async (id) => {
-      const res = await undoCommit(id, sha);
-      if (res.status === "ok") {
-        setSummary(res.data.summary);
-        setDescription(res.data.description);
-        setLastCommit(null);
-      }
-      return res;
-    });
+    const res = await mutate((id) => undoCommit(id, sha));
+    if (res?.status === "ok") {
+      setSummary(res.data.summary);
+      setDescription(res.data.description);
+      setLastCommit(null);
+    }
   };
 
   // Only offer Undo while our commit is still the branch tip.
