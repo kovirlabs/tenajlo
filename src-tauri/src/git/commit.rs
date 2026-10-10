@@ -87,9 +87,8 @@ pub async fn commit(git: &GitBinary, root: &Path, message: &str) -> Result<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::error::GitErrorKind;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{git, git_in, init_repo, write};
 
     #[test]
     fn builds_messages() {
@@ -117,7 +116,7 @@ mod tests {
     #[tokio::test]
     async fn conflicts_block_before_anything_else() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         let current = WorkingDirectoryStatus {
             has_conflicts: true,
             ..Default::default()
@@ -131,7 +130,7 @@ mod tests {
     #[tokio::test]
     async fn commits_index_with_unicode_and_hash_lines() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         git_in(&repo, &["config", "user.name", "Tëst"]).await;
         git_in(&repo, &["config", "user.email", "t@example.com"]).await;
         git_in(&repo, &["config", "commit.gpgsign", "false"]).await;
@@ -153,7 +152,7 @@ mod tests {
     #[tokio::test]
     async fn missing_identity_is_classified() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         // Empty name in local config overrides any global identity on the test machine.
         git_in(&repo, &["config", "user.name", ""]).await;
         git_in(&repo, &["config", "user.email", ""]).await;

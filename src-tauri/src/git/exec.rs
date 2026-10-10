@@ -13,7 +13,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 use tokio_util::sync::CancellationToken;
 
-use super::error::{classify, GitError, GitErrorKind};
+use super::error::GitError;
 use super::process_tree::TreeKiller;
 use crate::redact::redact;
 
@@ -151,10 +151,17 @@ impl GitCommand {
         self
     }
 
-    /// Feeds `paths` as NUL-separated pathspecs on stdin. Add
-    /// `--pathspec-from-file=- --pathspec-file-nul` to the args. Avoids command-line
-    /// length limits (Windows: 32K chars) and implies [`Self::literal_pathspecs`].
-    pub fn pathspecs_on_stdin<S: AsRef<str>>(self, paths: &[S]) -> Self {
+    /// Feeds `paths` as NUL-separated pathspecs on stdin and appends the
+    /// `--pathspec-from-file=- --pathspec-file-nul` flags, so the args must not end with
+    /// `--`. Avoids command-line length limits (Windows: 32K chars) and implies
+    /// [`Self::literal_pathspecs`].
+    pub fn pathspecs_on_stdin<S: AsRef<str>>(mut self, paths: &[S]) -> Self {
+        debug_assert!(
+            !self.args.iter().any(|a| a == "--"),
+            "pathspecs follow `--`"
+        );
+        self.args
+            .extend(["--pathspec-from-file=-", "--pathspec-file-nul"].map(OsString::from));
         let mut buf = Vec::new();
         for p in paths {
             buf.extend_from_slice(p.as_ref().as_bytes());
@@ -309,18 +316,11 @@ impl GitCommand {
                 exit_code,
             });
         }
-        let stderr = redact(&stderr);
-        tracing::debug!(?exit_code, %stderr, "git failed");
-        // Some failures are only explained on stdout (merge: "CONFLICT (content): …").
-        let kind = match classify(&stderr) {
-            GitErrorKind::Unknown => classify(&String::from_utf8_lossy(&output.stdout)),
-            kind => kind,
-        };
-        Err(GitError::Failed {
-            kind,
-            exit_code,
-            stderr,
-        })
+        let err = GitError::failed(&stderr, &output.stdout, exit_code);
+        if let GitError::Failed { stderr, .. } = &err {
+            tracing::debug!(?exit_code, %stderr, "git failed");
+        }
+        Err(err)
     }
 }
 

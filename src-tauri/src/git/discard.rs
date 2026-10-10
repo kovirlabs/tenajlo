@@ -9,8 +9,6 @@ use super::error::GitError;
 use super::exec::{Access, GitBinary, GitCommand};
 use super::parse::status::{FileChange, FileStatusKind};
 
-const FROM_STDIN: [&str; 2] = ["--pathspec-from-file=-", "--pathspec-file-nul"];
-
 /// Why a discard did not fully happen.
 #[derive(Debug, thiserror::Error)]
 pub enum DiscardError {
@@ -69,12 +67,11 @@ pub async fn discard(
     }
     if !specs.is_empty() {
         // No-overlay restore also drops index entries absent from HEAD (added/copied/renamed-to).
-        let mut args = if has_head {
+        let args = if has_head {
             vec!["restore", "--source=HEAD", "--staged", "--worktree"]
         } else {
             vec!["rm", "--cached", "-r", "-q", "-f", "--ignore-unmatch"]
         };
-        args.extend(FROM_STDIN);
         GitCommand::new(args, Access::Mutating)
             .pathspecs_on_stdin(&specs)
             .cwd(root)
@@ -92,9 +89,8 @@ pub async fn discard(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::status::status;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
     use std::path::PathBuf;
     use std::sync::Mutex;
 
@@ -125,12 +121,11 @@ mod tests {
     #[tokio::test]
     async fn discards_every_kind_and_keeps_content_in_trash() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         write(&repo, "mod.txt", "orig\n");
         write(&repo, "del.txt", "keep\n");
         write(&repo, "ren.txt", "a\nb\nc\nd\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "init"]).await;
+        commit_all(&repo, "init").await;
 
         write(&repo, "mod.txt", "edited and staged\n");
         git_in(&repo, &["add", "mod.txt"]).await;
@@ -177,7 +172,7 @@ mod tests {
     #[tokio::test]
     async fn before_first_commit_and_trash_failures() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         write(&repo, "a.txt", "a\n");
         write(&repo, "b.txt", "b\n");
         git_in(&repo, &["add", "-A"]).await;
@@ -209,7 +204,7 @@ mod tests {
     #[tokio::test]
     async fn refuses_conflicts_and_submodules() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         let conflicted = FileChange {
             path: "c".into(),
             old_path: None,

@@ -61,13 +61,13 @@ pub async fn push_objects(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::parse::progress::parse_progress;
+    use crate::git::test_support::git;
 
     #[test]
     fn detects_lfs_attributes() {
         let dir = tempfile::tempdir().unwrap();
-        let git = resolve(None, None).unwrap();
+        let git = git();
         assert!(!status(&git, dir.path()).used);
         std::fs::write(
             dir.path().join(".gitattributes"),

@@ -9,11 +9,6 @@ use super::parse::status::{FileChange, FileStatusKind};
 
 const DIFF_FLAGS: [&str; 4] = ["--no-ext-diff", "--patience", "--no-color", "-M"];
 
-/// `:(literal)` pathspec so `*`, `?` and `[` in file names are not globs.
-fn literal(path: &str) -> String {
-    format!(":(literal){path}")
-}
-
 /// Diff of a changed working-directory file against HEAD (staged and unstaged together).
 ///
 /// `has_head` is false in a repository with no commits yet.
@@ -38,14 +33,13 @@ pub async fn working_dir_diff(
         args.extend(["--", "/dev/null", file.path.as_str()]);
         GitCommand::new(args, Access::ReadOnly).ok_exit_codes(&[0, 1])
     } else {
-        let mut args: Vec<String> = vec!["diff".into()];
-        args.extend(DIFF_FLAGS.map(String::from));
-        args.extend(["HEAD".into(), "--".into()]);
-        if let Some(old) = &file.old_path {
-            args.push(literal(old));
-        }
-        args.push(literal(&file.path));
-        GitCommand::new(args, Access::ReadOnly)
+        let mut args = vec!["diff"];
+        args.extend(DIFF_FLAGS);
+        args.extend(["HEAD", "--"]);
+        args.extend(file.old_path.as_deref());
+        args.push(&file.path);
+        // Literal so `*`, `?` and `[` in file names are not globs.
+        GitCommand::new(args, Access::ReadOnly).literal_pathspecs()
     };
     let out = cmd.cwd(root).run(git).await?;
     Ok(parse_diff(&out.stdout))
@@ -59,18 +53,13 @@ pub async fn commit_file_diff(
     path: &str,
     old_path: Option<&str>,
 ) -> Result<FileDiff, GitError> {
-    let mut args: Vec<String> = vec![
-        "show".into(),
-        "--format=".into(),
-        "--diff-merges=first-parent".into(),
-    ];
-    args.extend(DIFF_FLAGS.map(String::from));
-    args.extend(["--end-of-options".into(), sha.to_owned(), "--".into()]);
-    if let Some(old) = old_path {
-        args.push(literal(old));
-    }
-    args.push(literal(path));
+    let mut args = vec!["show", "--format=", "--diff-merges=first-parent"];
+    args.extend(DIFF_FLAGS);
+    args.extend(["--end-of-options", sha, "--"]);
+    args.extend(old_path);
+    args.push(path);
     let out = GitCommand::new(args, Access::ReadOnly)
+        .literal_pathspecs()
         .cwd(root)
         .run(git)
         .await?;
@@ -120,10 +109,9 @@ fn reject_escaping_path(path: &str) -> Result<(), GitError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::parse::diff::DiffLineKind;
     use crate::git::status::status;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
 
     fn added_lines(diff: &FileDiff) -> Vec<String> {
         match diff {
@@ -140,7 +128,7 @@ mod tests {
     #[tokio::test]
     async fn working_dir_diffs_by_kind() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
 
         // Unborn HEAD: staged file is shown as all-new.
         write(&repo, "a[b].txt", "first\n");
@@ -182,10 +170,9 @@ mod tests {
     #[tokio::test]
     async fn rename_and_commit_diffs() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         write(&repo, "old.txt", "a\nb\nc\nd\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "root"]).await;
+        commit_all(&repo, "root").await;
         git_in(&repo, &["mv", "old.txt", "new.txt"]).await;
         write(&repo, "new.txt", "a\nb\nc\nd\ne\n");
 
@@ -209,7 +196,7 @@ mod tests {
     #[tokio::test]
     async fn large_new_files_skip_git_unless_binary() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         let mut text = "line\n".repeat(MAX_DIFF_BYTES / 5 + 1);
         write(&repo, "big.csv", &text);
         text.insert(0, '\0');

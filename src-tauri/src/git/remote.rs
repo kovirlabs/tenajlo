@@ -216,45 +216,27 @@ pub async fn push(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::error::GitErrorKind;
     use crate::git::status::status;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{
+        commit_all, git, git_in, init_repo, teammate_clone, with_bare_origin, write,
+    };
     use std::path::PathBuf;
     use std::sync::{Arc, Mutex};
 
-    /// A repo with a bare `origin` and a second clone (`other`) to simulate a teammate.
+    /// A repo with one commit and an empty bare `origin`. Returns (tmp, repo, origin).
     async fn setup() -> (tempfile::TempDir, PathBuf, PathBuf) {
         let (tmp, repo) = init_repo().await;
-        let origin = tmp.path().join("origin.git");
-        git_in(
-            tmp.path(),
-            &[
-                "init",
-                "-q",
-                "--bare",
-                "-b",
-                "main",
-                origin.to_str().unwrap(),
-            ],
-        )
-        .await;
-        git_in(
-            &repo,
-            &["remote", "add", "origin", origin.to_str().unwrap()],
-        )
-        .await;
+        let origin = with_bare_origin(&repo).await;
         write(&repo, "a.txt", "1\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "init"]).await;
-        let other = tmp.path().join("other");
-        (tmp, repo, other)
+        commit_all(&repo, "init").await;
+        (tmp, repo, origin)
     }
 
     #[tokio::test]
     async fn publish_push_fetch_pull_round_trip() {
-        let (tmp, repo, other) = setup().await;
-        let git = resolve(None, None).unwrap();
+        let (_tmp, repo, origin) = setup().await;
+        let git = git();
 
         push(
             &git,
@@ -276,19 +258,9 @@ mod tests {
         assert!(last_fetched(&git, &repo).await.unwrap().is_none());
 
         // A teammate pushes; we fetch and see we're behind, then pull.
-        git_in(
-            tmp.path(),
-            &[
-                "clone",
-                "-q",
-                tmp.path().join("origin.git").to_str().unwrap(),
-                other.to_str().unwrap(),
-            ],
-        )
-        .await;
+        let other = teammate_clone(&origin).await;
         write(&other, "b.txt", "from teammate\n");
-        git_in(&other, &["add", "-A"]).await;
-        git_in(&other, &["commit", "-q", "-m", "teammate"]).await;
+        commit_all(&other, "teammate").await;
         git_in(&other, &["push", "-q"]).await;
 
         let seen = Arc::new(Mutex::new(Vec::new()));
@@ -306,8 +278,7 @@ mod tests {
 
         // Our new commit → push.
         write(&repo, "c.txt", "mine\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "mine"]).await;
+        commit_all(&repo, "mine").await;
         push(
             &git,
             &repo,
@@ -325,8 +296,8 @@ mod tests {
 
     #[tokio::test]
     async fn diverged_pull_and_rejected_push_are_classified() {
-        let (tmp, repo, other) = setup().await;
-        let git = resolve(None, None).unwrap();
+        let (_tmp, repo, origin) = setup().await;
+        let git = git();
         push(
             &git,
             &repo,
@@ -338,16 +309,7 @@ mod tests {
         )
         .await
         .unwrap();
-        git_in(
-            tmp.path(),
-            &[
-                "clone",
-                "-q",
-                tmp.path().join("origin.git").to_str().unwrap(),
-                other.to_str().unwrap(),
-            ],
-        )
-        .await;
+        let other = teammate_clone(&origin).await;
         git_in(&other, &["commit", "-q", "--allow-empty", "-m", "theirs"]).await;
         git_in(&other, &["push", "-q"]).await;
         git_in(&repo, &["commit", "-q", "--allow-empty", "-m", "ours"]).await;
@@ -377,8 +339,8 @@ mod tests {
 
     #[tokio::test]
     async fn cancelled_fetch_reports_cancelled() {
-        let (_tmp, repo, _) = setup().await;
-        let git = resolve(None, None).unwrap();
+        let (_tmp, repo, _origin) = setup().await;
+        let git = git();
         let run = RemoteRun::quiet();
         run.cancel.cancel();
         assert!(matches!(
@@ -389,8 +351,8 @@ mod tests {
 
     /// `repo` and a teammate's clone both commit after `init`, editing `file`.
     async fn diverged(file_ours: &str, file_theirs: &str) -> (tempfile::TempDir, PathBuf) {
-        let (tmp, repo, other) = setup().await;
-        let git = resolve(None, None).unwrap();
+        let (tmp, repo, origin) = setup().await;
+        let git = git();
         push(
             &git,
             &repo,
@@ -402,24 +364,12 @@ mod tests {
         )
         .await
         .unwrap();
-        let origin = tmp.path().join("origin.git");
-        git_in(
-            tmp.path(),
-            &[
-                "clone",
-                "-q",
-                origin.to_str().unwrap(),
-                other.to_str().unwrap(),
-            ],
-        )
-        .await;
+        let other = teammate_clone(&origin).await;
         write(&other, file_theirs, "theirs\n");
-        git_in(&other, &["add", "-A"]).await;
-        git_in(&other, &["commit", "-q", "-m", "theirs"]).await;
+        commit_all(&other, "theirs").await;
         git_in(&other, &["push", "-q"]).await;
         write(&repo, file_ours, "ours\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "ours"]).await;
+        commit_all(&repo, "ours").await;
         // pull_merge commits as the user; tests have no global identity.
         git_in(&repo, &["config", "user.name", "Test"]).await;
         git_in(&repo, &["config", "user.email", "t@example.com"]).await;
@@ -429,7 +379,7 @@ mod tests {
     #[tokio::test]
     async fn diverged_pull_fails_ff_only_then_merges() {
         let (_tmp, repo) = diverged("mine.txt", "theirs.txt").await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         let err = pull(&git, &repo, RemoteRun::quiet()).await.unwrap_err();
         assert!(
             matches!(
@@ -454,7 +404,7 @@ mod tests {
     #[tokio::test]
     async fn conflicting_merge_is_left_in_progress() {
         let (_tmp, repo) = diverged("a.txt", "a.txt").await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         let err = pull_merge(&git, &repo, RemoteRun::quiet())
             .await
             .unwrap_err();
@@ -474,7 +424,7 @@ mod tests {
     #[tokio::test]
     async fn rebase_pull_replays_local_commits() {
         let (_tmp, repo) = diverged("mine.txt", "theirs.txt").await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         pull_rebase(&git, &repo, RemoteRun::quiet()).await.unwrap();
         let st = status(&git, &repo).await.unwrap();
         assert_eq!(

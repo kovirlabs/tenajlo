@@ -89,16 +89,14 @@ fn is_stash_ref(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
 
     #[tokio::test]
     async fn save_find_restore() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         write(&repo, "a.txt", "1\n");
-        git_in(&repo, &["add", "-A"]).await;
-        git_in(&repo, &["commit", "-q", "-m", "init"]).await;
+        commit_all(&repo, "init").await;
 
         // A user's own stash must never be picked up.
         write(&repo, "a.txt", "mine\n");

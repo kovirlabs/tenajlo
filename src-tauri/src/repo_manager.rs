@@ -238,14 +238,13 @@ fn now() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
-    use crate::git::test_support::init_repo;
+    use crate::git::test_support::{git, init_repo};
 
     #[tokio::test]
     async fn add_select_remove_persist() {
         let data = tempfile::tempdir().unwrap();
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
 
         let mgr = RepoManager::load(data.path());
         let added = mgr.add(&git, &repo.join(".")).await.unwrap();
@@ -279,7 +278,7 @@ mod tests {
         let plain = tempfile::tempdir().unwrap();
         let mgr = RepoManager::load(data.path());
         assert!(matches!(
-            mgr.add(&resolve(None, None).unwrap(), plain.path()).await,
+            mgr.add(&git(), plain.path()).await,
             Err(RepoError::Git(GitError::Failed { .. }))
         ));
         assert!(mgr.list().repositories.is_empty());
@@ -290,13 +289,7 @@ mod tests {
         let data = tempfile::tempdir().unwrap();
         let (_tmp, repo) = init_repo().await;
         let mgr = std::sync::Arc::new(RepoManager::load(data.path()));
-        let id: Uuid = mgr
-            .add(&resolve(None, None).unwrap(), &repo)
-            .await
-            .unwrap()
-            .id
-            .parse()
-            .unwrap();
+        let id: Uuid = mgr.add(&git(), &repo).await.unwrap().id.parse().unwrap();
 
         let (_root, guard) = mgr.lock_repo(id).await.unwrap();
         let waiter = {

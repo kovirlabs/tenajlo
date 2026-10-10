@@ -72,13 +72,12 @@ pub async fn set_global(git: &GitBinary, name: &str, email: &str) -> Result<(), 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
-    use crate::git::test_support::{git_in, init_repo};
+    use crate::git::test_support::{git, git_in, init_repo};
 
     #[tokio::test]
     async fn reads_local_identity() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         git_in(&repo, &["config", "user.name", "Ëvan"]).await;
         git_in(&repo, &["config", "user.email", ""]).await;
         let id = identity(&git, &repo).await.unwrap();

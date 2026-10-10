@@ -111,10 +111,9 @@ pub async fn undo_last_commit(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::git::binary::resolve;
     use crate::git::parse::status::StagedState;
     use crate::git::status::status;
-    use crate::git::test_support::{git_in, init_repo, write};
+    use crate::git::test_support::{git, git_in, init_repo, with_bare_origin, write};
 
     async fn head(repo: &Path) -> String {
         git_in(repo, &["rev-parse", "HEAD"]).await.trim().to_owned()
@@ -123,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn undoes_root_and_normal_commits() {
         let (_tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let git = git();
         write(&repo, "a.txt", "1\n");
         git_in(&repo, &["add", "-A"]).await;
         git_in(&repo, &["commit", "-q", "-m", "First", "-m", "Body ü"]).await;
@@ -159,20 +158,10 @@ mod tests {
 
     #[tokio::test]
     async fn refuses_pushed_and_merge_commits() {
-        let (tmp, repo) = init_repo().await;
-        let git = resolve(None, None).unwrap();
+        let (_tmp, repo) = init_repo().await;
+        let git = git();
         git_in(&repo, &["commit", "-q", "--allow-empty", "-m", "init"]).await;
-        let origin = tmp.path().join("o.git");
-        git_in(
-            tmp.path(),
-            &["init", "-q", "--bare", origin.to_str().unwrap()],
-        )
-        .await;
-        git_in(
-            &repo,
-            &["remote", "add", "origin", origin.to_str().unwrap()],
-        )
-        .await;
+        with_bare_origin(&repo).await;
         git_in(&repo, &["push", "-q", "-u", "origin", "main"]).await;
         let pushed = head(&repo).await;
         assert!(matches!(
