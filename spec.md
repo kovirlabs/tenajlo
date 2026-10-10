@@ -277,7 +277,7 @@ The layout mirrors GitHub Desktop, which users may already know.
 - **Toolbar sync button:** context-aware label: *Publish branch* / *Fetch origin* / *Pull origin (↓3)* / *Push origin (↑2)*, with a progress bar during the operation.
 - **Auth prompts:** HTTPS credentials, SSH passphrase, and host-key confirmation dialogs, all driven by `auth-prompt` events.
 - **Accounts dialog (M4 interim):** list, sign in, sign out; opened from the repository dropdown and the no-repository screen. One account per server. Folds into Settings in M6.
-- **Settings:** accounts, git identity, default clone path, external editor (VS Code / Notepad++ / custom), pull strategy, background fetch interval (default 5 min, 0 = off), theme (system / light / dark), git binary override.
+- **Settings:** accounts, git identity, default clone path, external editor (VS Code / Notepad++ / custom), pull strategy, background fetch interval (default 5 min, 0 = off), new-commit notifications (v1.1, default on: after a background fetch, a desktop notification when the current branch fell further behind its upstream, only while Tenajlo isn't focused; sent from Rust, no WebView permission), theme (system / light / dark), git binary override.
 - **Conflict banner:** lists conflicted files with "Open in editor" and "Mark resolved" (`git add`). Commit is blocked until resolved. Abort merge is available.
 
 ### 8.2 UX rules

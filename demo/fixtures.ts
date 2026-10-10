@@ -85,6 +85,7 @@ export const settings: Settings = {
   defaultCloneFolder: null,
   pullStrategy: "FastForwardOnly",
   backgroundFetchMinutes: 5,
+  notifyNewCommits: true,
   gitPath: null,
   editor: { kind: "VsCode" },
   welcomeCompleted: true,
