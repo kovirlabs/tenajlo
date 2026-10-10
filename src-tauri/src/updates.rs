@@ -3,12 +3,15 @@
 //! key built into the app.
 //!
 //! This and the Forgejo client are the only network calls Tenajlo makes (CLAUDE.md). The
-//! check can be turned off in Settings. Linux `.deb` installs can't replace themselves, so
-//! there the user is pointed to the release page instead.
+//! check can be turned off in Settings. Only copies installed from a release package update
+//! themselves: the Windows installer, the macOS app, and the Linux `.deb` (which asks for an
+//! administrator password, since `dpkg` needs root). Development builds and other installs
+//! are pointed to the release page instead.
 
 use std::time::Duration;
 
 use serde::Serialize;
+use tauri::utils::config::BundleType;
 use tauri::{AppHandle, Runtime};
 use tauri_plugin_updater::UpdaterExt;
 
@@ -44,9 +47,18 @@ pub enum UpdateError {
     Updater(#[from] tauri_plugin_updater::Error),
 }
 
-/// True on platforms whose installer the updater can run in place.
+/// True if this copy came from a release package the updater can replace in place. The
+/// bundler records the package type in the binary; `tauri dev` and `cargo run` builds have
+/// none, so they never try to replace themselves with a release.
 pub fn can_self_update() -> bool {
-    cfg!(any(windows, target_os = "macos"))
+    installable(tauri::utils::platform::bundle_type())
+}
+
+fn installable(bundle: Option<BundleType>) -> bool {
+    matches!(
+        bundle,
+        Some(BundleType::Nsis | BundleType::App | BundleType::Dmg | BundleType::Deb)
+    )
 }
 
 /// True if the app was built with the update signing key's public half. Without it the
@@ -126,6 +138,23 @@ mod tests {
         assert!(configured(&config_with_pubkey(
             "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWdu"
         )));
+    }
+
+    #[test]
+    fn only_release_packages_update_themselves() {
+        for bundle in [
+            BundleType::Nsis,
+            BundleType::App,
+            BundleType::Dmg,
+            BundleType::Deb,
+        ] {
+            let name = format!("{bundle:?}");
+            assert!(installable(Some(bundle)), "{name}");
+        }
+        // Not built by the release workflow, or a development build.
+        assert!(!installable(Some(BundleType::Msi)));
+        assert!(!installable(Some(BundleType::AppImage)));
+        assert!(!installable(None));
     }
 
     #[test]

@@ -1,8 +1,8 @@
 # Builds the installers for a version tag (e.g. v1.0.0) and attaches them to a draft GitHub
 # Release for review: Windows NSIS, Linux .deb and macOS (Apple Silicon) .dmg. See
-# docs/releasing.md. Installers are not code-signed yet. When the TAURI_SIGNING_PRIVATE_KEY
-# secret is set, Windows and macOS builds also sign update packages and the release gets the
-# latest.json feed that installed copies check.
+# docs/releasing.md. Installers are not code-signed. When the TAURI_SIGNING_PRIVATE_KEY secret
+# is set, every build also signs its update package (NSIS installer, macOS .app.tar.gz, .deb)
+# and the release gets the latest.json feed that installed copies check.
 name: Release
 
 on:
@@ -79,7 +79,6 @@ jobs:
           tool: cargo-about@0.9.2
       - run: pnpm install --frozen-lockfile
       # Update packages need the signing key; without the secret, builds are as before.
-      # Linux .deb installs don't update themselves (they're pointed to the release page).
       - name: Choose bundles and update signing
         id: bundle
         shell: bash
@@ -87,7 +86,7 @@ jobs:
           HAS_UPDATER_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
         run: |
           args="--bundles ${{ matrix.bundles }}"
-          if [ "$HAS_UPDATER_KEY" = "true" ] && [ "$RUNNER_OS" != "Linux" ]; then
+          if [ "$HAS_UPDATER_KEY" = "true" ]; then
             pubkey=$(node -p "require('./src-tauri/tauri.conf.json').plugins.updater.pubkey")
             if [ -z "$pubkey" ]; then
               echo "TAURI_SIGNING_PRIVATE_KEY is set but tauri.conf.json has no updater pubkey" >&2
