@@ -16,7 +16,7 @@ pub struct GitInfo {
     pub minimum: GitVersion,
     /// `version >= minimum`.
     pub supported: bool,
-    /// `git lfs version` output (e.g. `git-lfs/3.7.1 (…)`), or `None` if not installed.
+    /// The git-lfs version (e.g. `3.7.1`), or `None` if not installed.
     pub lfs_version: Option<String>,
 }
 
@@ -36,14 +36,21 @@ pub async fn detect(git: &GitBinary) -> Result<GitInfo, GitError> {
     })
 }
 
-/// `git lfs version`; `None` when git-lfs isn't installed ("'lfs' is not a git command").
+/// The version from `git lfs version`; `None` when git-lfs isn't installed ("'lfs' is not a
+/// git command").
 async fn lfs_version(git: &GitBinary) -> Option<String> {
     let out = GitCommand::new(["lfs", "version"], Access::ReadOnly)
         .run(git)
         .await
         .ok()?;
-    let text = String::from_utf8_lossy(&out.stdout).trim().to_owned();
-    text.starts_with("git-lfs/").then_some(text)
+    parse_lfs_version(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// `git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)` → `3.7.1`.
+fn parse_lfs_version(output: &str) -> Option<String> {
+    let rest = output.trim().strip_prefix("git-lfs/")?;
+    let version = rest.split_whitespace().next()?;
+    Some(version.to_owned())
 }
 
 #[cfg(test)]
@@ -62,6 +69,20 @@ mod tests {
         );
         assert_eq!(info.minimum, GitVersion::MINIMUM);
         // Tests run with git-lfs installed (CLAUDE.md).
-        assert!(info.lfs_version.is_some_and(|v| v.starts_with("git-lfs/")));
+        assert!(info
+            .lfs_version
+            .is_some_and(|v| v.starts_with(|c: char| c.is_ascii_digit())));
+    }
+
+    #[test]
+    fn parses_lfs_versions() {
+        let parse = parse_lfs_version;
+        assert_eq!(
+            parse("git-lfs/3.7.1 (GitHub; darwin arm64; go 1.25.3)\n").as_deref(),
+            Some("3.7.1")
+        );
+        assert_eq!(parse("git-lfs/3.4.0").as_deref(), Some("3.4.0"));
+        assert_eq!(parse("git: 'lfs' is not a git command."), None);
+        assert_eq!(parse(""), None);
     }
 }

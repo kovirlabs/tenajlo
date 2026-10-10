@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { AuthPromptRequested } from "../bindings";
 import { useSyncStore } from "../stores/syncStore";
 import { AuthPromptDialog } from "./AuthPromptDialog";
@@ -23,7 +23,6 @@ const prompt = (kind: AuthPromptRequested["kind"], opId = "op1"): AuthPromptRequ
 
 describe("AuthPromptDialog", () => {
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

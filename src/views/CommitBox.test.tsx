@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { FileChange, Identity } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { useConflictStore } from "../stores/conflictStore";
@@ -28,10 +28,8 @@ const file = (staged: FileChange["staged"]): FileChange => ({
 
 function setup(staged: FileChange["staged"], id: Identity = { name: "E", email: "e@x" }) {
   identity.mockResolvedValue({ status: "ok", data: id });
-  const mutate = vi.fn(async (op: (id: string) => Promise<unknown>) => {
-    await op("r1");
-    return true;
-  });
+  // Like the real one: runs the operation and resolves to its result.
+  const mutate = vi.fn((op: (id: string) => Promise<unknown>) => op("r1"));
   useChangesStore.setState({
     repoId: "r1",
     busy: false,
@@ -51,7 +49,6 @@ describe("CommitBox", () => {
     commitChanges.mockClear();
     useConflictStore.setState({ repoId: "r1", state: null });
   });
-  afterEach(cleanup);
 
   it("commits with Ctrl+Enter and clears the message", async () => {
     setup("Full");

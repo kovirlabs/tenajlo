@@ -5,25 +5,27 @@ import { onProgress } from "../../api/sync";
 import { useAccountStore } from "../../stores/accountStore";
 import { useCloneStore } from "../../stores/cloneStore";
 import { useRepoStore } from "../../stores/repoStore";
-import { useUiStore } from "../../stores/uiStore";
 import { InlineError } from "../InlineError";
 import { Modal } from "../Modal";
 import { ForgejoRepoList } from "./ForgejoRepoList";
+import { useAsyncEffect } from "../../hooks/useAsyncEffect";
+import { useDialog } from "../../hooks/useDialog";
+import { useTauriEvent } from "../../hooks/useTauriEvent";
+import { formatProgress } from "../../lib/progress";
 
 type Tab = "forgejo" | "url";
 type Protocol = "https" | "ssh";
 
 /** Clone dialog (spec §8.1): pick a Forgejo repository or paste a URL, then a local folder. */
 export function CloneDialog() {
-  const open = useUiStore((s) => s.dialog === "clone");
+  const dialog = useDialog("clone");
   const close = () => {
     // Closing (e.g. Escape) while cloning stops the clone.
     useCloneStore.getState().cancel();
-    // Also fires when another dialog replaced this one (e.g. "Sign in"); keep that one open.
-    if (useUiStore.getState().dialog === "clone") useUiStore.getState().openDialog(null);
+    dialog.close();
   };
   return (
-    <Modal open={open} title="Clone a repository" onClose={close}>
+    <Modal open={dialog.open} title="Clone a repository" onClose={close}>
       <CloneBody onClose={close} />
     </Modal>
   );
@@ -48,30 +50,17 @@ function CloneBody({ onClose }: { onClose: () => void }) {
     void loadAccounts();
   }, [loadAccounts]);
 
-  useEffect(() => {
-    let unlisten: (() => void) | null = null;
-    let disposed = false;
-    void onProgress((p) => useCloneStore.getState().onProgress(p.opId, p.progress)).then((fn) => {
-      if (disposed) fn();
-      else unlisten = fn;
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
+  useTauriEvent(onProgress, (p) => useCloneStore.getState().onProgress(p.opId, p.progress));
 
   // Suggest Documents/Tenajlo/<name> until the user picks a folder themselves.
-  useEffect(() => {
-    if (!url || pathChosen) return;
-    let live = true;
-    void suggestClonePath(url).then((res) => {
-      if (live && res.status === "ok") setPath(res.data);
-    });
-    return () => {
-      live = false;
-    };
-  }, [url, pathChosen]);
+  useAsyncEffect(
+    async (live) => {
+      if (!url || pathChosen) return;
+      const res = await suggestClonePath(url);
+      if (live() && res.status === "ok") setPath(res.data);
+    },
+    [url, pathChosen],
+  );
 
   const choose = async () => {
     const res = await chooseCloneFolder(url);
@@ -186,11 +175,7 @@ function CloneBody({ onClose }: { onClose: () => void }) {
 
       {running ? (
         <div className="clone-progress" role="status" aria-live="polite">
-          <span>
-            {running.progress
-              ? `${running.progress.phase}${running.progress.percent !== null ? ` ${running.progress.percent}%` : ""}`
-              : "Starting…"}
-          </span>
+          <span>{formatProgress(running.progress)}</span>
           <progress
             max={100}
             value={running.progress?.percent ?? undefined}

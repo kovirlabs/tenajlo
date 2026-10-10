@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getLfsStatus } from "../api/status";
 import { useChangesStore } from "../stores/changesStore";
+import { useAsyncEffect } from "../hooks/useAsyncEffect";
 
 /** Warns when a repository stores large files with Git LFS but git-lfs is missing. */
 export function LfsBanner({ repoId }: { repoId: string }) {
@@ -8,15 +9,14 @@ export function LfsBanner({ repoId }: { repoId: string }) {
   // Re-check when the branch tip moves (a pull or switch can add .gitattributes).
   const tip = useChangesStore((s) => (s.repoId === repoId ? s.status?.branch.tip : undefined));
 
-  useEffect(() => {
-    let live = true;
-    void getLfsStatus(repoId).then((res) => {
-      if (live) setMissing(res.status === "ok" && res.data.used && !res.data.installed);
-    });
-    return () => {
-      live = false;
-    };
-  }, [repoId, tip]);
+  useAsyncEffect(
+    async (live) => {
+      const res = await getLfsStatus(repoId);
+      if (live()) setMissing(res.status === "ok" && res.data.used && !res.data.installed);
+    },
+    // `tip` re-checks after commits and pulls, which may add .gitattributes.
+    [repoId, tip],
+  );
 
   if (!missing) return null;
   return (

@@ -1,18 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { AppError } from "../bindings";
 import { createRepository, defaultRepositoryFolder } from "../api/repos";
 import { chooseFolder } from "../api/settings";
+import { useAsyncEffect } from "../hooks/useAsyncEffect";
+import { useDialog } from "../hooks/useDialog";
 import { useRepoStore } from "../stores/repoStore";
-import { useUiStore } from "../stores/uiStore";
 import { InlineError } from "./InlineError";
 import { Modal } from "./Modal";
 
 /** "New repository": a new folder with `git init` on branch main (spec §8.1). */
 export function NewRepositoryDialog() {
-  const open = useUiStore((s) => s.dialog === "newRepository");
-  const close = () => {
-    if (useUiStore.getState().dialog === "newRepository") useUiStore.getState().openDialog(null);
-  };
+  const { open, close } = useDialog("newRepository");
   return (
     <Modal open={open} title="Create a new repository" onClose={close}>
       <NewRepositoryForm onClose={close} />
@@ -27,14 +25,9 @@ function NewRepositoryForm({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
 
-  useEffect(() => {
-    let live = true;
-    void defaultRepositoryFolder().then((res) => {
-      if (live && res.status === "ok") setParent((current) => current || res.data);
-    });
-    return () => {
-      live = false;
-    };
+  useAsyncEffect(async (live) => {
+    const res = await defaultRepositoryFolder();
+    if (live() && res.status === "ok") setParent((current) => current || res.data);
   }, []);
 
   const choose = async () => {

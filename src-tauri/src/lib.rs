@@ -46,6 +46,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::changes::get_identity,
             commands::changes::set_global_identity,
             commands::changes::discard_changes,
+            commands::changes::ignore_extension,
             commands::changes::ignore_file,
             commands::changes::undo_commit,
             commands::accounts::list_accounts,

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import type { FileChange } from "../bindings";
-import { discardChanges, ignoreFile } from "../api/changes";
+import { discardChanges, ignoreExtension, ignoreFile } from "../api/changes";
 import { openRepoFile, revealRepoFile } from "../api/merge";
 import { useUiStore } from "../stores/uiStore";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ContextMenu, type MenuItem } from "../components/ContextMenu";
 import { useChangesStore } from "../stores/changesStore";
 
-type MenuState = { file: FileChange; x: number; y: number } | null;
+/** `extension`: what "Ignore all .ext files" would ignore (untracked files only). */
+type MenuState = { file: FileChange; x: number; y: number; extension: string | null } | null;
 
 /** Right-click menu for a changed file, plus the discard confirmation it can open. */
 export function useFileActions() {
@@ -16,12 +17,14 @@ export function useFileActions() {
   const [menu, setMenu] = useState<MenuState>(null);
   const [confirm, setConfirm] = useState<FileChange | null>(null);
 
-  const open = (file: FileChange, e: React.MouseEvent) => {
+  const open = async (file: FileChange, e: React.MouseEvent) => {
     e.preventDefault();
-    setMenu({ file, x: e.clientX, y: e.clientY });
+    const { clientX: x, clientY: y } = e;
+    const extension = file.kind === "Untracked" ? await ignoreExtension(file.path) : null;
+    setMenu({ file, x, y, extension });
   };
 
-  const items = (file: FileChange): MenuItem[] => {
+  const items = ({ file, extension }: NonNullable<MenuState>): MenuItem[] => {
     const blocked = busy || file.kind === "Conflicted" || file.submodule;
     const repoId = useChangesStore.getState().repoId;
     const run = (action: typeof openRepoFile) => {
@@ -45,10 +48,9 @@ export function useFileActions() {
         onSelect: () => void mutate((id) => ignoreFile(id, file.path, false)),
         disabled: busy,
       });
-      const ext = file.path.match(/[^/]\.([\w-]+)$/)?.[1];
-      if (ext) {
+      if (extension) {
         list.push({
-          label: `Ignore all .${ext} files`,
+          label: `Ignore all .${extension} files`,
           onSelect: () => void mutate((id) => ignoreFile(id, file.path, true)),
           disabled: busy,
         });
@@ -60,7 +62,7 @@ export function useFileActions() {
   const ui = (
     <>
       {menu && (
-        <ContextMenu x={menu.x} y={menu.y} items={items(menu.file)} onClose={() => setMenu(null)} />
+        <ContextMenu x={menu.x} y={menu.y} items={items(menu)} onClose={() => setMenu(null)} />
       )}
       <ConfirmDialog
         open={confirm !== null}

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Identity } from "../bindings";
 import { commitChanges, getIdentity, undoCommit } from "../api/changes";
 import { IdentityDialog } from "../components/IdentityDialog";
 import { useChangesStore } from "../stores/changesStore";
 import { useMerging } from "../stores/conflictStore";
+import { useAsyncEffect } from "../hooks/useAsyncEffect";
 
 /** Summary + description + "Commit to <branch>" (spec §8). Ctrl/Cmd+Enter commits. */
 export function CommitBox({ repoId }: { repoId: string }) {
@@ -22,15 +23,13 @@ export function CommitBox({ repoId }: { repoId: string }) {
 
   const [identityVersion, setIdentityVersion] = useState(0);
 
-  useEffect(() => {
-    let live = true;
-    void getIdentity(repoId).then((res) => {
-      if (live && res.status === "ok") setIdentity(res.data);
-    });
-    return () => {
-      live = false;
-    };
-  }, [repoId, identityVersion]);
+  useAsyncEffect(
+    async (live) => {
+      const res = await getIdentity(repoId);
+      if (live() && res.status === "ok") setIdentity(res.data);
+    },
+    [repoId, identityVersion],
+  );
 
   const anyStaged = status?.files.some((f) => f.staged !== "None") ?? false;
   const conflicts = status?.hasConflicts ?? false;
@@ -43,14 +42,9 @@ export function CommitBox({ repoId }: { repoId: string }) {
     if (!canCommit) return;
     if (missingIdentity) return setAskIdentity(true);
     const committedSummary = summary.trim();
-    const committed: { sha?: string } = {};
-    await mutate(async (id) => {
-      const res = await commitChanges(id, summary, description);
-      if (res.status === "ok") committed.sha = res.data;
-      return res;
-    });
-    if (committed.sha) {
-      setLastCommit({ sha: committed.sha, summary: committedSummary });
+    const res = await mutate((id) => commitChanges(id, summary, description));
+    if (res?.status === "ok") {
+      setLastCommit({ sha: res.data, summary: committedSummary });
       setSummary("");
       setSummaryTouched(false);
       setDescription("");
@@ -60,15 +54,12 @@ export function CommitBox({ repoId }: { repoId: string }) {
   const undo = async () => {
     if (!lastCommit) return;
     const { sha } = lastCommit;
-    await mutate(async (id) => {
-      const res = await undoCommit(id, sha);
-      if (res.status === "ok") {
-        setSummary(res.data.summary);
-        setDescription(res.data.description);
-        setLastCommit(null);
-      }
-      return res;
-    });
+    const res = await mutate((id) => undoCommit(id, sha));
+    if (res?.status === "ok") {
+      setSummary(res.data.summary);
+      setDescription(res.data.description);
+      setLastCommit(null);
+    }
   };
 
   // Only offer Undo while our commit is still the branch tip.

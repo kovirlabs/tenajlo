@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { AppError } from "../../bindings";
 import { deleteBranch } from "../../api/branches";
 import { useChangesStore } from "../../stores/changesStore";
 import { ConfirmDialog } from "../ConfirmDialog";
@@ -18,16 +19,10 @@ export function DeleteBranchDialog({ name, onClose }: Props) {
   const confirm = async () => {
     if (!name) return;
     const force = unmerged;
-    let needsForce = false;
-    await mutate(async (id) => {
-      const res = await deleteBranch(id, name, force);
-      if (res.status === "error" && res.error.gitKind === "BranchNotMerged" && !force) {
-        needsForce = true;
-        return { status: "ok" };
-      }
-      return res;
-    });
-    if (needsForce) setUnmerged(true);
+    // An unmerged branch isn't an error to report: ask again, offering "Delete anyway".
+    const needsForce = (e: AppError) => e.gitKind === "BranchNotMerged" && !force;
+    const res = await mutate((id) => deleteBranch(id, name, force), { quietError: needsForce });
+    if (res?.status === "error" && needsForce(res.error)) setUnmerged(true);
     else close();
   };
 

@@ -3,9 +3,14 @@ import type { AppError, SavedChanges, WorkingDirectoryStatus } from "../bindings
 import { getStatus } from "../api/status";
 import { setStaged } from "../api/changes";
 import { getSavedChanges } from "../api/branches";
-import { useBranchStore } from "./branchStore";
-import { useSyncStore } from "./syncStore";
+import type { Result } from "../api/result";
+import { refreshRepo, registerRefresh } from "./refreshRepo";
 import { useUiStore } from "./uiStore";
+
+export type MutateOptions = {
+  /** Errors this returns true for are left to the caller instead of the error dialog. */
+  quietError?: (error: AppError) => boolean;
+};
 
 type ChangesState = {
   repoId: string | null;
@@ -18,10 +23,15 @@ type ChangesState = {
   busy: boolean;
   refresh: (repoId: string) => Promise<void>;
   selectFile: (path: string | null) => void;
-  /** Runs a mutating operation, then refreshes status. Errors go to the error dialog. */
-  mutate: (
-    op: (repoId: string) => Promise<{ status: "ok" } | { status: "error"; error: AppError }>,
-  ) => Promise<boolean>;
+  /**
+   * Runs a mutating operation on the current repository, then refreshes everything shown
+   * for it. Errors go to the error dialog. Resolves to the operation's result, or `null`
+   * if it didn't run (no repository, or another operation is running).
+   */
+  mutate: <T>(
+    op: (repoId: string) => Promise<Result<T>>,
+    options?: MutateOptions,
+  ) => Promise<Result<T> | null>;
   setStaged: (paths: string[], staged: boolean) => Promise<void>;
   reset: () => void;
 };
@@ -57,21 +67,19 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
 
   selectFile: (path) => set({ selectedPath: path }),
 
-  mutate: async (op) => {
+  mutate: async (op, options) => {
     const repoId = get().repoId;
-    if (!repoId || get().busy) return false;
+    if (!repoId || get().busy) return null;
     set({ busy: true });
     try {
       const res = await op(repoId);
-      if (res.status === "error") useUiStore.getState().showError(res.error);
-      return res.status === "ok";
+      if (res.status === "error" && !options?.quietError?.(res.error)) {
+        useUiStore.getState().showError(res.error);
+      }
+      return res;
     } finally {
       set({ busy: false });
-      await Promise.all([
-        get().refresh(repoId),
-        useBranchStore.getState().refresh(repoId),
-        useSyncStore.getState().refresh(repoId),
-      ]);
+      await refreshRepo(repoId);
     }
   },
 
@@ -81,3 +89,5 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
   },
   reset: () => set(initial),
 }));
+
+registerRefresh("changes", (repoId) => useChangesStore.getState().refresh(repoId));

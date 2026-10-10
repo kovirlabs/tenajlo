@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { OperationState } from "../bindings";
 import * as api from "../api/merge";
 import { useChangesStore } from "./changesStore";
+import { registerRefresh } from "./refreshRepo";
 
 type ConflictStoreState = {
   repoId: string | null;
@@ -21,18 +22,17 @@ export const useConflictStore = create<ConflictStoreState>((set, get) => ({
     if (get().repoId === repoId && res.status === "ok") set({ state: res.data });
   },
 
+  // `mutate` refreshes this store along with the others.
   markResolved: async (paths) => {
     await useChangesStore.getState().mutate((id) => api.markResolved(id, paths));
-    const repoId = get().repoId;
-    if (repoId) await get().refresh(repoId);
   },
 
   abort: async () => {
     await useChangesStore.getState().mutate((id) => api.abortOperation(id));
-    const repoId = get().repoId;
-    if (repoId) await get().refresh(repoId);
   },
 }));
+
+registerRefresh("conflicts", (repoId) => useConflictStore.getState().refresh(repoId));
 
 /** A merge Tenajlo can finish with a commit (as opposed to a rebase started elsewhere). */
 export function useMerging(): {

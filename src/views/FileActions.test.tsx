@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { FileChange } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { ChangesList } from "./ChangesList";
@@ -15,6 +15,7 @@ vi.mock("../api/merge", () => ({
 vi.mock("../api/changes", () => ({
   discardChanges: (...a: unknown[]) => discardChanges(...a),
   ignoreFile: (...a: unknown[]) => ignoreFile(...a),
+  ignoreExtension: async (path: string) => path.split(".").pop() ?? null,
   setStaged: vi.fn(),
 }));
 
@@ -27,10 +28,8 @@ const file = (path: string, kind: FileChange["kind"]): FileChange => ({
 });
 
 function setup(files: FileChange[]) {
-  const mutate = vi.fn(async (op: (id: string) => Promise<unknown>) => {
-    await op("r1");
-    return true;
-  });
+  // Like the real one: runs the operation and resolves to its result.
+  const mutate = vi.fn((op: (id: string) => Promise<unknown>) => op("r1"));
   useChangesStore.setState({
     repoId: "r1",
     busy: false,
@@ -48,13 +47,13 @@ function setup(files: FileChange[]) {
 
 describe("file context menu", () => {
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 
-  it("discards only after confirmation", () => {
+  it("discards only after confirmation", async () => {
     setup([file("a.txt", "Modified")]);
     fireEvent.contextMenu(screen.getByText("a.txt"));
+    await screen.findByRole("menuitem", { name: "Discard changes…" });
     expect(screen.queryByText(/Ignore/)).toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "Discard changes…" }));
     expect(discardChanges).not.toHaveBeenCalled();
@@ -63,27 +62,29 @@ describe("file context menu", () => {
     expect(discardChanges).toHaveBeenCalledWith("r1", ["a.txt"]);
   });
 
-  it("offers ignore options for new files", () => {
+  it("offers ignore options for new files", async () => {
     setup([file("logs/run.log", "Untracked")]);
     fireEvent.contextMenu(screen.getByText("logs/run.log"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Ignore all .log files" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Ignore all .log files" }));
     expect(ignoreFile).toHaveBeenCalledWith("r1", "logs/run.log", true);
   });
 
-  it("blocks discarding conflicted files", () => {
+  it("blocks discarding conflicted files", async () => {
     setup([file("c.txt", "Conflicted")]);
     fireEvent.contextMenu(screen.getByText("c.txt"));
-    const item = screen.getByRole("menuitem", { name: "Discard changes…" }) as HTMLButtonElement;
+    const item = (await screen.findByRole("menuitem", {
+      name: "Discard changes…",
+    })) as HTMLButtonElement;
     expect(item.disabled).toBe(true);
   });
 
   it("opens the file in the editor or shows it in its folder", async () => {
     setup([file("plc/main.st", "Modified")]);
     fireEvent.contextMenu(screen.getByText("plc/main.st"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Open in editor" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Open in editor" }));
     expect(openRepoFile).toHaveBeenCalledWith("r1", "plc/main.st");
     fireEvent.contextMenu(screen.getByText("plc/main.st"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Show in folder" }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Show in folder" }));
     expect(revealRepoFile).toHaveBeenCalledWith("r1", "plc/main.st");
   });
 });

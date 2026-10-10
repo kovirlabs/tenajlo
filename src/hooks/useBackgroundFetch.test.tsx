@@ -38,7 +38,6 @@ describe("useBackgroundFetch", () => {
     });
   });
   afterEach(() => {
-    cleanup();
     vi.useRealTimers();
     vi.clearAllMocks();
   });

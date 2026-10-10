@@ -1,11 +1,12 @@
 import type { SyncRequest, SyncState } from "../bindings";
+import { formatProgress } from "../lib/progress";
 import { formatRelative } from "../lib/time";
 import { useSyncStore } from "../stores/syncStore";
 
 type Label = { request: SyncRequest; title: string; detail: string; badge?: string };
 
 /** Spec §8.1: Publish branch / Fetch origin / Pull origin (↓3) / Push origin (↑2). */
-export function describe(state: SyncState): Label | null {
+export function syncLabel(state: SyncState): Label | null {
   const { action, ahead, behind, lastFetched } = state;
   const fetched =
     lastFetched === null
@@ -58,9 +59,7 @@ export function SyncButton() {
     return (
       <div className="sync-button running" role="status" aria-live="polite">
         <span className="toolbar-label">
-          <small>
-            {p ? `${p.phase}${p.percent !== null ? ` ${p.percent}%` : ""}` : "Starting…"}
-          </small>
+          <small>{formatProgress(p)}</small>
           {RUNNING_TITLE[running.request]}
         </span>
         <progress max={100} value={p?.percent ?? undefined} aria-label="Progress" />
@@ -71,7 +70,7 @@ export function SyncButton() {
     );
   }
 
-  const label = state && describe(state);
+  const label = state && syncLabel(state);
   if (!label) return null;
   return (
     <button

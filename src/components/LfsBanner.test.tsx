@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { LfsStatus } from "../bindings";
 import { LfsBanner } from "./LfsBanner";
 
@@ -8,7 +8,6 @@ vi.mock("../api/status", () => ({ getLfsStatus: (id: string) => getLfsStatus(id)
 
 describe("LfsBanner", () => {
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

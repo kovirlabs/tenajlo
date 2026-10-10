@@ -348,19 +348,19 @@ code {
   flex: 1;
 }
 
-.file-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow: auto;
-  flex: 1;
+/* Long paths are cut off with an ellipsis rather than scrolling sideways. */
+.file-list .vlist-inner {
+  width: auto;
 }
 
 .file-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px;
+  /* ROW_HEIGHT in ChangesList.tsx. */
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 12px;
   cursor: default;
 }
 

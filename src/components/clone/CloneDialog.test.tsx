@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Account, RemoteRepository } from "../../bindings";
 import { useAccountStore } from "../../stores/accountStore";
 import { useCloneStore } from "../../stores/cloneStore";
@@ -57,7 +57,6 @@ describe("CloneDialog", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

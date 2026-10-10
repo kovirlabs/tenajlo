@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { OperationState } from "../../bindings";
 import { useConflictStore } from "../../stores/conflictStore";
 import { ConflictBanner } from "./ConflictBanner";
@@ -23,7 +23,6 @@ function show(state: OperationState) {
 
 describe("ConflictBanner", () => {
   beforeEach(() => vi.clearAllMocks());
-  afterEach(cleanup);
 
   it("lists conflicts, opens files and confirms when markers remain", () => {
     show({

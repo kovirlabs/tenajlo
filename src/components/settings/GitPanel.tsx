@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { AppError } from "../../bindings";
-import { setGlobalIdentity } from "../../api/changes";
 import { chooseFile, getGlobalIdentity } from "../../api/settings";
+import { useIdentityForm } from "../../hooks/useIdentityForm";
+import { IdentityFields } from "../IdentityFields";
 import { useAppStore } from "../../stores/appStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { InlineError } from "../InlineError";
@@ -17,41 +18,19 @@ export function GitPanel() {
 }
 
 function IdentityForm() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [loaded, setLoaded] = useState(false);
+  const form = useIdentityForm(async () => {
+    const res = await getGlobalIdentity();
+    return res.status === "ok" ? res.data : {};
+  });
   const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<AppError | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    void getGlobalIdentity().then((res) => {
-      if (!live) return;
-      if (res.status === "ok") {
-        setName(res.data.name ?? "");
-        setEmail(res.data.email ?? "");
-      }
-      setLoaded(true);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  const save = async () => {
-    setSaved(false);
-    const res = await setGlobalIdentity(name, email);
-    if (res.status === "error") return setError(res.error);
-    setError(null);
-    setSaved(true);
-  };
 
   return (
     <form
       className="settings-group form"
       onSubmit={(e) => {
         e.preventDefault();
-        void save();
+        setSaved(false);
+        void form.save().then(setSaved);
       }}
     >
       <h3>Your name and email</h3>
@@ -59,23 +38,11 @@ function IdentityForm() {
         Git records these on every commit. Saving updates your global Git settings, so every
         repository on this computer uses them.
       </p>
-      <label>
-        Name
-        <input value={name} disabled={!loaded} onChange={(e) => setName(e.target.value)} />
-      </label>
-      <label>
-        Email
-        <input
-          type="email"
-          value={email}
-          disabled={!loaded}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </label>
-      <InlineError error={error} />
+      <IdentityFields form={form} />
+      <InlineError error={form.error} />
       <div className="dialog-actions">
         {saved && <span className="muted">Saved</span>}
-        <button type="submit" disabled={!loaded || !name.trim() || !email.trim()}>
+        <button type="submit" disabled={!form.loaded || !form.valid || form.saving}>
           Save name and email
         </button>
       </div>
@@ -114,7 +81,7 @@ function GitLocation() {
       {info && (
         <p className="muted">
           {info.lfsVersion
-            ? `Git LFS: ${info.lfsVersion.split(" ")[0]?.replace("git-lfs/", "")}`
+            ? `Git LFS: ${info.lfsVersion}`
             : "Git LFS isn't installed. Repositories with large files (CAD, PLC archives) need it: get it from git-lfs.com."}
         </p>
       )}

@@ -65,6 +65,8 @@ export const commands = {
 	setGlobalIdentity: (name: string, email: string) => typedError<null, AppError>(__TAURI_INVOKE("set_global_identity", { name, email })),
 	/**  Discards all changes to the given files. Current content goes to the OS trash first. */
 	discardChanges: (repoId: string, paths: string[]) => typedError<null, AppError>(__TAURI_INVOKE("discard_changes", { repoId, paths })),
+	/**  The extension "Ignore all .ext files" would ignore for `path`, if any. Pure; no git call. */
+	ignoreExtension: (path: string) => __TAURI_INVOKE<string | null>("ignore_extension", { path }),
 	/**  Adds an untracked file (or all files with its extension) to the root `.gitignore`. */
 	ignoreFile: (repoId: string, path: string, byExtension: boolean) => typedError<null, AppError>(__TAURI_INVOKE("ignore_file", { repoId, path, byExtension })),
 	/**
@@ -372,7 +374,7 @@ export type GitInfo = {
 	minimum: GitVersion,
 	/**  `version >= minimum`. */
 	supported: boolean,
-	/**  `git lfs version` output (e.g. `git-lfs/3.7.1 (…)`), or `None` if not installed. */
+	/**  The git-lfs version (e.g. `3.7.1`), or `None` if not installed. */
 	lfsVersion: string | null,
 };
 

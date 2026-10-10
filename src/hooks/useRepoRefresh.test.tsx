@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { useBranchStore } from "../stores/branchStore";
 import { useChangesStore } from "../stores/changesStore";
 import { useHistoryStore } from "../stores/historyStore";
@@ -28,7 +28,6 @@ function Probe({ id }: { id: string }) {
 
 describe("useRepoRefresh", () => {
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

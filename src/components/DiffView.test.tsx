@@ -1,11 +1,9 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { FileDiff } from "../bindings";
 import { DiffView } from "./DiffView";
 
 describe("DiffView", () => {
-  afterEach(cleanup);
-
   it("renders hunk headers and lines", () => {
     const diff: FileDiff = {
       type: "Text",

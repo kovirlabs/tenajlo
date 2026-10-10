@@ -1,9 +1,14 @@
 import type { FileChange, StagedState } from "../bindings";
 import { FileStatusIcon } from "../components/FileStatusIcon";
 import { StageCheckbox } from "../components/StageCheckbox";
+import { VirtualList } from "../components/VirtualList";
 import { useChangesStore } from "../stores/changesStore";
 import { useFileActions } from "./FileActions";
 import { SavedChangesBanner } from "./SavedChangesBanner";
+
+/** Matches `.file-row` in styles.css. Rows are virtualized: a CAD or PLC repository can have
+ *  thousands of changed files. */
+const ROW_HEIGHT = 28;
 
 /** Aggregate stage state for the "all files" checkbox. */
 function overall(files: FileChange[]): StagedState {
@@ -48,19 +53,23 @@ export function ChangesList() {
             : `${files.length} changed ${files.length === 1 ? "file" : "files"}`}
         </span>
       </div>
-      <ul role="listbox" aria-label="Changed files" className="file-list">
-        {files.map((f) => (
+      <VirtualList
+        role="listbox"
+        ariaLabel="Changed files"
+        className="file-list"
+        items={files}
+        rowHeight={ROW_HEIGHT}
+        renderRow={(f) => (
           <FileRow
-            key={f.path}
             file={f}
             selected={f.path === selectedPath}
             busy={busy}
             onSelect={() => selectFile(f.path)}
             onStage={(stage) => void setStaged([f.path], stage)}
-            onContextMenu={(e) => actions.open(f, e)}
+            onContextMenu={(e) => void actions.open(f, e)}
           />
-        ))}
-      </ul>
+        )}
+      />
       {actions.ui}
     </div>
   );
@@ -79,7 +88,7 @@ function FileRow({ file, selected, busy, onSelect, onStage, onContextMenu }: Row
   const title = file.oldPath ? `${file.oldPath} → ${file.path}` : file.path;
   const conflicted = file.kind === "Conflicted";
   return (
-    <li
+    <div
       role="option"
       aria-selected={selected}
       className={selected ? "file-row selected" : "file-row"}
@@ -98,6 +107,6 @@ function FileRow({ file, selected, busy, onSelect, onStage, onContextMenu }: Row
         {file.submodule && <span className="muted"> (submodule)</span>}
       </span>
       <FileStatusIcon kind={file.kind} />
-    </li>
+    </div>
   );
 }

@@ -8,6 +8,8 @@ type Props<T> = {
   /** Extra rows rendered above and below the viewport. */
   overscan?: number;
   ariaLabel?: string;
+  /** ARIA role of the scroll container, e.g. `listbox` when rows are `option`s. */
+  role?: string;
   /** Called when the last rendered row is within `overscan` of the end. Pass a stable
    *  function: a new one each render re-fires the call. */
   onNearEnd?: () => unknown;
@@ -21,6 +23,7 @@ export function VirtualList<T>({
   className,
   overscan = 10,
   ariaLabel,
+  role,
   onNearEnd,
 }: Props<T>) {
   const ref = useRef<HTMLDivElement>(null);
@@ -60,6 +63,7 @@ export function VirtualList<T>({
       className={`vlist ${className ?? ""}`}
       onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       aria-label={ariaLabel}
+      role={role}
     >
       <div className="vlist-inner" style={{ height: items.length * rowHeight }}>
         {rows}

@@ -4,6 +4,7 @@ import { Modal } from "../Modal";
 import { AboutPanel } from "./AboutPanel";
 import { GitPanel } from "./GitPanel";
 import { AppearancePanel, RepositoriesPanel } from "./PreferencePanels";
+import { useDialog } from "../../hooks/useDialog";
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: "accounts", label: "Accounts" },
@@ -15,13 +16,9 @@ const TABS: { id: SettingsTab; label: string }[] = [
 
 /** Settings (spec §8.1). Every control saves as soon as it changes. */
 export function SettingsDialog() {
-  const open = useUiStore((s) => s.dialog === "settings");
+  const { open, close } = useDialog("settings");
   const tab = useUiStore((s) => s.settingsTab);
   const setTab = useUiStore((s) => s.setSettingsTab);
-  const close = () => {
-    // Also fires when another dialog replaced this one; keep that one open.
-    if (useUiStore.getState().dialog === "settings") useUiStore.getState().openDialog(null);
-  };
   return (
     <Modal open={open} title="Settings" onClose={close}>
       <div className="settings">

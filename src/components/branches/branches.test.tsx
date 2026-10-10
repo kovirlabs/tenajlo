@@ -34,10 +34,8 @@ const branch = (name: string, over: Partial<Branch> = {}): Branch => ({
 });
 
 function setup(files: FileChange[]) {
-  const mutate = vi.fn(async (op: (id: string) => Promise<{ status: string }>) => {
-    const res = await op("r1");
-    return res.status === "ok";
-  });
+  // Like the real one: runs the operation and resolves to its result.
+  const mutate = vi.fn((op: (id: string) => Promise<{ status: string }>) => op("r1"));
   useChangesStore.setState({
     repoId: "r1",
     busy: false,
@@ -69,7 +67,6 @@ const change: FileChange = {
 
 describe("branch actions", () => {
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 
@@ -108,8 +105,6 @@ describe("branch actions", () => {
 });
 
 describe("NewBranchDialog", () => {
-  afterEach(cleanup);
-
   it("shows the sanitized name and creates it", async () => {
     setup([]);
     cleanup();

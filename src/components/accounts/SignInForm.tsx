@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Account, AppError, ServerInfo } from "../../bindings";
 import { checkServer, openTokenSettings, signIn } from "../../api/accounts";
 import { InlineError } from "../InlineError";
+import { useAsyncEffect } from "../../hooks/useAsyncEffect";
 
 type Props = {
   /** Known server (signing in again): skips straight to checking it. */
@@ -34,19 +35,17 @@ export function SignInForm({ initialServer, onSignedIn, onCancel, cancelLabel }:
       setInfo(res.data);
     });
 
-  useEffect(() => {
-    if (!initialServer) return;
-    let live = true;
-    void checkServer(initialServer).then((res) => {
-      if (!live) return;
+  useAsyncEffect(
+    async (live) => {
+      if (!initialServer) return;
+      const res = await checkServer(initialServer);
+      if (!live()) return;
       setBusy(false);
       if (res.status === "error") setError(res.error);
       else setInfo(res.data);
-    });
-    return () => {
-      live = false;
-    };
-  }, [initialServer]);
+    },
+    [initialServer],
+  );
 
   const submit = (srv: ServerInfo) =>
     run(async () => {

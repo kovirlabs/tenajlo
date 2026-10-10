@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { FileChange } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { ChangesList } from "./ChangesList";
@@ -33,8 +33,6 @@ const setStatus = (files: FileChange[]) =>
   });
 
 describe("ChangesList", () => {
-  afterEach(cleanup);
-
   it("lists files with status labels and selects on click", () => {
     setStatus([
       file("a.txt"),
@@ -78,5 +76,14 @@ describe("ChangesList", () => {
     setStatus([]);
     render(<ChangesList />);
     expect(screen.getByText("No changes")).toBeTruthy();
+  });
+
+  it("renders only the rows in view for large change sets", () => {
+    setStatus(Array.from({ length: 5000 }, (_, i) => file(`cad/part-${i}.sldprt`)));
+    render(<ChangesList />);
+    expect(screen.getByText("5000 changed files")).toBeTruthy();
+    const rows = screen.getAllByRole("option");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThan(100);
   });
 });
