@@ -13,6 +13,7 @@ const defaults: Settings = {
   defaultCloneFolder: null,
   pullStrategy: "FastForwardOnly",
   backgroundFetchMinutes: 5,
+  notifyNewCommits: true,
   gitPath: null,
   editor: { kind: "SystemDefault" },
   welcomeCompleted: true,

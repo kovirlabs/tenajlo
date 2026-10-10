@@ -174,8 +174,9 @@ Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its s
 - **Passwords:** passwords and SSH passphrases you chose to remember. **Forget** removes one;
   Tenajlo asks for it next time.
 - **Git:** your name and email for commits, and which Git program to use.
-- **Repositories:** where new clones go, what Pull does, how often to check the server, and
-  which editor opens files.
+- **Repositories:** where new clones go, what Pull does, how often to check the server,
+  whether to show a notification when the server has new commits on your branch (only while
+  you're using another window), and which editor opens files.
 - **Appearance:** light, dark, or the same as your computer.
 - **About:** Tenajlo's version, its log files, and **Updates**. On Windows and macOS, Tenajlo
   checks for a new version when it starts (turn this off with **Check for updates when Tenajlo

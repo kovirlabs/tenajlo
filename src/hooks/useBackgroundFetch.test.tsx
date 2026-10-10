@@ -16,6 +16,7 @@ const settings = (minutes: number): Settings => ({
   defaultCloneFolder: null,
   pullStrategy: "FastForwardOnly",
   backgroundFetchMinutes: minutes,
+  notifyNewCommits: true,
   gitPath: null,
   editor: { kind: "SystemDefault" },
   welcomeCompleted: true,

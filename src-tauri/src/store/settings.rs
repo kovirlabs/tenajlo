@@ -54,6 +54,8 @@ pub struct Settings {
     pub pull_strategy: PullStrategy,
     /// 0 = off.
     pub background_fetch_minutes: u32,
+    /// Show a desktop notification when a background fetch finds new commits on the branch.
+    pub notify_new_commits: bool,
     /// Git executable to use instead of the bundled/system one.
     pub git_path: Option<String>,
     pub editor: Editor,
@@ -70,6 +72,7 @@ impl Default for Settings {
             default_clone_folder: None,
             pull_strategy: PullStrategy::FastForwardOnly,
             background_fetch_minutes: DEFAULT_FETCH_MINUTES,
+            notify_new_commits: true,
             git_path: None,
             editor: Editor::SystemDefault,
             welcome_completed: false,

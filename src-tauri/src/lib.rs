@@ -7,6 +7,7 @@ pub mod error;
 pub mod forgejo;
 pub mod git;
 pub mod logging;
+pub mod notifications;
 pub mod operations;
 pub mod os_trash;
 pub mod redact;
@@ -107,6 +108,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         // Rust-side only (token settings link); the WebView gets no opener permissions.
         .plugin(tauri_plugin_opener::init())
+        // Rust-side only (notifications.rs); the WebView gets no notification permissions.
+        .plugin(tauri_plugin_notification::init())
         // Rust-side only (commands::updates); the WebView gets no updater permissions.
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(builder.invoke_handler())

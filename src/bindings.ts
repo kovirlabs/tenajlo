@@ -631,6 +631,8 @@ export type Settings = {
 	pullStrategy: PullStrategy,
 	/**  0 = off. */
 	backgroundFetchMinutes: number,
+	/**  Show a desktop notification when a background fetch finds new commits on the branch. */
+	notifyNewCommits: boolean,
 	/**  Git executable to use instead of the bundled/system one. */
 	gitPath: string | null,
 	editor: Editor,

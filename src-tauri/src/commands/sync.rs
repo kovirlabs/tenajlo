@@ -6,10 +6,13 @@ use super::remote_op::{explain_failure, remote_run};
 use super::{check_op_id, parse_id};
 use crate::auth::remote_auth::AuthRequest;
 use crate::error::AppError;
+use crate::git::exec::GitBinary;
+use crate::git::parse::status::WorkingDirectoryStatus;
 use crate::git::remote;
 use crate::git::sync_plan::{self, Plan, SyncRequest};
 use crate::git::sync_state::{self, SyncState};
 use crate::git::{branch_name, lfs, status};
+use crate::notifications;
 use crate::state::AppState;
 use crate::store::settings::PullStrategy;
 
@@ -86,6 +89,7 @@ pub async fn sync(
     }
 
     let run = make_run();
+    let remote_name = plan.remote().to_owned();
     let result = match plan {
         Plan::Fetch { remote } => remote::fetch(&git, &root, &remote, run).await,
         Plan::Pull { merge: true, .. } => remote::pull_merge(&git, &root, run).await,
@@ -104,7 +108,46 @@ pub async fn sync(
         }
     };
     match result {
-        Ok(()) => Ok(()),
+        Ok(()) => {
+            if background {
+                notify_new_commits(&app, &state, id, &git, &root, &current, &remote_name).await;
+            }
+            Ok(())
+        }
         Err(e) => Err(explain_failure(&state, &auth, e).await),
+    }
+}
+
+/// After a background fetch: a desktop notification if the branch fell further behind.
+async fn notify_new_commits(
+    app: &AppHandle,
+    state: &AppState,
+    id: uuid::Uuid,
+    git: &GitBinary,
+    root: &std::path::Path,
+    before: &WorkingDirectoryStatus,
+    remote: &str,
+) {
+    if !state.settings.get().notify_new_commits {
+        return;
+    }
+    let Ok(after) = status::status(git, root).await else {
+        return;
+    };
+    let name = state
+        .repos
+        .list()
+        .repositories
+        .into_iter()
+        .find(|r| r.id == id.to_string())
+        .map_or_else(|| "your repository".to_owned(), |r| r.name);
+    if let Some(notice) = notifications::new_commits(
+        &name,
+        after.branch.name.as_deref(),
+        remote,
+        before.branch.behind,
+        after.branch.behind,
+    ) {
+        notifications::show(app, &notice);
     }
 }

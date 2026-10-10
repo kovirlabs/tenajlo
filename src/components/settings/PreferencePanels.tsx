@@ -118,6 +118,20 @@ export function RepositoriesPanel() {
           ))}
         </select>
       </label>
+      <label className="radio">
+        <input
+          type="checkbox"
+          checked={settings.notifyNewCommits}
+          disabled={settings.backgroundFetchMinutes === 0}
+          onChange={(e) => void save({ notifyNewCommits: e.target.checked })}
+        />
+        <span>
+          Show a notification when the server has new commits on your branch
+          <span className="settings-help muted">
+            Only while Tenajlo isn&apos;t the window you&apos;re using.
+          </span>
+        </span>
+      </label>
       <EditorChoice onError={setError} />
       <InlineError error={error} />
     </div>
