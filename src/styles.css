@@ -681,11 +681,14 @@ code {
   width: 100%;
 }
 
-/* One line however long the branch name; the full text is in the tooltip. */
+/* At most two lines however long the branch name; the full text is in the tooltip. */
 .commit-button {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 button:disabled {
