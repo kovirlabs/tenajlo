@@ -18,7 +18,8 @@ path = "src/bin/export_bindings.rs"
 required-features = ["bindings"]
 
 [features]
-bindings = []
+# `pnpm bindings`: the TypeScript exporter isn't needed in the app itself.
+bindings = ["dep:specta-typescript", "tauri-specta/typescript"]
 # Tests against a real Forgejo: docker compose -f dev/forgejo.yml up -d && dev/seed-forgejo.sh
 integration = []
 
@@ -35,8 +36,8 @@ tokio-util = "0.7"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 specta = { version = "=2.0.0-rc.25", features = ["derive"] }
-tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
-specta-typescript = "0.0.12"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive"] }
+specta-typescript = { version = "0.0.12", optional = true }
 dunce = "1"
 tauri-plugin-dialog = "2.8"
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -51,6 +52,9 @@ tracing-appender = "0.2.5"
 
 [dev-dependencies]
 tempfile = "3"
+# For the bindings_are_up_to_date test.
+specta-typescript = "0.0.12"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -137,6 +137,11 @@ impl RepoManager {
             file.selected = None;
         }
         self.save(&file)?;
+        // A running operation keeps its own handle to the lock, so dropping ours is safe.
+        self.locks
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .remove(&id);
         Ok(())
     }
 

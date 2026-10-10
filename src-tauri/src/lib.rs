@@ -15,6 +15,7 @@ pub mod settings;
 pub mod state;
 pub mod store;
 pub mod watcher;
+pub mod which;
 
 use tauri::Manager;
 use tauri_specta::{collect_commands, collect_events, Builder};

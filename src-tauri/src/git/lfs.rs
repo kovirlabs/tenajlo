@@ -52,7 +52,13 @@ pub async fn push_objects(
     run_remote(
         git,
         root,
-        vec!["lfs".into(), "push".into(), remote.into(), branch.into()],
+        vec![
+            "lfs".into(),
+            "push".into(),
+            "--".into(),
+            remote.into(),
+            branch.into(),
+        ],
         r,
     )
     .await
