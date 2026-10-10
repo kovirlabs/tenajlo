@@ -10,7 +10,9 @@ land in a **draft** GitHub Release, so a person checks them before anyone can do
    - `src-tauri/tauri.conf.json` → `version`
    - `src-tauri/Cargo.toml` → `[package] version`
    - `package.json` → `version`
-3. Commit: `Release v1.2.3`.
+3. In `CHANGELOG.md`, give the version's section today's date (it says `Unreleased` until
+   then) and add an empty `## [Unreleased]` above it if there isn't one.
+4. Commit: `Release v1.2.3`.
 
 The dependency license list is automatic: `scripts/third-party-licenses.mjs` (cargo-about for
 Rust crates, `pnpm licenses` for npm packages) runs in CI on every push and fails if a
@@ -86,9 +88,14 @@ SHA-256 from the release's published digest (GitHub shows it on the release asse
 GitHub API returns it as `digest`). Update the versions in `THIRD_PARTY_NOTICES.md`. Run
 `node scripts/fetch-mingit.mjs --force` to check the download and layout.
 
-## Code signing (not set up yet)
+## Code signing (not planned)
 
-Builds are unsigned for now. When a certificate is chosen, set
+Decided on 2026-10-10: Windows installers aren't code-signed and the macOS app isn't
+notarized. Users see SmartScreen's "unknown publisher" warning on Windows and allow the app
+once in System Settings on macOS (the user guide explains both). Update packages are still
+signed with Tenajlo's update key (below), so auto-update is unaffected.
+
+If that changes: for Windows, set
 `bundle.windows.signCommand` in `src-tauri/tauri.windows.conf.json` (or
 `certificateThumbprint` for a local certificate) and pass its secrets to the release job.
 See Tauri's Windows code-signing guide.
