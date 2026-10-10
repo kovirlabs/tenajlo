@@ -8,8 +8,9 @@ type Props<T> = {
   /** Extra rows rendered above and below the viewport. */
   overscan?: number;
   ariaLabel?: string;
-  /** Called when the last rendered row is within `overscan` of the end. */
-  onNearEnd?: () => void;
+  /** Called when the last rendered row is within `overscan` of the end. Pass a stable
+   *  function: a new one each render re-fires the call. */
+  onNearEnd?: () => unknown;
 };
 
 /** Fixed-row-height virtualized list. Renders only the rows in view. */
@@ -41,7 +42,7 @@ export function VirtualList<T>({
 
   const nearEnd = items.length > 0 && last >= items.length;
   useEffect(() => {
-    if (nearEnd) onNearEnd?.();
+    if (nearEnd) void onNearEnd?.();
   }, [nearEnd, items.length, onNearEnd]);
 
   const rows: ReactNode[] = [];
