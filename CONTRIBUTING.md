@@ -31,6 +31,9 @@ docker compose -f dev/forgejo.yml up -d && dev/seed-forgejo.sh
 cd src-tauri && cargo test --features integration
 ```
 
+To try the app by hand against a server of your own (with users, a token and a sample
+repository generated for you), see [`dev/test-server/`](dev/test-server/README.md).
+
 ## Making a change
 
 1. Read the relevant section of [`spec.md`](spec.md). The architecture rules in
