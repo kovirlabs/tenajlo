@@ -29,6 +29,11 @@ export function discardChanges(repoId: string, paths: string[]): Promise<Result<
   return commands.discardChanges(repoId, paths);
 }
 
+/** The extension "Ignore all .ext files" would use for `path`, if it has a simple one. */
+export function ignoreExtension(path: string): Promise<string | null> {
+  return commands.ignoreExtension(path);
+}
+
 /** Adds an untracked file, or all files with its extension, to .gitignore. */
 export function ignoreFile(
   repoId: string,

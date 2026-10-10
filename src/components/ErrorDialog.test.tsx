@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { AppError } from "../bindings";
 import { useSyncStore } from "../stores/syncStore";
 import { useUiStore } from "../stores/uiStore";
@@ -14,8 +14,6 @@ const error = (kind: AppError["kind"], accountId: string | null): AppError => ({
 });
 
 describe("ErrorDialog", () => {
-  afterEach(cleanup);
-
   it("offers to sign in again when the account's token stopped working", () => {
     useUiStore.setState({ error: error("SignInRequired", "a1"), dialog: null });
     render(<ErrorDialog />);

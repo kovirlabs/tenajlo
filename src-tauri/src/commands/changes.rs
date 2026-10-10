@@ -136,6 +136,13 @@ pub async fn discard_changes(
     }
 }
 
+/// The extension "Ignore all .ext files" would ignore for `path`, if any. Pure; no git call.
+#[tauri::command]
+#[specta::specta]
+pub fn ignore_extension(path: String) -> Option<String> {
+    ignore::extension(&path).map(str::to_owned)
+}
+
 /// Adds an untracked file (or all files with its extension) to the root `.gitignore`.
 #[tauri::command]
 #[specta::specta]

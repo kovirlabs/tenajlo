@@ -1,8 +1,8 @@
-import { afterEach, describe as suite, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { SyncState } from "../bindings";
 import { useSyncStore } from "../stores/syncStore";
-import { describe, SyncButton } from "./SyncButton";
+import { SyncButton, syncLabel } from "./SyncButton";
 
 const state = (action: SyncState["action"], ahead = 0, behind = 0): SyncState => ({
   action,
@@ -12,20 +12,18 @@ const state = (action: SyncState["action"], ahead = 0, behind = 0): SyncState =>
   lastFetched: null,
 });
 
-suite("sync button", () => {
-  afterEach(cleanup);
-
+describe("sync button", () => {
   it("labels each action in plain language", () => {
-    expect(describe(state({ type: "NoRemote" }))).toBeNull();
-    expect(describe(state({ type: "Publish", remote: "origin" }))?.title).toBe("Publish branch");
-    expect(describe(state({ type: "Pull", remote: "origin" }, 0, 3))).toMatchObject({
+    expect(syncLabel(state({ type: "NoRemote" }))).toBeNull();
+    expect(syncLabel(state({ type: "Publish", remote: "origin" }))?.title).toBe("Publish branch");
+    expect(syncLabel(state({ type: "Pull", remote: "origin" }, 0, 3))).toMatchObject({
       title: "Pull origin",
       badge: "↓3",
       detail: "Never fetched",
     });
-    expect(describe(state({ type: "Pull", remote: "origin" }, 2, 3))?.badge).toBe("↓3 ↑2");
-    expect(describe(state({ type: "Push", remote: "origin" }, 2))?.badge).toBe("↑2");
-    expect(describe(state({ type: "Fetch", remote: "origin" }))?.request).toBe("Fetch");
+    expect(syncLabel(state({ type: "Pull", remote: "origin" }, 2, 3))?.badge).toBe("↓3 ↑2");
+    expect(syncLabel(state({ type: "Push", remote: "origin" }, 2))?.badge).toBe("↑2");
+    expect(syncLabel(state({ type: "Fetch", remote: "origin" }))?.request).toBe("Fetch");
   });
 
   it("runs the action and shows progress with cancel", () => {

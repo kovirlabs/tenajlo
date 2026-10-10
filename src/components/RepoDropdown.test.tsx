@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { Repository } from "../bindings";
 import { useShortcuts } from "../hooks/useShortcuts";
 import { useRepoStore } from "../stores/repoStore";
@@ -35,7 +35,6 @@ describe("RepoDropdown", () => {
     }),
   );
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

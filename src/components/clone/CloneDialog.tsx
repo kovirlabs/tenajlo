@@ -11,6 +11,7 @@ import { ForgejoRepoList } from "./ForgejoRepoList";
 import { useAsyncEffect } from "../../hooks/useAsyncEffect";
 import { useDialog } from "../../hooks/useDialog";
 import { useTauriEvent } from "../../hooks/useTauriEvent";
+import { formatProgress } from "../../lib/progress";
 
 type Tab = "forgejo" | "url";
 type Protocol = "https" | "ssh";
@@ -174,11 +175,7 @@ function CloneBody({ onClose }: { onClose: () => void }) {
 
       {running ? (
         <div className="clone-progress" role="status" aria-live="polite">
-          <span>
-            {running.progress
-              ? `${running.progress.phase}${running.progress.percent !== null ? ` ${running.progress.percent}%` : ""}`
-              : "Starting…"}
-          </span>
+          <span>{formatProgress(running.progress)}</span>
           <progress
             max={100}
             value={running.progress?.percent ?? undefined}

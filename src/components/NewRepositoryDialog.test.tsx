@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useUiStore } from "../stores/uiStore";
 import { NewRepositoryDialog } from "./NewRepositoryDialog";
 
@@ -21,7 +21,6 @@ describe("NewRepositoryDialog", () => {
     useUiStore.setState({ dialog: "newRepository" });
   });
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

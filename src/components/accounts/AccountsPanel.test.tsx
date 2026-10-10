@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Account, ServerInfo } from "../../bindings";
 import { useAccountStore } from "../../stores/accountStore";
 import { useUiStore } from "../../stores/uiStore";
@@ -40,7 +40,6 @@ describe("AccountsPanel", () => {
   });
 
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

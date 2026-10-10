@@ -13,12 +13,13 @@ import { useTauriEvent } from "../hooks/useTauriEvent";
 export function AuthPromptDialog() {
   const [queue, setQueue] = useState<AuthPromptRequested[]>([]);
 
-  useTauriEvent(onAuthPrompt, (p) => setQueue((q) => [...q, p]));
-
   // Prompts for an operation that has finished or been cancelled are stale.
   const syncOp = useSyncStore((s) => s.running?.opId);
   const cloneOp = useCloneStore((s) => s.running?.opId);
   const isRunning = (opId: string) => opId === syncOp || opId === cloneOp;
+
+  // Drop stale prompts as new ones arrive, so the queue can't grow over a long session.
+  useTauriEvent(onAuthPrompt, (p) => setQueue((q) => [...q.filter((o) => isRunning(o.opId)), p]));
   const current = queue.find((p) => isRunning(p.opId)) ?? null;
   const done = () => setQueue((q) => q.filter((p) => p !== current && isRunning(p.opId)));
   if (!current) return null;

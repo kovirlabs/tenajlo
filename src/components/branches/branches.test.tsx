@@ -67,7 +67,6 @@ const change: FileChange = {
 
 describe("branch actions", () => {
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 
@@ -106,8 +105,6 @@ describe("branch actions", () => {
 });
 
 describe("NewBranchDialog", () => {
-  afterEach(cleanup);
-
   it("shows the sanitized name and creates it", async () => {
     setup([]);
     cleanup();

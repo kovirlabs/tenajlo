@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { FileChange, Identity } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { useConflictStore } from "../stores/conflictStore";
@@ -49,7 +49,6 @@ describe("CommitBox", () => {
     commitChanges.mockClear();
     useConflictStore.setState({ repoId: "r1", state: null });
   });
-  afterEach(cleanup);
 
   it("commits with Ctrl+Enter and clears the message", async () => {
     setup("Full");

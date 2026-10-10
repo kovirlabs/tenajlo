@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { Commit } from "../bindings";
 import { useHistoryStore } from "../stores/historyStore";
 import { HistoryList } from "./HistoryList";
@@ -16,8 +16,6 @@ const commit = (n: number): Commit => ({
 });
 
 describe("HistoryList", () => {
-  afterEach(cleanup);
-
   it("renders commits, selects, and asks for more at the end", () => {
     const selectCommit = vi.fn(async () => {});
     const loadMore = vi.fn(async () => {});

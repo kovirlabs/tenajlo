@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { AppError, GitInfo, Settings } from "../bindings";
 import type { Result } from "../api/result";
 import { useAppStore } from "../stores/appStore";
@@ -32,7 +32,7 @@ const info = (minor: number): GitInfo => ({
   version: { major: 2, minor, patch: 1 },
   minimum: { major: 2, minor: 40, patch: 0 },
   supported: minor >= 40,
-  lfsVersion: "git-lfs/3.7.1 (GitHub; darwin arm64)",
+  lfsVersion: "3.7.1",
 });
 
 const renderGate = () =>
@@ -48,7 +48,6 @@ describe("StartupGate", () => {
     useAppStore.setState({ gitCheck: { phase: "checking" } });
   });
   afterEach(() => {
-    cleanup();
     checkGit.mockReset();
   });
 

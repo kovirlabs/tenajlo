@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Account } from "../bindings";
 import { useAccountStore } from "../stores/accountStore";
 import { useSettingsStore } from "../stores/settingsStore";
@@ -39,7 +39,6 @@ describe("Welcome", () => {
     useSettingsStore.setState({ update });
   });
   afterEach(() => {
-    cleanup();
     vi.clearAllMocks();
   });
 

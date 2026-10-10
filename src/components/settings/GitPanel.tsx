@@ -81,7 +81,7 @@ function GitLocation() {
       {info && (
         <p className="muted">
           {info.lfsVersion
-            ? `Git LFS: ${info.lfsVersion.split(" ")[0]?.replace("git-lfs/", "")}`
+            ? `Git LFS: ${info.lfsVersion}`
             : "Git LFS isn't installed. Repositories with large files (CAD, PLC archives) need it: get it from git-lfs.com."}
         </p>
       )}

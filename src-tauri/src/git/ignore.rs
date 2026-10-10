@@ -18,8 +18,9 @@ pub fn exact_pattern(path: &str) -> String {
     out
 }
 
-/// `*.ext` pattern for the file's extension, if it has a simple one.
-pub fn extension_pattern(path: &str) -> Option<String> {
+/// The file's extension (without the dot) if it's simple enough to ignore by: letters,
+/// digits, `_` and `-`. Dotfiles like `.env` have none.
+pub fn extension(path: &str) -> Option<&str> {
     let name = path.rsplit('/').next()?;
     let (stem, ext) = name.rsplit_once('.')?;
     let simple = !stem.is_empty()
@@ -27,7 +28,12 @@ pub fn extension_pattern(path: &str) -> Option<String> {
         && ext
             .chars()
             .all(|c| c.is_alphanumeric() || c == '_' || c == '-');
-    simple.then(|| format!("*.{ext}"))
+    simple.then_some(ext)
+}
+
+/// `*.ext` pattern for the file's [`extension`], if it has one.
+pub fn extension_pattern(path: &str) -> Option<String> {
+    extension(path).map(|ext| format!("*.{ext}"))
 }
 
 /// Appends `pattern` to `<root>/.gitignore` unless an identical line exists.

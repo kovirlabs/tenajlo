@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { Branch } from "../bindings";
 import { useBranchStore } from "../stores/branchStore";
 import { useChangesStore } from "../stores/changesStore";
@@ -26,8 +26,6 @@ const setHead = (name: string | null, tip: string | null) =>
   });
 
 describe("BranchDropdown", () => {
-  afterEach(cleanup);
-
   it("groups branches and filters", () => {
     setHead("main", "abc");
     useBranchStore.setState({
