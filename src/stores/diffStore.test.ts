@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import type { AppError, FileDiff } from "../bindings";
+import type { AppError, FileDiff, WorkingDiff } from "../bindings";
 import type { Result } from "../api/result";
 import { useDiffStore } from "./diffStore";
 
@@ -11,19 +11,19 @@ const failure: AppError = {
   accountId: null,
 };
 
-const ok = (diff: FileDiff): Promise<Result<FileDiff>> =>
-  Promise.resolve({ status: "ok", data: diff });
+const ok = (diff: FileDiff): Promise<Result<WorkingDiff>> =>
+  Promise.resolve({ status: "ok", data: { diff, lines: null } });
 
 describe("diffStore", () => {
   beforeEach(() => useDiffStore.getState().clear());
 
   it("shows the latest selection, not a slower earlier one", async () => {
-    let resolveFirst: (v: Result<FileDiff>) => void = () => {};
+    let resolveFirst: (v: Result<WorkingDiff>) => void = () => {};
     const first = useDiffStore
       .getState()
       .load("work:r:a.txt", () => new Promise((r) => (resolveFirst = r)));
     await useDiffStore.getState().load("work:r:b.txt", () => ok({ type: "Binary" }));
-    resolveFirst({ status: "ok", data: { type: "TooLarge" } });
+    resolveFirst({ status: "ok", data: { diff: { type: "TooLarge" }, lines: null } });
     await first;
     expect(useDiffStore.getState()).toMatchObject({
       key: "work:r:b.txt",

@@ -8,6 +8,7 @@ use super::parse_id;
 use crate::error::AppError;
 use crate::git::discard::{self, DiscardError};
 use crate::git::identity::{self, Identity};
+use crate::git::line_staging::{self, LineRef, LineStageError};
 use crate::git::parse::status::{FileChange, FileStatusKind};
 use crate::git::undo::{self, UndoError, UndoneCommit};
 use crate::git::{commit, ignore, stage, status};
@@ -41,6 +42,43 @@ pub async fn set_staged(
         stage::unstage(&git, &root, &files, current.branch.tip.is_some()).await?;
     }
     Ok(())
+}
+
+/// Stages or unstages individual change lines of one file. `token` comes from the
+/// `get_working_diff` result the lines refer to.
+#[tauri::command]
+#[specta::specta]
+pub async fn set_lines_staged(
+    state: State<'_, AppState>,
+    repo_id: String,
+    path: String,
+    token: String,
+    lines: Vec<LineRef>,
+    staged: bool,
+) -> Result<(), AppError> {
+    let (root, _guard) = state.repos.lock_repo(parse_id(&repo_id)?).await?;
+    let git = state.git()?;
+    let current = status::status(&git, &root).await?;
+    let changed = || {
+        AppError::invalid_input(
+            "This file changed since it was shown. Check the updated changes and try again.",
+        )
+    };
+    let file = current
+        .files
+        .iter()
+        .find(|f| f.path == path)
+        .ok_or_else(changed)?;
+    let has_head = current.branch.tip.is_some();
+    match line_staging::set_lines_staged(&git, &root, file, has_head, &token, &lines, staged).await
+    {
+        Ok(()) => Ok(()),
+        Err(LineStageError::Git(e)) => Err(e.into()),
+        Err(LineStageError::Changed | LineStageError::BadLine) => Err(changed()),
+        Err(LineStageError::Unsupported) => Err(AppError::invalid_input(
+            "This file can only be committed as a whole. Use its checkbox in the list of changes.",
+        )),
+    }
 }
 
 /// Commits the staged changes. Returns the new commit's SHA.

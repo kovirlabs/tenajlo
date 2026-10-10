@@ -35,8 +35,11 @@ export const commands = {
 	selectRepository: (id: string) => typedError<Repository, AppError>(__TAURI_INVOKE("select_repository", { id })),
 	/**  Working directory status for a repository. */
 	getStatus: (repoId: string) => typedError<WorkingDirectoryStatus, AppError>(__TAURI_INVOKE("get_status", { repoId })),
-	/**  Diff of a changed working-directory file. Unchanged if the file no longer has changes. */
-	getWorkingDiff: (repoId: string, path: string) => typedError<FileDiff, AppError>(__TAURI_INVOKE("get_working_diff", { repoId, path })),
+	/**
+	 *  Diff of a changed working-directory file, with which lines are staged.
+	 *  Unchanged if the file no longer has changes.
+	 */
+	getWorkingDiff: (repoId: string, path: string) => typedError<WorkingDiff, AppError>(__TAURI_INVOKE("get_working_diff", { repoId, path })),
 	/**  A page of commits reachable from HEAD, newest first. */
 	getHistory: (repoId: string, skip: number, limit: number) => typedError<Commit[], AppError>(__TAURI_INVOKE("get_history", { repoId, skip, limit })),
 	/**  Files changed by a commit. */
@@ -54,6 +57,11 @@ export const commands = {
 	getLfsStatus: (repoId: string) => typedError<LfsStatus, AppError>(__TAURI_INVOKE("get_lfs_status", { repoId })),
 	/**  Stages (`staged = true`) or unstages the given changed files. */
 	setStaged: (repoId: string, paths: string[], staged: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_staged", { repoId, paths, staged })),
+	/**
+	 *  Stages or unstages individual change lines of one file. `token` comes from the
+	 *  `get_working_diff` result the lines refer to.
+	 */
+	setLinesStaged: (repoId: string, path: string, token: string, lines: LineRef[], staged: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_lines_staged", { repoId, path, token, lines, staged })),
 	/**  Commits the staged changes. Returns the new commit's SHA. */
 	commitChanges: (repoId: string, summary: string, description: string) => typedError<string, AppError>(__TAURI_INVOKE("commit_changes", { repoId, summary, description })),
 	/**  The name and email git will record on commits in this repository. */
@@ -405,6 +413,23 @@ export type LfsStatus = {
 	installed: boolean,
 };
 
+/**  A line in a diff, by position. */
+export type LineRef = {
+	hunk: number,
+	line: number,
+};
+
+/**  Line staging state for a working-directory diff. */
+export type LineStaging = {
+	/**
+	 *  Identifies the diff these flags belong to. Sent back with [`set_lines_staged`] so a file
+	 *  that changed in between is never staged against a stale view.
+	 */
+	token: string,
+	/**  `[hunk][line]` like the diff's hunks: whether that change is staged. Context lines are false. */
+	staged: boolean[][],
+};
+
 /**  What to do with uncommitted changes when switching (GitHub Desktop's two choices). */
 export type LocalChanges = 
 /**  Carry them to the target branch (fails if they would be overwritten). */
@@ -563,6 +588,13 @@ export type Theme = "System" | "Light" | "Dark";
 export type UndoneCommit = {
 	summary: string,
 	description: string,
+};
+
+/**  A working-directory file's diff with its line staging state. */
+export type WorkingDiff = {
+	diff: FileDiff,
+	/**  `None` when the file can only be staged whole. */
+	lines: LineStaging | null,
 };
 
 /**  Parsed working directory status. */

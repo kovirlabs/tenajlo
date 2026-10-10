@@ -18,14 +18,33 @@ pub async fn working_dir_diff(
     file: &FileChange,
     has_head: bool,
 ) -> Result<FileDiff, GitError> {
+    Ok(match working_dir_patch(git, root, file, has_head).await? {
+        WorkingPatch::Raw(bytes) => parse_diff(&bytes),
+        WorkingPatch::Settled(diff) => diff,
+    })
+}
+
+/// The raw patch behind [`working_dir_diff`], or the result when no patch is needed.
+pub(crate) enum WorkingPatch {
+    Raw(Vec<u8>),
+    Settled(FileDiff),
+}
+
+/// Runs the HEAD → working tree diff for one file and returns git's output unparsed.
+pub(crate) async fn working_dir_patch(
+    git: &GitBinary,
+    root: &Path,
+    file: &FileChange,
+    has_head: bool,
+) -> Result<WorkingPatch, GitError> {
     let treat_as_new = file.kind == FileStatusKind::Untracked || !has_head;
     let cmd = if treat_as_new {
         if file.kind == FileStatusKind::Deleted {
-            return Ok(FileDiff::Unchanged);
+            return Ok(WorkingPatch::Settled(FileDiff::Unchanged));
         }
         reject_escaping_path(&file.path)?;
         if is_large_text_file(&root.join(&file.path)).await {
-            return Ok(FileDiff::TooLarge);
+            return Ok(WorkingPatch::Settled(FileDiff::TooLarge));
         }
         // --no-index takes real paths (no pathspec magic) and exits 1 when files differ.
         let mut args = vec!["diff", "--no-index"];
@@ -41,8 +60,27 @@ pub async fn working_dir_diff(
         // Literal so `*`, `?` and `[` in file names are not globs.
         GitCommand::new(args, Access::ReadOnly).literal_pathspecs()
     };
-    let out = cmd.cwd(root).run(git).await?;
-    Ok(parse_diff(&out.stdout))
+    Ok(WorkingPatch::Raw(cmd.cwd(root).run(git).await?.stdout))
+}
+
+/// Raw diff of one file between two of HEAD, the index and the working tree (`args` picks
+/// which, e.g. `["--cached"]` for HEAD → index, `[]` for index → working tree).
+pub(crate) async fn raw_diff(
+    git: &GitBinary,
+    root: &Path,
+    args: &[&str],
+    path: &str,
+) -> Result<Vec<u8>, GitError> {
+    let mut all = vec!["diff"];
+    all.extend(DIFF_FLAGS);
+    all.extend(args);
+    all.extend(["--", path]);
+    let out = GitCommand::new(all, Access::ReadOnly)
+        .literal_pathspecs()
+        .cwd(root)
+        .run(git)
+        .await?;
+    Ok(out.stdout)
 }
 
 /// Diff of one file in a commit, against its first parent (or the empty tree for a root commit).

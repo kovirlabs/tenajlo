@@ -7,6 +7,7 @@ use crate::error::AppError;
 use crate::git::branches;
 use crate::git::diff;
 use crate::git::lfs::{self, LfsStatus};
+use crate::git::line_staging::{self, WorkingDiff};
 use crate::git::log;
 use crate::git::parse::branches::BranchList;
 use crate::git::parse::diff::FileDiff;
@@ -34,22 +35,26 @@ pub async fn get_status(
     Ok(status::status(&state.git()?, &root).await?)
 }
 
-/// Diff of a changed working-directory file. Unchanged if the file no longer has changes.
+/// Diff of a changed working-directory file, with which lines are staged.
+/// Unchanged if the file no longer has changes.
 #[tauri::command]
 #[specta::specta]
 pub async fn get_working_diff(
     state: State<'_, AppState>,
     repo_id: String,
     path: String,
-) -> Result<FileDiff, AppError> {
+) -> Result<WorkingDiff, AppError> {
     let root = state.repos.root(parse_id(&repo_id)?)?;
     let git = state.git()?;
     // Re-read status so Rust, not the UI, decides how to diff, and the path is a real change.
     let current = status::status(&git, &root).await?;
     let Some(file) = current.files.iter().find(|f| f.path == path) else {
-        return Ok(FileDiff::Unchanged);
+        return Ok(WorkingDiff {
+            diff: FileDiff::Unchanged,
+            lines: None,
+        });
     };
-    Ok(diff::working_dir_diff(&git, &root, file, current.branch.tip.is_some()).await?)
+    Ok(line_staging::working_diff(&git, &root, file, current.branch.tip.is_some()).await?)
 }
 
 /// Largest page the History list may request.

@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import type { AppError, SavedChanges, WorkingDirectoryStatus } from "../bindings";
+import type { AppError, LineRef, SavedChanges, WorkingDirectoryStatus } from "../bindings";
 import { getStatus } from "../api/status";
 import { setStaged } from "../api/changes";
+import { setLinesStaged } from "../api/diff";
 import { getSavedChanges } from "../api/branches";
 import type { Result } from "../api/result";
 import { refreshRepo, registerRefresh } from "./refreshRepo";
@@ -33,6 +34,8 @@ type ChangesState = {
     options?: MutateOptions,
   ) => Promise<Result<T> | null>;
   setStaged: (paths: string[], staged: boolean) => Promise<void>;
+  /** Stages or unstages single lines of `path`, as picked from the diff identified by `token`. */
+  setLinesStaged: (path: string, token: string, lines: LineRef[], staged: boolean) => Promise<void>;
   reset: () => void;
 };
 
@@ -86,6 +89,10 @@ export const useChangesStore = create<ChangesState>((set, get) => ({
   setStaged: async (paths, staged) => {
     if (paths.length === 0) return;
     await get().mutate((repoId) => setStaged(repoId, paths, staged));
+  },
+  setLinesStaged: async (path, token, lines, staged) => {
+    if (lines.length === 0) return;
+    await get().mutate((repoId) => setLinesStaged(repoId, path, token, lines, staged));
   },
   reset: () => set(initial),
 }));
