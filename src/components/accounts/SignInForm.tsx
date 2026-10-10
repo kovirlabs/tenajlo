@@ -11,10 +11,12 @@ type Props = {
   onCancel: () => void;
   /** Label of the first step's cancel button (the welcome screen says "Skip"). */
   cancelLabel?: string;
+  /** Token permissions to ask for, when a feature needs more than the server's usual list. */
+  scopes?: string[];
 };
 
 /** Two-step Forgejo sign-in (spec §6.4): server address, then a personal access token. */
-export function SignInForm({ initialServer, onSignedIn, onCancel, cancelLabel }: Props) {
+export function SignInForm({ initialServer, onSignedIn, onCancel, cancelLabel, scopes }: Props) {
   const [server, setServer] = useState(initialServer ?? "");
   const [info, setInfo] = useState<ServerInfo | null>(null);
   const [token, setToken] = useState("");
@@ -112,7 +114,7 @@ export function SignInForm({ initialServer, onSignedIn, onCancel, cancelLabel }:
       </p>
       <p className="muted">
         Give the token these permissions:{" "}
-        {info.requiredScopes.map((s, i) => (
+        {(scopes ?? info.requiredScopes).map((s, i) => (
           <span key={s}>
             {i > 0 && ", "}
             <code>{s}</code>

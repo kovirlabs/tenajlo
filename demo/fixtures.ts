@@ -6,6 +6,7 @@ import type {
   Commit,
   CommitFile,
   FileDiff,
+  LocalSshKey,
   OperationState,
   RemoteRepository,
   Repository,
@@ -48,6 +49,21 @@ export const account: Account = {
   avatarUrl: null,
   needsSignIn: false,
 };
+
+export const sshKeys: LocalSshKey[] = [
+  {
+    fileName: "id_ed25519.pub",
+    keyType: "ssh-ed25519",
+    comment: "Shop floor laptop",
+    fingerprint: "SHA256:EFkhbrl2BVgz/5dqpHPiNUBnSJ4TW94gTxr4Owcbt5Y",
+  },
+  {
+    fileName: "id_rsa_old.pub",
+    keyType: "ssh-rsa",
+    comment: "sam@old-pc",
+    fingerprint: "SHA256:q3Ad8mNVh2vXcP0yL7kR1sTbG9wEoZuJ4fHiK6nMxY0",
+  },
+];
 
 export const settings: Settings = {
   theme: "Light",

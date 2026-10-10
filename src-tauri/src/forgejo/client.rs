@@ -122,11 +122,28 @@ impl ForgejoClient {
         url: Url,
         token: Option<&Secret>,
     ) -> Result<T, ForgejoError> {
+        self.send(self.http.get(url.clone()), &url, token).await
+    }
+
+    /// `POST url` with a JSON `body` and the token, parsing the JSON reply.
+    pub(crate) async fn post_url<B: Serialize + ?Sized, T: DeserializeOwned>(
+        &self,
+        url: Url,
+        token: &Secret,
+        body: &B,
+    ) -> Result<T, ForgejoError> {
+        let req = self.http.post(url.clone()).json(body);
+        self.send(req, &url, Some(token)).await
+    }
+
+    async fn send<T: DeserializeOwned>(
+        &self,
+        req: reqwest::RequestBuilder,
+        url: &Url,
+        token: Option<&Secret>,
+    ) -> Result<T, ForgejoError> {
         let path = url.path().to_owned();
-        let mut req = self
-            .http
-            .get(url)
-            .header(reqwest::header::ACCEPT, "application/json");
+        let mut req = req.header(reqwest::header::ACCEPT, "application/json");
         if let Some(token) = token {
             let mut value =
                 reqwest::header::HeaderValue::from_str(&format!("token {}", token.expose()))

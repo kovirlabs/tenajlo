@@ -2,6 +2,7 @@
 
 pub mod address;
 pub mod client;
+pub mod keys;
 pub mod repos;
 
 pub use client::{ForgejoClient, ForgejoUser, ServerInfo};
