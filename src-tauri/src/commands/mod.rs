@@ -23,6 +23,7 @@ pub mod remote_op;
 pub mod repo;
 pub mod repos;
 pub mod settings;
+pub mod ssh_keys;
 pub mod sync;
 
 /// Parses a repository id from the frontend.

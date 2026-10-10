@@ -82,7 +82,7 @@ pub async fn list_repositories(
 }
 
 /// Follows `?page=N&limit=50` until a short page. `segments` are percent-encoded.
-async fn all_pages<T: serde::de::DeserializeOwned>(
+pub(super) async fn all_pages<T: serde::de::DeserializeOwned>(
     client: &ForgejoClient,
     base: &Url,
     segments: &[&str],

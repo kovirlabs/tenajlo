@@ -212,7 +212,7 @@ When the credential helper protocol sends `erase`, delete the keychain entry. On
 - Use the system OpenSSH client (Windows ships `C:\Windows\System32\OpenSSH\ssh.exe`; prefer it over MinGit's ssh so the Windows `ssh-agent` service is used). Set `core.sshCommand` per invocation.
 - **Key passphrase:** `SSH_ASKPASS` → trampoline → UI dialog, which says when a previous answer was wrong. (Remembering the passphrase in the keychain is deferred to v1.1; on Windows the ssh-agent service already covers this.)
 - **Unknown host key:** detect the prompt text, show host, key type, and fingerprint, and let the user accept or reject. On accept, answer `yes` so OpenSSH writes `known_hosts` itself. Tenajlo never edits `known_hosts` directly.
-- **Key management (v1.1):** list keys in `~/.ssh`, generate an ed25519 key, and upload the public key to Forgejo (`POST /api/v1/user/keys`, needs `write:user` scope).
+- **Key management (v1.1, Settings → SSH keys):** list the public keys in `~/.ssh`, generate `~/.ssh/id_ed25519` in-process (`ssh-key` crate, so a passphrase never reaches a command line; never overwrites an existing key or edits `~/.ssh/config`), and upload a public key to Forgejo (`POST /api/v1/user/keys`). Uploading needs the `write:user` scope, which sign-in doesn't ask for. Before offering "Add", and again before uploading, Tenajlo checks the token by posting an empty key: Forgejo answers 403 "required scope" without the scope and 422 with it, and creates nothing either way. Without the scope, the panel offers to replace the token with one that has `write:user`, `read:repository` and `write:repository`.
 
 ### 6.4 Forgejo sign-in flow
 

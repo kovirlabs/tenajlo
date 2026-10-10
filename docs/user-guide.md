@@ -63,8 +63,8 @@ offers **Sign in again**. Paste a new token; nothing else changes.
 2. On **Your Forgejo repositories**, pick a repository. Use **Filter** to find it.
 3. Choose how to connect:
    - **HTTPS** uses your Forgejo account. Pick this if you're not sure.
-   - **SSH** uses your SSH key. Your key must be added in Forgejo under
-     **Settings → SSH / GPG Keys**.
+   - **SSH** uses your SSH key. Your key must be added to your Forgejo account first (see
+     [SSH keys](#ssh-keys)).
 4. Check the **Local folder** (by default `Documents\Tenajlo\<name>`) and click **Clone**.
 
 You can also paste an address on the **URL** tab, for example
@@ -138,9 +138,20 @@ shows a warning and won't commit or push, so large files aren't stored the wrong
 
 ## SSH keys
 
-Your SSH key needs to be added to your Forgejo account (**Settings → SSH / GPG Keys** on the
-Forgejo website). Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and
-its ssh-agent).
+Your SSH key needs to be added to your Forgejo account. Tenajlo can do this for you in
+**Settings → SSH keys**:
+
+- **Create an SSH key…** makes a new key named `id_ed25519` in the `.ssh` folder in your home
+  folder. It only appears if you don't have one yet; Tenajlo never replaces a key. A
+  passphrase is optional but protects the key if someone copies it.
+- **Add to <server>** puts a key on your Forgejo account. Keys already on the account say
+  **Added to <server>**.
+- If your access token can't add keys, Tenajlo says so and offers **Update the token**. Create a
+  new token with the `write:user`, `read:repository` and `write:repository` permissions and
+  paste it. You can also add keys yourself on the Forgejo website under
+  **Settings → SSH / GPG Keys**.
+
+Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its ssh-agent).
 
 - **Passphrase:** Tenajlo asks for it when needed.
 - **"Connect to <server>?"** appears the first time you connect to a server. Check the
@@ -152,6 +163,7 @@ its ssh-agent).
 ## Settings
 
 - **Accounts:** sign in and out of Forgejo servers.
+- **SSH keys:** create an SSH key and add it to your Forgejo account.
 - **Git:** your name and email for commits, and which Git program to use.
 - **Repositories:** where new clones go, what Pull does, how often to check the server, and
   which editor opens files.

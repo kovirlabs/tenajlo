@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::auth::accounts::AccountError;
 use crate::auth::remote_auth::PrepareError;
+use crate::auth::ssh_keys::SshKeyError;
 use crate::editor::EditorError;
 use crate::forgejo::ForgejoError;
 use crate::git::clone::CloneError;
@@ -343,6 +344,30 @@ impl From<EditorError> for AppError {
             }
         };
         AppError::with_details(AppErrorKind::InvalidInput, message, err.to_string())
+    }
+}
+
+impl From<SshKeyError> for AppError {
+    fn from(err: SshKeyError) -> Self {
+        let (kind, message) = match &err {
+            SshKeyError::Exists(_) => (
+                AppErrorKind::InvalidInput,
+                "You already have an SSH key named id_ed25519. Use that key instead of creating a new one.",
+            ),
+            SshKeyError::NotFound(_) => (
+                AppErrorKind::InvalidInput,
+                "That SSH key isn't in your .ssh folder anymore.",
+            ),
+            SshKeyError::Invalid(_) => (
+                AppErrorKind::InvalidInput,
+                "That file isn't an SSH public key Tenajlo can read.",
+            ),
+            SshKeyError::Generate(_) | SshKeyError::Io { .. } => (
+                AppErrorKind::Internal,
+                "Tenajlo couldn't save the SSH key in your .ssh folder.",
+            ),
+        };
+        AppError::with_details(kind, message, err.to_string())
     }
 }
 

@@ -6,6 +6,7 @@ pub mod credential_helper;
 pub mod prompt;
 pub mod remote_auth;
 pub mod secrets;
+pub mod ssh_keys;
 pub mod trampoline;
 
 use std::path::PathBuf;

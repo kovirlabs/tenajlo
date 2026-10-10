@@ -3,7 +3,7 @@ import type { AppError } from "../bindings";
 
 export type Tab = "changes" | "history";
 export type Dialog = "newBranch" | "newRepository" | "clone" | "settings" | null;
-export type SettingsTab = "accounts" | "git" | "appearance" | "repositories" | "about";
+export type SettingsTab = "accounts" | "ssh" | "git" | "appearance" | "repositories" | "about";
 
 type UiState = {
   error: AppError | null;

@@ -97,6 +97,17 @@ export const commands = {
 	 *  run. Fetched live; Tenajlo doesn't store the email.
 	 */
 	getAccountIdentity: (accountId: string) => typedError<Identity, AppError>(__TAURI_INVOKE("get_account_identity", { accountId })),
+	/**  The public keys in `~/.ssh`. */
+	listSshKeys: () => typedError<LocalSshKey[], AppError>(__TAURI_INVOKE("list_ssh_keys")),
+	/**  Creates `~/.ssh/id_ed25519`, protected by `passphrase` if it isn't empty. */
+	createSshKey: (comment: string, passphrase: string | null) => typedError<LocalSshKey, AppError>(__TAURI_INVOKE("create_ssh_key", { comment, passphrase })),
+	/**  Which keys `account_id` already has, and whether its token may add more. */
+	getAccountSshKeys: (accountId: string) => typedError<AccountSshKeys, AppError>(__TAURI_INVOKE("get_account_ssh_keys", { accountId })),
+	/**
+	 *  Adds the public key `file_name` from `~/.ssh` to `account_id` as `title`. Checks the
+	 *  token's permission first, so nothing is sent with a token that can't add keys.
+	 */
+	addSshKey: (accountId: string, fileName: string, title: string) => typedError<null, AppError>(__TAURI_INVOKE("add_ssh_key", { accountId, fileName, title })),
 	/**  Repositories the account can clone: its own and its organizations'. */
 	listForgejoRepositories: (accountId: string) => typedError<RemoteRepository[], AppError>(__TAURI_INVOKE("list_forgejo_repositories", { accountId })),
 	/**
@@ -189,6 +200,17 @@ export type Account = {
 
 /**  Kind of account. Only Forgejo for v1. */
 export type AccountKind = "forgejo";
+
+/**  One account's SSH key status. */
+export type AccountSshKeys = {
+	accountId: string,
+	/**  Whether the account's token may add keys (`write:user`). */
+	canAdd: boolean,
+	/**  Fingerprints (`SHA256:…`) of the keys already on the account. */
+	fingerprints: string[],
+	/**  Permissions for a replacement token when `can_add` is false. */
+	requiredScopes: string[],
+};
 
 /**  Error shape sent to the frontend. Never contains secrets: `details` is redacted. */
 export type AppError = {
@@ -436,6 +458,18 @@ export type LocalChanges =
 "Bring" | 
 /**  Save them on the current branch and switch with a clean working directory. */
 "Leave";
+
+/**  A public key found in `~/.ssh`. */
+export type LocalSshKey = {
+	/**  File name of the public key, e.g. `id_ed25519.pub`. */
+	fileName: string,
+	/**  Algorithm as OpenSSH names it, e.g. `ssh-ed25519`. */
+	keyType: string,
+	/**  The key's comment (often `user@host`); may be empty. */
+	comment: string,
+	/**  `SHA256:…`, as `ssh-keygen -l` and Forgejo show it. */
+	fingerprint: string,
+};
 
 /**  A multi-step git operation that's waiting for the user. */
 export type OperationKind = "Merge" | "Rebase" | "CherryPick" | "Revert";
