@@ -33,7 +33,7 @@ export function StartupGate({ children }: { children: ReactNode }) {
           title="Git needs an update"
           message={`Tenajlo needs Git ${formatVersion(gitCheck.info.minimum)} or newer. This computer has Git ${formatVersion(gitCheck.info.version)}. Update Git, then try again.`}
           details={`Git found at: ${gitCheck.info.path}`}
-          onRetry={runGitCheck}
+          onRetry={() => void runGitCheck()}
         />
       );
     case "failed":
@@ -42,7 +42,7 @@ export function StartupGate({ children }: { children: ReactNode }) {
           title="Git isn't available"
           message={gitCheck.error.message}
           details={gitCheck.error.details}
-          onRetry={runGitCheck}
+          onRetry={() => void runGitCheck()}
         />
       );
   }
