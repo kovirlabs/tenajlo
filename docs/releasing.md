@@ -67,12 +67,14 @@ through the manual matrix from spec §11:
 - [ ] Sign in (the token is saved in the Keychain); clone, commit, push, pull over HTTPS and
       SSH; the SSH passphrase prompt appears in Tenajlo.
 
-### Updates (Windows and macOS)
+### Updates
 
-- [ ] The draft has `latest.json`, plus a `.sig` file next to the NSIS installer and the
-      macOS `.app.tar.gz`. (They're missing if the `TAURI_SIGNING_PRIVATE_KEY` secret isn't set.)
+- [ ] The draft has `latest.json`, plus a `.sig` file next to the NSIS installer, the macOS
+      `.app.tar.gz` and the `.deb`. (They're missing if the `TAURI_SIGNING_PRIVATE_KEY` secret
+      isn't set.) `latest.json` lists `windows-x86_64`, `darwin-aarch64` and `linux-x86_64-deb`.
 - [ ] After publishing: a copy of the previous version shows "Tenajlo <version> is available"
-      at startup, and **Install and restart** installs it and reopens Tenajlo.
+      at startup, and **Install and restart** installs it and reopens Tenajlo. On Linux, the
+      system asks for an administrator password first (`pkexec`).
 
 Then publish the draft release. Installed copies only see a release once it's published:
 `latest.json` is served from the latest _published_ release.
@@ -128,7 +130,7 @@ password are GitHub secrets that only the release workflow sees.
 4. Put the contents of `~/.tauri/tenajlo-updater.key.pub` into `plugins.updater.pubkey` in
    `src-tauri/tauri.conf.json` and commit it. The public key isn't secret.
 
-From the next release on, the Windows and macOS builds sign their update packages and the
+From the next release on, the Windows, macOS and Linux builds sign their update packages and the
 release gets a `latest.json`. Copies installed _before_ the public key was added can't update
 themselves; they need one manual install of a version that has it.
 

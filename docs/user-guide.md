@@ -178,11 +178,11 @@ Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its s
   whether to show a notification when the server has new commits on your branch (only while
   you're using another window), and which editor opens files.
 - **Appearance:** light, dark, or the same as your computer.
-- **About:** Tenajlo's version, its log files, and **Updates**. On Windows and macOS, Tenajlo
-  checks for a new version when it starts (turn this off with **Check for updates when Tenajlo
-  starts**) and shows a banner when one is available. **Install and restart** downloads it,
-  checks it's signed by Tenajlo's release key, and restarts. On Linux, use **Open release
-  page** to download new versions.
+- **About:** Tenajlo's version, its log files, and **Updates**. Tenajlo checks for a new
+  version when it starts (turn this off with **Check for updates when Tenajlo starts**) and
+  shows a banner when one is available. **Install and restart** downloads it, checks it's
+  signed by Tenajlo's release key, installs it and restarts. On Linux, installing asks for
+  your administrator password, because the `.deb` package is installed for the whole computer.
 
 ## Troubleshooting
 
