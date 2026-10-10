@@ -120,4 +120,20 @@ describe("NewBranchDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create branch" }));
     await waitFor(() => expect(api.createBranch).toHaveBeenCalledWith("r1", "fix-pump-alarm"));
   });
+
+  it("creates the name as typed even if Enter beats the preview", async () => {
+    setup([]);
+    cleanup();
+    useUiStore.setState({ dialog: "newBranch" });
+    render(<NewBranchDialog />);
+    const input = screen.getByLabelText("Name");
+    fireEvent.change(input, { target: { value: "fix" } });
+    expect(await screen.findByRole("button", { name: "Create branch" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+    fireEvent.change(input, { target: { value: "fix pump" } });
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    await waitFor(() => expect(api.createBranch).toHaveBeenLastCalledWith("r1", "fix-pump"));
+  });
 });
