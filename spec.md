@@ -201,16 +201,17 @@ Resolution order when git asks for credentials for `https://host/...`:
 
 1. **Tenajlo account for this host** → return `username=<login>`, `password=<PAT>` from the keychain. Forgejo accepts PATs as the HTTPS password.
 2. **User's existing git credential helper** (e.g. Git Credential Manager). When no Tenajlo account matches the host, Tenajlo does not override `credential.helper`, so the user's chain runs as normal.
-3. **Prompt** via the trampoline. Show a UI dialog for username and password or token. (A "Save to keychain" option is deferred to v1.1: hosts that need saved credentials should use a Forgejo account, or the user's own helper.)
+3. **Remembered login (v1.1)** that the user saved in step 4. Tenajlo's helper is added *after* the user's helpers (never replacing them) and answers `get` from the keychain for the same protocol and host (and username, if git names one).
+4. **Prompt** via the trampoline. Show a UI dialog for username and password or token, with a "Remember this password" checkbox. Git LFS asks the same helpers, so remembered logins cover it too.
 
 On `AuthFailed` for an account host, check the PAT with `GET /api/v1/user`. If that returns 401, the token is dead: keep the account metadata, mark it as needing sign-in, and show a re-enter-token dialog once. If the token still works, the failure is a repository permission problem: say so and keep the PAT. Never loop.
 
-When the credential helper protocol sends `erase`, delete the keychain entry. On `store`, save it only if the user opted in.
+When the credential helper protocol sends `store` (the login worked), save it only if the user ticked "Remember" in this operation's dialog; a `store` for a login from the user's own helpers is ignored. On `erase` (the server rejected it), forget the remembered login if its password is the one that failed. Remembered logins are keyed `login|<protocol>|<host>|<username>` in the keychain (host lowercased, default port dropped), apart from account tokens; `$DATA/saved-secrets.json` lists them, without secrets, for Settings → Passwords.
 
 ### 6.3 SSH remotes
 
 - Use the system OpenSSH client (Windows ships `C:\Windows\System32\OpenSSH\ssh.exe`; prefer it over MinGit's ssh so the Windows `ssh-agent` service is used). Set `core.sshCommand` per invocation.
-- **Key passphrase:** `SSH_ASKPASS` → trampoline → UI dialog, which says when a previous answer was wrong. (Remembering the passphrase in the keychain is deferred to v1.1; on Windows the ssh-agent service already covers this.)
+- **Key passphrase:** `SSH_ASKPASS` → trampoline → UI dialog, which says when a previous answer was wrong. **v1.1:** a "Remember this passphrase" checkbox saves it in the keychain (`ssh-passphrase|<key path>`) right away, since OpenSSH never reports success. Later prompts for that key are answered without a dialog, including for background fetches. If OpenSSH asks again for the same key during one operation, the passphrase was wrong: it is forgotten and the dialog shows. (On Windows the ssh-agent service is another option.)
 - **Unknown host key:** detect the prompt text, show host, key type, and fingerprint, and let the user accept or reject. On accept, answer `yes` so OpenSSH writes `known_hosts` itself. Tenajlo never edits `known_hosts` directly.
 - **Key management (v1.1, Settings → SSH keys):** list the public keys in `~/.ssh`, generate `~/.ssh/id_ed25519` in-process (`ssh-key` crate, so a passphrase never reaches a command line; never overwrites an existing key or edits `~/.ssh/config`), and upload a public key to Forgejo (`POST /api/v1/user/keys`). Uploading needs the `write:user` scope, which sign-in doesn't ask for. Before offering "Add", and again before uploading, Tenajlo checks the token by posting an empty key: Forgejo answers 403 "required scope" without the scope and 422 with it, and creates nothing either way. Without the scope, the panel offers to replace the token with one that has `write:user`, `read:repository` and `write:repository`.
 
@@ -293,8 +294,9 @@ The layout mirrors GitHub Desktop, which users may already know.
 |---|---|---|
 | Repository list (paths, last opened, alias) | `$DATA/repositories.json` | JSON, versioned schema |
 | Accounts (no secrets) | `$DATA/accounts.json` | JSON |
+| Remembered passwords and passphrases (names only, v1.1) | `$DATA/saved-secrets.json` | JSON, versioned schema |
 | Settings | `$DATA/settings.json` | JSON |
-| Secrets (PATs, optional passphrases) | OS keychain | — |
+| Secrets (PATs, remembered passwords and passphrases) | OS keychain | — |
 | Logs | `$DATA/logs/` | rolling, 7 days, redacted |
 
 `$DATA` is Tauri's app data directory for the bundle identifier `com.kovirlabs.tenajlo`: `%APPDATA%\com.kovirlabs.tenajlo` on Windows, `~/.local/share/com.kovirlabs.tenajlo` on Linux, `~/Library/Application Support/com.kovirlabs.tenajlo` on macOS.

@@ -39,7 +39,10 @@ function HostKeyForm({ prompt, onDone }: { prompt: AuthPromptRequested; onDone: 
   if (kind.type !== "HostKey") return null;
   const finish = (trust: boolean) => {
     // Rust turns any answer into OpenSSH's "yes"; null cancels.
-    void answerAuthPrompt(prompt.promptId, trust ? { username: null, secret: "" } : null);
+    void answerAuthPrompt(
+      prompt.promptId,
+      trust ? { username: null, secret: "", remember: false } : null,
+    );
     onDone();
   };
   return (
@@ -70,10 +73,17 @@ function PromptForm({ prompt, onDone }: { prompt: AuthPromptRequested; onDone: (
   const { kind } = prompt;
   const [username, setUsername] = useState(kind.type === "Password" ? kind.username : "");
   const [secret, setSecret] = useState("");
+  const [remember, setRemember] = useState(false);
+  // Git's own free-form questions aren't worth keeping.
+  const canRemember = kind.type !== "Other";
 
   const finish = (send: boolean) => {
     const answer = send
-      ? { username: kind.type === "Credentials" ? username : null, secret }
+      ? {
+          username: kind.type === "Credentials" ? username : null,
+          secret,
+          remember: canRemember && remember,
+        }
       : null;
     void answerAuthPrompt(prompt.promptId, answer);
     setSecret("");
@@ -145,6 +155,24 @@ function PromptForm({ prompt, onDone }: { prompt: AuthPromptRequested; onDone: (
             autoFocus={kind.type !== "Credentials"}
           />
         </label>
+        {canRemember && (
+          <>
+            <label className="radio">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              {kind.type === "Passphrase" ? "Remember this passphrase" : "Remember this password"}
+            </label>
+            {remember && (
+              <p className="muted">
+                Tenajlo keeps it in this computer&apos;s password store. To forget it, go to
+                Settings → Passwords.
+              </p>
+            )}
+          </>
+        )}
         <div className="dialog-actions">
           <button type="button" className="secondary" onClick={() => finish(false)}>
             Cancel

@@ -39,7 +39,11 @@ describe("AuthPromptDialog", () => {
     fireEvent.change(screen.getByLabelText("Username"), { target: { value: "evan" } });
     fireEvent.change(screen.getByLabelText("Password or token"), { target: { value: "pat" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", { username: "evan", secret: "pat" });
+    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", {
+      username: "evan",
+      secret: "pat",
+      remember: false,
+    });
     expect(screen.queryByText(/Sign in to/)).toBeNull();
   });
 
@@ -60,8 +64,14 @@ describe("AuthPromptDialog", () => {
     expect(screen.getByText("Unlock your SSH key")).toBeTruthy();
     expect(screen.getByRole("alert").textContent).toContain("didn't work");
     fireEvent.change(screen.getByLabelText("Passphrase"), { target: { value: "pp" } });
+    fireEvent.click(screen.getByLabelText("Remember this passphrase"));
+    expect(screen.getByText(/Settings → Passwords/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Unlock" }));
-    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", { username: null, secret: "pp" });
+    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", {
+      username: null,
+      secret: "pp",
+      remember: true,
+    });
   });
 
   it("shows the host key fingerprint and only trusts on request", async () => {
@@ -76,6 +86,10 @@ describe("AuthPromptDialog", () => {
     expect(screen.getByText("Connect to [git.example.com]:2222?")).toBeTruthy();
     expect(screen.getByText("SHA256:abc")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Trust and connect" }));
-    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", { username: null, secret: "" });
+    expect(answerAuthPrompt).toHaveBeenCalledWith("p-op1", {
+      username: null,
+      secret: "",
+      remember: false,
+    });
   });
 });

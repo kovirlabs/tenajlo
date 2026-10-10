@@ -4,6 +4,7 @@ use serde::Serialize;
 
 use crate::auth::accounts::AccountError;
 use crate::auth::remote_auth::PrepareError;
+use crate::auth::saved_secrets::SavedSecretError;
 use crate::auth::ssh_keys::SshKeyError;
 use crate::editor::EditorError;
 use crate::forgejo::ForgejoError;
@@ -365,6 +366,30 @@ impl From<SshKeyError> for AppError {
             SshKeyError::Generate(_) | SshKeyError::Io { .. } => (
                 AppErrorKind::Internal,
                 "Tenajlo couldn't save the SSH key in your .ssh folder.",
+            ),
+        };
+        AppError::with_details(kind, message, err.to_string())
+    }
+}
+
+impl From<SavedSecretError> for AppError {
+    fn from(err: SavedSecretError) -> Self {
+        let (kind, message) = match &err {
+            SavedSecretError::Unknown => (
+                AppErrorKind::InvalidInput,
+                "That password was already forgotten.",
+            ),
+            SavedSecretError::ReadOnly => (
+                AppErrorKind::Storage,
+                "Your saved passwords were changed by a newer version of Tenajlo, so they can't be changed here. Update Tenajlo.",
+            ),
+            SavedSecretError::Secret(_) => (
+                AppErrorKind::Storage,
+                "Tenajlo couldn't reach this computer's password store.",
+            ),
+            SavedSecretError::Store(_) => (
+                AppErrorKind::Storage,
+                "Tenajlo couldn't save the list of remembered passwords.",
             ),
         };
         AppError::with_details(kind, message, err.to_string())
