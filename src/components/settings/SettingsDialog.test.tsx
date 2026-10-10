@@ -14,6 +14,7 @@ const defaults: Settings = {
   gitPath: null,
   editor: { kind: "SystemDefault" },
   welcomeCompleted: true,
+  checkForUpdates: false,
 };
 
 const api = vi.hoisted(() => ({

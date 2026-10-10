@@ -45,6 +45,15 @@ impl Operations {
         )
     }
 
+    /// True while any fetch, pull, push or clone is running.
+    pub fn any_running(&self) -> bool {
+        !self
+            .running
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .is_empty()
+    }
+
     /// Cancels a running operation. Unknown ids (already finished) are ignored.
     pub fn cancel(&self, id: &str) {
         if let Some(token) = self

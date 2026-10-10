@@ -16,6 +16,7 @@ use crate::git::sync_plan::PlanError;
 use crate::repo_manager::RepoError;
 use crate::settings::SettingsError;
 use crate::store::accounts::AccountEntry;
+use crate::updates::UpdateError;
 
 /// Broad category the UI uses to pick a dialog.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, specta::Type)]
@@ -390,6 +391,22 @@ impl From<SavedSecretError> for AppError {
             SavedSecretError::Store(_) => (
                 AppErrorKind::Storage,
                 "Tenajlo couldn't save the list of remembered passwords.",
+            ),
+        };
+        AppError::with_details(kind, message, err.to_string())
+    }
+}
+
+impl From<UpdateError> for AppError {
+    fn from(err: UpdateError) -> Self {
+        let (kind, message) = match &err {
+            UpdateError::NotConfigured => (
+                AppErrorKind::InvalidInput,
+                "This copy of Tenajlo can't update itself. Download new versions from the release page.",
+            ),
+            UpdateError::TimedOut | UpdateError::Updater(_) => (
+                AppErrorKind::Server,
+                "Tenajlo couldn't check for or install an update. Check your network connection and try again later.",
             ),
         };
         AppError::with_details(kind, message, err.to_string())

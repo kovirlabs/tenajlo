@@ -59,6 +59,8 @@ pub struct Settings {
     pub editor: Editor,
     /// The first-run welcome (sign in, name and email) was finished or skipped.
     pub welcome_completed: bool,
+    /// Check GitHub Releases for a newer Tenajlo at startup (spec §10 item 8).
+    pub check_for_updates: bool,
 }
 
 impl Default for Settings {
@@ -71,6 +73,7 @@ impl Default for Settings {
             git_path: None,
             editor: Editor::SystemDefault,
             welcome_completed: false,
+            check_for_updates: true,
         }
     }
 }

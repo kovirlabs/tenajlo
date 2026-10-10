@@ -88,6 +88,7 @@ export const settings: Settings = {
   gitPath: null,
   editor: { kind: "VsCode" },
   welcomeCompleted: true,
+  checkForUpdates: false,
 };
 
 export const status: WorkingDirectoryStatus = {

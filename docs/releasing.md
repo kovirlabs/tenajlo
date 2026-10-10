@@ -67,7 +67,15 @@ through the manual matrix from spec §11:
 - [ ] Sign in (the token is saved in the Keychain); clone, commit, push, pull over HTTPS and
       SSH; the SSH passphrase prompt appears in Tenajlo.
 
-Then publish the draft release.
+### Updates (Windows and macOS)
+
+- [ ] The draft has `latest.json`, plus a `.sig` file next to the NSIS installer and the
+      macOS `.app.tar.gz`. (They're missing if the `TAURI_SIGNING_PRIVATE_KEY` secret isn't set.)
+- [ ] After publishing: a copy of the previous version shows "Tenajlo <version> is available"
+      at startup, and **Install and restart** installs it and reopens Tenajlo.
+
+Then publish the draft release. Installed copies only see a release once it's published:
+`latest.json` is served from the latest _published_ release.
 
 ## Updating bundled Git or Git LFS
 
@@ -88,3 +96,47 @@ which Apple Silicon needs to run it at all, but it isn't notarized, so Gatekeepe
 allow it once. Notarizing needs an Apple Developer ID certificate: set `signingIdentity` to it
 and pass `APPLE_CERTIFICATE`, `APPLE_ID`, `APPLE_PASSWORD` and `APPLE_TEAM_ID` to the macOS
 build. See Tauri's macOS code-signing guide.
+
+## Update signing
+
+Installed copies of Tenajlo download updates only if they're signed with Tenajlo's update key
+(a minisign key made by Tauri, separate from code signing and from any GPG key). The public
+half is in `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`; the private half and its
+password are GitHub secrets that only the release workflow sees.
+
+### One-time setup
+
+1. Create the key pair on your own computer (not in CI), and choose a strong password when asked:
+
+   ```bash
+   pnpm tauri signer generate -w ~/.tauri/tenajlo-updater.key
+   ```
+
+   This writes `~/.tauri/tenajlo-updater.key` (private, password-protected) and
+   `~/.tauri/tenajlo-updater.key.pub` (public).
+
+2. **Back up the private key file and its password** somewhere safe and separate, such as a
+   password manager. If they're lost, installed copies can never verify a new update: everyone
+   would have to download and reinstall Tenajlo by hand.
+3. Add both as repository secrets (Settings → Secrets and variables → Actions, or with `gh`):
+
+   ```bash
+   gh secret set TAURI_SIGNING_PRIVATE_KEY < ~/.tauri/tenajlo-updater.key
+   gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD   # paste the password when asked
+   ```
+
+4. Put the contents of `~/.tauri/tenajlo-updater.key.pub` into `plugins.updater.pubkey` in
+   `src-tauri/tauri.conf.json` and commit it. The public key isn't secret.
+
+From the next release on, the Windows and macOS builds sign their update packages and the
+release gets a `latest.json`. Copies installed _before_ the public key was added can't update
+themselves; they need one manual install of a version that has it.
+
+If the secret is set but `pubkey` is empty, the release workflow stops with an error rather
+than publishing updates nobody can verify.
+
+### Replacing the key
+
+Only if the private key leaks: generate a new pair, update both secrets and `pubkey`, and
+release. Copies with the old public key will reject updates signed with the new one, so tell
+users to download the new version by hand.

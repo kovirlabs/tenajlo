@@ -29,6 +29,8 @@ pub struct AppInfo {
     pub version: String,
     /// Folder with the daily log files.
     pub logs_dir: String,
+    /// This copy can check for and install updates itself (Windows and macOS release builds).
+    pub can_update: bool,
 }
 
 /// Tenajlo's version and where its logs are.
@@ -38,6 +40,7 @@ pub fn get_app_info(app: AppHandle) -> Result<AppInfo, AppError> {
     Ok(AppInfo {
         version: env!("CARGO_PKG_VERSION").to_owned(),
         logs_dir: logs_dir(&app)?.to_string_lossy().into_owned(),
+        can_update: crate::updates::enabled(&app),
     })
 }
 

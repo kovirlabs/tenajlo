@@ -1,6 +1,6 @@
 // Renders the real Tenajlo UI with Tauri's IPC mocked and invented data, for screenshots.
-// Open /demo/?scene=changes|history|clone|conflict|welcome|ssh|passwords[&theme=dark] on the Vite dev
-// server. Not part of the app build.
+// Open /demo/?scene=changes|history|clone|conflict|welcome|ssh|passwords|update[&theme=dark]
+// on the Vite dev server. Not part of the app build.
 import { createRoot } from "react-dom/client";
 import { mockIPC } from "@tauri-apps/api/mocks";
 import { App } from "../src/App";
@@ -33,6 +33,7 @@ mockIPC(
           ...f.settings,
           theme: dark ? "Dark" : "Light",
           welcomeCompleted: !welcome,
+          checkForUpdates: scene === "update",
         };
       case "list_repositories":
         return welcome
@@ -86,6 +87,20 @@ mockIPC(
         };
       case "list_saved_secrets":
         return f.savedSecrets;
+      case "get_app_info":
+        return {
+          version: "1.0.2",
+          logsDir: "C:\\Users\\sam\\AppData\\Roaming\\com.kovirlabs.tenajlo\\logs",
+          canUpdate: true,
+        };
+      case "check_for_update":
+        return scene === "update"
+          ? {
+              version: "1.1.0",
+              notes: null,
+              releaseUrl: "https://github.com/kovirlabs/tenajlo/releases/latest",
+            }
+          : null;
       default:
         return null;
     }
@@ -131,6 +146,9 @@ if (scene === "clone") {
 
 if (scene === "ssh") useUiStore.getState().openSettings("ssh");
 if (scene === "passwords") useUiStore.getState().openSettings("passwords");
+if (scene === "update") {
+  useUiStore.getState().openSettings("about");
+}
 
 if (scene === "changes") {
   // Type a commit summary the way a user would, so the commit button is ready.
