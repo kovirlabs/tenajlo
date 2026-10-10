@@ -1,19 +1,12 @@
 //! Repository list commands.
 
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::DialogExt;
-use uuid::Uuid;
 
+use super::{parse_id, pick, Pick};
 use crate::error::AppError;
 use crate::git::init;
 use crate::repo_manager::{Repository, RepositoryList};
 use crate::state::AppState;
-
-/// Parses a repository id from the frontend.
-pub(crate) fn parse_id(id: &str) -> Result<Uuid, AppError> {
-    id.parse()
-        .map_err(|_| AppError::invalid_input("That repository id isn't valid."))
-}
 
 /// Lists added repositories, most recently opened first.
 #[tauri::command]
@@ -29,19 +22,9 @@ pub async fn add_local_repository(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<Option<Repository>, AppError> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    app.dialog()
-        .file()
-        .set_title("Add a local repository")
-        .pick_folder(move |picked| {
-            let _ = tx.send(picked);
-        });
-    let Some(picked) = rx.await.ok().flatten() else {
+    let Some(dir) = pick(&app, "Add a local repository", Pick::Folder).await? else {
         return Ok(None);
     };
-    let dir = picked
-        .into_path()
-        .map_err(|_| AppError::invalid_input("That folder can't be opened."))?;
     let git = state.git()?;
     Ok(Some(state.repos.add(&git, &dir).await?))
 }

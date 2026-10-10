@@ -2,7 +2,7 @@
 
 use tauri::State;
 
-use super::repos::parse_id;
+use super::parse_id;
 use crate::error::AppError;
 use crate::git::stash::{self, SavedChanges};
 use crate::git::switch::{self, LocalChanges};

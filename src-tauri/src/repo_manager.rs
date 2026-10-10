@@ -1,7 +1,7 @@
 //! Owns the repository list and per-repository state.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -41,6 +41,8 @@ pub struct RepositoryList {
 pub enum RepoError {
     #[error("unknown repository id")]
     UnknownRepository,
+    #[error("path is outside the repository")]
+    OutsideRepository,
     #[error(transparent)]
     Git(#[from] GitError),
     #[error(transparent)]
@@ -163,6 +165,11 @@ impl RepoManager {
             .ok_or(RepoError::UnknownRepository)
     }
 
+    /// `root/rel` for a file path from the UI, if it stays inside the repository (spec §10.9).
+    pub fn file(&self, id: Uuid, rel: &str) -> Result<PathBuf, RepoError> {
+        inside_repo(&self.root(id)?, rel).ok_or(RepoError::OutsideRepository)
+    }
+
     /// Waits for and takes the repository's mutation lock. Hold it for the whole
     /// mutating git operation; read-only operations don't need it.
     pub async fn lock_repo(&self, id: Uuid) -> Result<(PathBuf, OwnedMutexGuard<()>), RepoError> {
@@ -202,6 +209,23 @@ fn to_dto(entry: &RepositoryEntry) -> Repository {
             .unwrap_or_else(|| entry.path.display().to_string()),
         path: entry.path.display().to_string(),
         missing: !entry.path.is_dir(),
+    }
+}
+
+/// `root/rel` if `rel` is a plain relative path that stays inside `root`.
+fn inside_repo(root: &Path, rel: &str) -> Option<PathBuf> {
+    let rel = Path::new(rel);
+    let plain = rel
+        .components()
+        .all(|c| matches!(c, Component::Normal(_) | Component::CurDir));
+    if !plain || rel.as_os_str().is_empty() {
+        return None;
+    }
+    let full = root.join(rel);
+    // Symlinks could still point outside; compare canonical paths when the file exists.
+    match (dunce::canonicalize(&full), dunce::canonicalize(root)) {
+        (Ok(f), Ok(r)) if !f.starts_with(&r) => None,
+        _ => Some(full),
     }
 }
 
@@ -287,6 +311,27 @@ mod tests {
             mgr.lock_repo(Uuid::new_v4()).await,
             Err(RepoError::UnknownRepository)
         ));
+    }
+
+    #[test]
+    fn only_paths_inside_the_repo() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("repo");
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        std::fs::write(root.join("sub/a.txt"), "").unwrap();
+        assert_eq!(
+            inside_repo(&root, "sub/a.txt"),
+            Some(root.join("sub/a.txt"))
+        );
+        for bad in ["../x", "/etc/passwd", "sub/../../x", ""] {
+            assert_eq!(inside_repo(&root, bad), None, "{bad}");
+        }
+        #[cfg(unix)]
+        {
+            std::fs::write(dir.path().join("secret"), "").unwrap();
+            std::os::unix::fs::symlink(dir.path().join("secret"), root.join("link")).unwrap();
+            assert_eq!(inside_repo(&root, "link"), None);
+        }
     }
 
     #[test]

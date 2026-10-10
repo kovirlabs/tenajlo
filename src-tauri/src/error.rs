@@ -3,11 +3,14 @@
 use serde::Serialize;
 
 use crate::auth::accounts::AccountError;
+use crate::auth::remote_auth::PrepareError;
 use crate::editor::EditorError;
 use crate::forgejo::ForgejoError;
 use crate::git::clone::CloneError;
+use crate::git::commit::CommitBlocker;
 use crate::git::error::{GitError, GitErrorKind};
 use crate::git::init::InitError;
+use crate::git::sync_plan::PlanError;
 use crate::repo_manager::RepoError;
 use crate::settings::SettingsError;
 use crate::store::accounts::AccountEntry;
@@ -54,6 +57,19 @@ impl AppError {
         details: impl AsRef<str>,
     ) -> Self {
         Self::new(kind, message, Some(crate::redact::redact(details.as_ref())))
+    }
+
+    /// Something on this computer failed (opening a folder, starting a program); `details`
+    /// says what.
+    pub fn internal(message: impl Into<String>, details: impl AsRef<str>) -> Self {
+        Self::with_details(AppErrorKind::Internal, message, details)
+    }
+
+    /// The repository stores files with Git LFS but git-lfs isn't installed here.
+    pub fn lfs_missing() -> Self {
+        Self::invalid_input(
+            "This repository stores large files with Git LFS, which isn't installed on this computer. Install Git LFS (git-lfs.com), then restart Tenajlo.",
+        )
     }
 
     /// Rejected command input (bad id, bad path).
@@ -150,6 +166,40 @@ impl From<GitError> for AppError {
     }
 }
 
+impl From<PrepareError> for AppError {
+    fn from(err: PrepareError) -> Self {
+        match err {
+            PrepareError::SignInRequired(account) => AppError::sign_in_required(&account, None),
+            PrepareError::Trampoline(e) => {
+                AppError::internal("Couldn't prepare sign-in prompts.", e.to_string())
+            }
+        }
+    }
+}
+
+impl From<CommitBlocker> for AppError {
+    fn from(blocker: CommitBlocker) -> Self {
+        AppError::invalid_input(match blocker {
+            CommitBlocker::Conflicts => "Resolve the conflicted files before committing.",
+            CommitBlocker::LfsMissing => return AppError::lfs_missing(),
+            CommitBlocker::OperationInProgress => {
+                "Finish or abort the operation in progress before committing."
+            }
+            CommitBlocker::NothingStaged => "Select at least one file to include in the commit.",
+        })
+    }
+}
+
+impl From<PlanError> for AppError {
+    fn from(err: PlanError) -> Self {
+        AppError::invalid_input(match err {
+            PlanError::NoRemote => "This repository isn't connected to a server.",
+            PlanError::NotPublished => "This branch isn't on the server yet. Publish it first.",
+            PlanError::Detached => "Switch to a branch first.",
+        })
+    }
+}
+
 impl From<RepoError> for AppError {
     fn from(err: RepoError) -> Self {
         match err {
@@ -158,6 +208,9 @@ impl From<RepoError> for AppError {
                 "That repository is no longer in your list.",
                 None,
             ),
+            RepoError::OutsideRepository => {
+                AppError::invalid_input("That file isn't in this repository.")
+            }
             RepoError::Git(e) => e.into(),
             RepoError::Store(e) => AppError::new(
                 AppErrorKind::Storage,
@@ -301,6 +354,7 @@ impl From<AccountError> for AppError {
                 "That account is no longer signed in.",
                 None,
             ),
+            AccountError::SignInRequired(account) => AppError::sign_in_required(&account, None),
             AccountError::ReadOnly => AppError::new(
                 AppErrorKind::Storage,
                 "Your accounts were saved by a newer version of Tenajlo, so they can't be changed here. Update Tenajlo.",

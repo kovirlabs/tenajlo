@@ -1,8 +1,8 @@
 //! Settings screen commands.
 
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::DialogExt;
 
+use super::{pick, Pick};
 use crate::editor::{self, EditorOption};
 use crate::error::AppError;
 use crate::git::identity::{self, Identity};
@@ -28,30 +28,16 @@ pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> Result<S
 #[tauri::command]
 #[specta::specta]
 pub async fn choose_folder(app: AppHandle, title: String) -> Option<String> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    app.dialog().file().set_title(title).pick_folder(move |p| {
-        let _ = tx.send(p);
-    });
-    let picked = rx.await.ok().flatten()?;
-    picked
-        .into_path()
-        .ok()
-        .map(|p| p.to_string_lossy().into_owned())
+    let picked = pick(&app, title, Pick::Folder).await.ok().flatten()?;
+    Some(picked.to_string_lossy().into_owned())
 }
 
 /// File picker for settings (git or editor program). `None` if cancelled.
 #[tauri::command]
 #[specta::specta]
 pub async fn choose_file(app: AppHandle, title: String) -> Option<String> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    app.dialog().file().set_title(title).pick_file(move |p| {
-        let _ = tx.send(p);
-    });
-    let picked = rx.await.ok().flatten()?;
-    picked
-        .into_path()
-        .ok()
-        .map(|p| p.to_string_lossy().into_owned())
+    let picked = pick(&app, title, Pick::File).await.ok().flatten()?;
+    Some(picked.to_string_lossy().into_owned())
 }
 
 /// Editors Settings can offer, and whether each is installed.

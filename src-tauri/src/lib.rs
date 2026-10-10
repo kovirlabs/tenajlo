@@ -82,7 +82,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
         .events(collect_events![
             watcher::RepoChanged,
             auth::broker::AuthPromptRequested,
-            commands::sync::GitProgress
+            commands::remote_op::GitProgress
         ])
 }
 

@@ -3,16 +3,14 @@
 use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager, State};
-use tauri_plugin_dialog::DialogExt;
 
-use super::sync::{explain_failure, prepare_error, progress_emitter};
-use crate::auth::remote_auth;
+use super::remote_op::{explain_failure, remote_run};
+use super::{check_op_id, pick, Pick};
+use crate::auth::remote_auth::AuthRequest;
 use crate::error::AppError;
 use crate::forgejo::address::normalize_base_url;
 use crate::forgejo::repos::{self, RemoteRepository};
-use crate::forgejo::ForgejoError;
 use crate::git::clone::{self, CloneError};
-use crate::git::remote::RemoteRun;
 use crate::repo_manager::Repository;
 use crate::state::AppState;
 
@@ -26,31 +24,12 @@ pub async fn list_forgejo_repositories(
     state: State<'_, AppState>,
     account_id: String,
 ) -> Result<Vec<RemoteRepository>, AppError> {
-    let account = account_id
-        .parse()
-        .ok()
-        .and_then(|id| state.accounts.entry(id))
-        .ok_or_else(|| AppError::from(crate::auth::accounts::AccountError::UnknownAccount))?;
-    if account.needs_sign_in {
-        return Err(AppError::sign_in_required(&account, None));
-    }
-    let token = state
-        .accounts
-        .token(&account)
-        .await
-        .map_err(|e| AppError::from(crate::auth::accounts::AccountError::Secret(e)))?;
-    let Some(token) = token else {
-        let _ = state.accounts.mark_needs_sign_in(account.id);
-        return Err(AppError::sign_in_required(&account, None));
-    };
+    let account = super::account(&state, &account_id)?;
+    let token = state.accounts.usable_token(&account).await?;
     let base = normalize_base_url(&account.base_url)?;
-    match repos::list_repositories(&state.forgejo, &base, &token).await {
-        Err(ForgejoError::Unauthorized) => {
-            let _ = state.accounts.mark_needs_sign_in(account.id);
-            Err(AppError::sign_in_required(&account, None))
-        }
-        other => Ok(other?),
-    }
+    repos::list_repositories(&state.forgejo, &base, &token)
+        .await
+        .map_err(|e| super::account_api_error(&state, &account, e))
 }
 
 /// Default destination for `url`: `<default clone folder>/<name>` (Settings, else
@@ -83,19 +62,9 @@ pub(crate) fn default_parent(app: &AppHandle, state: &AppState) -> Result<PathBu
 #[tauri::command]
 #[specta::specta]
 pub async fn choose_clone_folder(app: AppHandle, url: String) -> Result<Option<String>, AppError> {
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    app.dialog()
-        .file()
-        .set_title("Choose where to put the repository")
-        .pick_folder(move |picked| {
-            let _ = tx.send(picked);
-        });
-    let Some(picked) = rx.await.ok().flatten() else {
+    let Some(parent) = pick(&app, "Choose where to put the repository", Pick::Folder).await? else {
         return Ok(None);
     };
-    let parent = picked
-        .into_path()
-        .map_err(|_| AppError::invalid_input("That folder can't be used."))?;
     Ok(Some(display(&unique_child(&parent, &name_for(&url)))))
 }
 
@@ -110,33 +79,23 @@ pub async fn clone_repository(
     url: String,
     path: String,
 ) -> Result<Repository, AppError> {
-    if uuid::Uuid::parse_str(&op_id).is_err() {
-        return Err(AppError::invalid_input("Invalid operation id."));
-    }
+    check_op_id(&op_id)?;
     let url = url.trim().to_owned();
     clone::validate_url(&url)?;
     let dest = PathBuf::from(path.trim());
     let git = state.git()?;
     let (cancel, _op) = state.operations.start(&op_id);
 
-    let auth = remote_auth::prepare(
-        &state.accounts,
-        state.trampoline.as_ref(),
-        state.askpass.as_deref(),
-        "",
-        &op_id,
-        cancel.clone(),
-        Some(&url),
-        true,
-    )
-    .await
-    .map_err(prepare_error)?;
-    let run = RemoteRun {
-        env: auth.env.clone(),
-        config: auth.config.clone(),
-        cancel,
-        on_progress: progress_emitter(app, String::new(), op_id.clone()),
-    };
+    let auth = state
+        .prepare_auth(AuthRequest {
+            repo_id: "",
+            op_id: &op_id,
+            cancel: cancel.clone(),
+            remote_url: Some(&url),
+            interactive: true,
+        })
+        .await?;
+    let run = remote_run(&app, &auth, &cancel, "", &op_id);
     match clone::clone(&git, &url, &dest, run).await {
         Ok(()) => {}
         Err(CloneError::Git(e)) => return Err(explain_failure(&state, &auth, e).await),

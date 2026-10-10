@@ -2,7 +2,7 @@
 
 use tauri::{AppHandle, State};
 
-use super::repos::parse_id;
+use super::parse_id;
 use crate::error::AppError;
 use crate::git::branches;
 use crate::git::diff;
