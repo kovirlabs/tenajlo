@@ -512,7 +512,8 @@ mod tests {
         let canceller = token.clone();
         let watch = pid_file.clone();
         tokio::spawn(async move {
-            while !watch.exists() {
+            // The shell creates the file before writing the pid; wait for the pid itself.
+            while std::fs::read_to_string(&watch).map_or(true, |s| s.trim().is_empty()) {
                 tokio::time::sleep(Duration::from_millis(10)).await;
             }
             canceller.cancel();
