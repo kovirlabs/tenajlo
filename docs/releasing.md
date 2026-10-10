@@ -40,7 +40,8 @@ and the three builds upload into it, along with the license list.
 ### Windows
 
 Install the draft's installer on a clean Windows 10 or 11 machine (no Git installed) and run
-through the manual matrix from spec §11:
+through the manual matrix from spec §11. [`dev/test-server/`](../dev/test-server/README.md)
+sets up a local Forgejo with users, a token and a sample repository for this:
 
 - [ ] The installer runs without administrator rights; SmartScreen's "unknown publisher"
       warning is expected while builds are unsigned.
