@@ -112,7 +112,13 @@ export function CommitBox({ repoId }: { repoId: string }) {
           </button>
         </p>
       )}
-      <button type="button" disabled={!canCommit} onClick={() => void commit()}>
+      <button
+        type="button"
+        className="commit-button"
+        title={`${merging ? "Commit merge to" : "Commit to"} ${branch}`}
+        disabled={!canCommit}
+        onClick={() => void commit()}
+      >
         {merging ? "Commit merge to " : "Commit to "}
         <strong>{branch}</strong>
       </button>

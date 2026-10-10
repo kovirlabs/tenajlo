@@ -161,11 +161,21 @@ button:focus-visible {
 .popover {
   position: relative;
   height: 100%;
+  display: flex;
+  flex: 0 1 220px;
+  min-width: 140px;
+}
+
+.popover > .toolbar-button {
+  flex: 1;
+  min-width: 0;
 }
 
 .toolbar-button {
   height: 100%;
-  min-width: 220px;
+  /* 220px each when there's room; narrower windows shrink them and shorten long names. */
+  flex: 0 1 220px;
+  min-width: 140px;
   padding: 0 12px;
   border: 0;
   border-right: 1px solid var(--border);
@@ -186,7 +196,15 @@ button:focus-visible {
 .toolbar-label {
   display: flex;
   flex-direction: column;
+  min-width: 0;
   font-weight: 600;
+}
+
+.toolbar-value,
+.toolbar-label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toolbar-label small {
@@ -263,8 +281,11 @@ button:focus-visible {
 }
 
 .dialog {
-  /* Wide enough for the clone and settings dialogs; small dialogs size to their content. */
-  max-width: min(680px, 94vw);
+  /* Wide enough for the clone dialog; small dialogs size to their content. Never larger
+     than the window: long content scrolls inside. */
+  max-width: min(680px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   color: var(--fg);
   background: var(--bg);
   border: 1px solid var(--border);
@@ -284,6 +305,15 @@ button:focus-visible {
   text-align: right;
 }
 
+/* A form's closing buttons stick to the bottom of a dialog that has to scroll. */
+.dialog form > .dialog-actions:last-child {
+  position: sticky;
+  bottom: -1em;
+  margin-bottom: -1em;
+  padding: 8px 0 1em;
+  background: var(--bg);
+}
+
 code {
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   word-break: break-all;
@@ -296,8 +326,8 @@ code {
 }
 
 .sidebar {
-  width: 300px;
-  min-width: 220px;
+  width: clamp(240px, 26vw, 380px);
+  flex: none;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
@@ -344,8 +374,23 @@ code {
 .changes-list {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  /* Header plus at least two files, however short the window. */
+  min-height: 96px;
   flex: 1;
+}
+
+/* Short windows: the conflict banner scrolls and the description box shrinks, so the list
+   of changes keeps its room. */
+@media (max-height: 640px) {
+  .sidebar .conflict-banner {
+    flex: none;
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+
+  .commit-box textarea {
+    height: 3em;
+  }
 }
 
 /* Long paths are cut off with an ellipsis rather than scrolling sideways. */
@@ -564,7 +609,25 @@ code {
 .commit-files {
   width: 260px;
   flex: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
   border-right: 1px solid var(--border);
+}
+
+/* Narrow windows: the file list goes above the diff instead of squeezing it. */
+@media (max-width: 1000px) {
+  .commit-split {
+    flex-direction: column;
+  }
+
+  .commit-files {
+    width: auto;
+    max-height: 30%;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
 }
 
 .picker-section {
@@ -600,7 +663,8 @@ code {
 
 .commit-box input,
 .commit-box textarea,
-.form input {
+.form input,
+.form select {
   font: inherit;
   color: var(--fg);
   background: var(--bg);
@@ -615,6 +679,13 @@ code {
 
 .commit-box button {
   width: 100%;
+}
+
+/* One line however long the branch name; the full text is in the tooltip. */
+.commit-button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 button:disabled {
@@ -832,7 +903,7 @@ button.danger {
 }
 
 .clone-form {
-  width: min(560px, 80vw);
+  width: min(560px, calc(100vw - 80px));
 }
 
 .clone-list-controls,
@@ -853,7 +924,7 @@ button.danger {
 }
 
 .clone-repo-list {
-  height: 260px;
+  height: clamp(120px, 100vh - 400px, 260px);
   margin: 0;
   padding: 0;
   overflow-y: auto;
@@ -923,6 +994,7 @@ button.danger {
 
 .update-banner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -960,13 +1032,70 @@ button.danger {
   flex: 1;
 }
 
+.settings-dialog {
+  width: min(820px, calc(100vw - 32px));
+  max-width: none;
+  height: min(620px, calc(100vh - 32px));
+  overflow: hidden;
+}
+
+.settings-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
 .settings {
-  width: min(600px, 80vw);
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 20px;
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.settings-nav-item {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-muted);
+  text-align: left;
+}
+
+.settings-nav-item:hover {
+  background: var(--bg-subtle);
+  color: var(--fg);
+}
+
+.settings-nav-item[aria-selected="true"] {
+  background: var(--bg-subtle);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.settings-nav-item:focus-visible {
+  outline-offset: -2px;
 }
 
 .settings-panel {
-  min-height: 320px;
-  padding: 12px 0;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for focus rings and the scrollbar. */
+  padding: 2px 8px 12px 2px;
+}
+
+.settings-actions {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
 .settings-group {

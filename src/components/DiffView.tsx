@@ -16,6 +16,10 @@ export type LineStagingProps = {
 
 const MARKER = { Add: "+", Delete: "-", Context: " " } as const;
 const ROW_HEIGHT = 20;
+/** Columns a tab advances to (the browser's default `tab-size`). */
+const TAB_SIZE = 8;
+/** Line numbers, marker, staging boxes and padding, beside the text. */
+const GUTTER_PX = 160;
 
 /** Unified diff renderer, virtualized for large files. */
 export function DiffView({
@@ -32,6 +36,14 @@ export function DiffView({
       ...h.lines.map((line, index) => ({ type: "line" as const, line, hunk, index })),
     ]);
   }, [diff]);
+  // Wide enough for the longest line, so long lines scroll sideways instead of being cut off.
+  const contentWidth = useMemo(() => {
+    const longest = rows.reduce(
+      (max, r) => Math.max(max, r.type === "line" ? columns(r.line.text) : r.header.length),
+      0,
+    );
+    return `calc(${longest}ch + ${GUTTER_PX}px)`;
+  }, [rows]);
   // Row of the last line clicked, for Shift+click ranges.
   const anchor = useRef<number | null>(null);
 
@@ -73,6 +85,7 @@ export function DiffView({
       ariaLabel="Diff"
       items={rows}
       rowHeight={ROW_HEIGHT}
+      contentWidth={contentWidth}
       renderRow={(row, rowIndex) =>
         row.type === "hunk" ? (
           <div className={staging ? "diff-row diff-hunk diff-stageable" : "diff-row diff-hunk"}>
@@ -113,6 +126,13 @@ export function DiffView({
       }
     />
   );
+}
+
+/** Display width of `text` in columns, with tabs expanded. */
+function columns(text: string): number {
+  let col = 0;
+  for (const ch of text) col = ch === "\t" ? col + TAB_SIZE - (col % TAB_SIZE) : col + 1;
+  return col;
 }
 
 function isChangeRow(row: Row): row is Extract<Row, { type: "line" }> {

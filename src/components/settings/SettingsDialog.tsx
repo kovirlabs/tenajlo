@@ -24,16 +24,17 @@ export function SettingsDialog() {
   const tab = useUiStore((s) => s.settingsTab);
   const setTab = useUiStore((s) => s.setSettingsTab);
   return (
-    <Modal open={open} title="Settings" onClose={close}>
+    <Modal open={open} title="Settings" onClose={close} className="settings-dialog">
       <div className="settings">
-        <div role="tablist" className="tabs">
+        {/* A list down the side: room for every section at any window width. */}
+        <div role="tablist" aria-orientation="vertical" className="settings-nav">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
               role="tab"
               aria-selected={tab === t.id}
-              className="tab"
+              className="settings-nav-item"
               onClick={() => setTab(t.id)}
             >
               {t.label}
@@ -49,13 +50,11 @@ export function SettingsDialog() {
           {tab === "appearance" && <AppearancePanel />}
           {tab === "about" && <AboutPanel />}
         </div>
-        {tab !== "accounts" && (
-          <div className="dialog-actions">
-            <button type="button" onClick={close}>
-              Done
-            </button>
-          </div>
-        )}
+      </div>
+      <div className="dialog-actions settings-actions">
+        <button type="button" onClick={close}>
+          Done
+        </button>
       </div>
     </Modal>
   );
