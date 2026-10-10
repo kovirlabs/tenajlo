@@ -6,7 +6,7 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
-## [1.1.0] - Unreleased
+## [1.1.0] - 2026-10-10
 
 ### Added
 
