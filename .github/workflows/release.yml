@@ -107,6 +107,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           releaseId: ${{ needs.create-release.outputs.release-id }}
+          # Its default (false) can publish the release when a build uploads; a person
+          # publishes after the checks in docs/releasing.md.
+          releaseDraft: true
           args: ${{ steps.bundle.outputs.args }}
       - name: Attach the license list to the release
         if: runner.os == 'Windows'
