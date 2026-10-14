@@ -6,7 +6,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use tokio_util::sync::CancellationToken;
 
-use super::error::GitError;
+use super::error::{GitError, GitErrorKind};
 use super::exec::{Access, GitBinary, GitCommand};
 use super::parse::progress::{parse_progress, Progress};
 
@@ -213,6 +213,29 @@ pub async fn push(
     run_remote(git, root, args, r).await
 }
 
+/// Pushes like [`push`] (without `--set-upstream`). When the server rejects it because it has
+/// commits we don't, also fetches `remote` (best effort) so the branch shows as behind and the
+/// sync button offers Pull instead of the same failing Push. Returns the push result either way.
+pub async fn push_or_catch_up(
+    git: &GitBinary,
+    root: &Path,
+    remote: &str,
+    local: &str,
+    remote_branch: &str,
+    make_run: impl Fn() -> RemoteRun,
+) -> Result<(), GitError> {
+    let pushed = push(git, root, remote, local, remote_branch, false, make_run()).await;
+    if let Err(GitError::Failed {
+        kind: GitErrorKind::PushRejected,
+        ..
+    }) = &pushed
+    {
+        // A failed fetch changes nothing: the user still gets the rejection to act on.
+        let _ = fetch(git, root, remote, make_run()).await;
+    }
+    pushed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -335,6 +358,36 @@ mod tests {
             Err(GitError::Failed { kind, .. }) => assert_eq!(kind, GitErrorKind::PullDiverged),
             other => panic!("unexpected {other:?}"),
         }
+    }
+
+    #[tokio::test]
+    async fn rejected_push_fetches_so_the_branch_shows_behind() {
+        let (_tmp, repo, origin) = setup().await;
+        let git = git();
+        push(
+            &git,
+            &repo,
+            "origin",
+            "main",
+            "main",
+            true,
+            RemoteRun::quiet(),
+        )
+        .await
+        .unwrap();
+        let other = teammate_clone(&origin).await;
+        git_in(&other, &["commit", "-q", "--allow-empty", "-m", "theirs"]).await;
+        git_in(&other, &["push", "-q"]).await;
+        git_in(&repo, &["commit", "-q", "--allow-empty", "-m", "ours"]).await;
+        let before = status(&git, &repo).await.unwrap();
+        assert_eq!((before.branch.ahead, before.branch.behind), (1, 0));
+
+        match push_or_catch_up(&git, &repo, "origin", "main", "main", RemoteRun::quiet).await {
+            Err(GitError::Failed { kind, .. }) => assert_eq!(kind, GitErrorKind::PushRejected),
+            other => panic!("unexpected {other:?}"),
+        }
+        let after = status(&git, &repo).await.unwrap();
+        assert_eq!((after.branch.ahead, after.branch.behind), (1, 1));
     }
 
     #[tokio::test]
