@@ -6,6 +6,8 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-13
+
 ### Changed
 
 - Dark text on the orange buttons in the dark theme is bold, so it's easier to read.
@@ -84,7 +86,8 @@ First public release:
   theme.
 - First-run welcome, plain-language error messages, daily log files.
 
-[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/kovirlabs/tenajlo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/kovirlabs/tenajlo/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/kovirlabs/tenajlo/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/kovirlabs/tenajlo/compare/v1.0.0...v1.0.1
