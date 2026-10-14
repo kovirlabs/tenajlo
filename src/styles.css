@@ -349,6 +349,12 @@ code {
   word-break: break-all;
 }
 
+/* Short names like write:repository read badly split mid-word; paths still break anywhere. */
+code.nowrap {
+  white-space: nowrap;
+  word-break: normal;
+}
+
 .repo-view {
   flex: 1;
   display: flex;
@@ -997,6 +1003,11 @@ button.danger {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+}
+
+.clone-repo-list [aria-selected="true"] > .picker-item {
+  background: var(--selection);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .clone-repo-desc {
