@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { AppError } from "../bindings";
 import { useSyncStore } from "../stores/syncStore";
 import { useUiStore } from "../stores/uiStore";
-import { ErrorDialog } from "./ErrorDialog";
+import { ErrorDialog, errorTitle } from "./ErrorDialog";
 
 const error = (kind: AppError["kind"], accountId: string | null): AppError => ({
   kind,
@@ -40,5 +40,21 @@ describe("ErrorDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Merge the server's changes" }));
     expect(run).toHaveBeenCalledWith("PullMerge");
     expect(useUiStore.getState().error).toBeNull();
+  });
+
+  it("offers to pull after a rejected push, with a title that says why", () => {
+    const run = vi.fn(async () => {});
+    useSyncStore.setState({ run });
+    useUiStore.setState({ error: { ...error("Git", null), gitKind: "PushRejected" } });
+    render(<ErrorDialog />);
+    expect(screen.getByText("The server has newer commits")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Pull" }));
+    expect(run).toHaveBeenCalledWith("Pull");
+    expect(useUiStore.getState().error).toBeNull();
+  });
+
+  it("keeps the generic title for real failures", () => {
+    expect(errorTitle(error("Git", null))).toBe("Something went wrong");
+    expect(errorTitle(error("InvalidInput", null))).toBe("Can't do that");
   });
 });
