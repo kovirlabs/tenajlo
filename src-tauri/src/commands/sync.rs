@@ -88,23 +88,24 @@ pub async fn sync(
         }
     }
 
-    let run = make_run();
     let remote_name = plan.remote().to_owned();
     let result = match plan {
-        Plan::Fetch { remote } => remote::fetch(&git, &root, &remote, run).await,
-        Plan::Pull { merge: true, .. } => remote::pull_merge(&git, &root, run).await,
+        Plan::Fetch { remote } => remote::fetch(&git, &root, &remote, make_run()).await,
+        Plan::Pull { merge: true, .. } => remote::pull_merge(&git, &root, make_run()).await,
         Plan::Pull { merge: false, .. } => match state.settings.get().pull_strategy {
-            PullStrategy::FastForwardOnly => remote::pull(&git, &root, run).await,
-            PullStrategy::Merge => remote::pull_merge(&git, &root, run).await,
-            PullStrategy::Rebase => remote::pull_rebase(&git, &root, run).await,
+            PullStrategy::FastForwardOnly => remote::pull(&git, &root, make_run()).await,
+            PullStrategy::Merge => remote::pull_merge(&git, &root, make_run()).await,
+            PullStrategy::Rebase => remote::pull_rebase(&git, &root, make_run()).await,
         },
         Plan::Push {
             remote,
             branch,
             remote_branch,
-        } => remote::push(&git, &root, &remote, &branch, &remote_branch, false, run).await,
+        } => {
+            remote::push_or_catch_up(&git, &root, &remote, &branch, &remote_branch, make_run).await
+        }
         Plan::Publish { remote, branch } => {
-            remote::push(&git, &root, &remote, &branch, &branch, true, run).await
+            remote::push(&git, &root, &remote, &branch, &branch, true, make_run()).await
         }
     };
     match result {

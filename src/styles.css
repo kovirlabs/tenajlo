@@ -6,6 +6,8 @@
   --border: #d0d7de;
   --accent: #b5551a;
   --accent-fg: #ffffff;
+  /* Bold when --accent-fg is dark text on the light accent: normal weight reads too thin. */
+  --accent-fg-weight: 400;
   --danger: #b42318;
   --added: #1a7f37;
   --modified: #9a6700;
@@ -28,6 +30,7 @@
     --border: #30363d;
     --accent: #f08a3c;
     --accent-fg: #161b22;
+    --accent-fg-weight: 600;
     --danger: #ff7b72;
     --added: #3fb950;
     --modified: #d29922;
@@ -46,6 +49,7 @@
   --border: #30363d;
   --accent: #f08a3c;
   --accent-fg: #161b22;
+  --accent-fg-weight: 600;
   --danger: #ff7b72;
   --added: #3fb950;
   --modified: #d29922;
@@ -129,6 +133,7 @@ button {
   border-radius: 6px;
   background: var(--accent);
   color: var(--accent-fg);
+  font-weight: var(--accent-fg-weight);
   cursor: pointer;
 }
 
@@ -182,6 +187,7 @@ button:focus-visible {
   border-radius: 0;
   background: transparent;
   color: var(--fg);
+  font-weight: 400;
   text-align: left;
   display: flex;
   align-items: center;
@@ -254,6 +260,7 @@ button:focus-visible {
   border-radius: 0;
   background: transparent;
   color: var(--fg);
+  font-weight: 400;
   text-align: left;
   padding: 6px 12px;
 }
@@ -352,6 +359,7 @@ code {
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--fg-muted);
+  font-weight: 400;
   padding: 8px;
 }
 
@@ -699,6 +707,7 @@ button:disabled {
 button.secondary {
   background: transparent;
   color: var(--fg);
+  font-weight: 400;
   border-color: var(--border);
 }
 
@@ -707,6 +716,7 @@ button.link {
   border: 0;
   background: none;
   color: var(--accent);
+  font-weight: 400;
   text-decoration: underline;
   width: auto;
 }
@@ -759,6 +769,7 @@ button.link {
   border-radius: 0;
   background: transparent;
   color: var(--fg);
+  font-weight: 400;
   text-align: left;
 }
 
@@ -771,6 +782,7 @@ button.danger {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
+  font-weight: 400;
 }
 
 .banner {
@@ -1070,6 +1082,7 @@ button.danger {
   border-radius: 6px;
   background: transparent;
   color: var(--fg-muted);
+  font-weight: 400;
   text-align: left;
 }
 
