@@ -18,6 +18,9 @@ pub enum ForgejoError {
     InvalidUrl(String),
     #[error("certificate not trusted: {0}")]
     TlsUntrusted(String),
+    /// An HTTPS request got a plain-HTTP answer: the server only speaks `http://`.
+    #[error("server doesn't use HTTPS: {0}")]
+    NotHttps(String),
     #[error("server unreachable: {0}")]
     Unreachable(String),
     #[error("request timed out")]
