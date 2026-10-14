@@ -198,6 +198,8 @@ fn classify(err: reqwest::Error) -> ForgejoError {
     let chain = error_chain(&err);
     if err.is_timeout() {
         ForgejoError::TimedOut
+    } else if is_plain_http(&chain) {
+        ForgejoError::NotHttps(chain)
     } else if is_tls_failure(&chain) {
         ForgejoError::TlsUntrusted(chain)
     } else if err.is_connect() {
@@ -213,6 +215,11 @@ fn is_tls_failure(chain: &str) -> bool {
     ["certificate", "unknownissuer"]
         .iter()
         .any(|needle| c.contains(needle))
+}
+
+/// rustls's wording when an HTTPS handshake gets a plain-HTTP reply.
+fn is_plain_http(chain: &str) -> bool {
+    chain.to_ascii_lowercase().contains("invalidcontenttype")
 }
 
 /// The error and all its sources, joined with `: `.
@@ -418,5 +425,15 @@ pub(crate) mod tests {
             "error sending request: client error (Connect): invalid peer certificate: UnknownIssuer"
         ));
         assert!(!is_tls_failure("dns error: failed to lookup address"));
+    }
+
+    #[test]
+    fn plain_http_answer_is_recognized() {
+        assert!(is_plain_http(
+            "error sending request: client error (Connect): received corrupt message of type InvalidContentType"
+        ));
+        assert!(!is_plain_http(
+            "client error (Connect): invalid peer certificate: UnknownIssuer"
+        ));
     }
 }
