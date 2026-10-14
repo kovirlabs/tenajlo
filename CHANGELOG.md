@@ -6,6 +6,15 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Dark text on the orange buttons in the dark theme is bold, so it's easier to read.
+
+### Fixed
+
+- When the server has commits you don't, a push no longer leaves you stuck with a Push
+  button that keeps failing: Tenajlo gets those commits and the button changes to Pull.
+
 ## [1.1.0] - 2026-10-10
 
 ### Added
