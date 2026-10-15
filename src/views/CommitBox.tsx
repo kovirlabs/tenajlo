@@ -10,7 +10,14 @@ import { useLockStore } from "../stores/lockStore";
 import { useAsyncEffect } from "../hooks/useAsyncEffect";
 import { formatRelative } from "../lib/time";
 
-type LastCommit = { sha: string; summary: string; branch: string | null; at: string };
+type LastCommit = {
+  sha: string;
+  summary: string;
+  branch: string | null;
+  at: string;
+  /** Merge commits can't be undone (git/undo.rs refuses them). */
+  merge: boolean;
+};
 
 /** Summary + description + "Commit to <branch>" (spec §8). Ctrl/Cmd+Enter commits. The
  *  message is a per-repository draft, so switching repositories doesn't lose it. */
@@ -86,6 +93,7 @@ export function CommitBox({ repoId }: { repoId: string }) {
         summary: committedSummary,
         branch: committedBranch,
         at: new Date().toISOString(),
+        merge: merging,
       });
       clearDraft(repoId);
     }
@@ -105,11 +113,12 @@ export function CommitBox({ repoId }: { repoId: string }) {
     }
   };
 
-  // Only offer Undo while our commit is still the tip of the branch it was made on, and not on
-  // the server yet (with an upstream, nothing ahead means it was pushed).
+  // Only offer Undo for an ordinary commit while it is still the tip of the branch it was made
+  // on, and not on the server yet (with an upstream, nothing ahead means it was pushed).
   const tip = status?.branch;
   const canUndo =
     lastCommit !== null &&
+    !lastCommit.merge &&
     tip?.tip === lastCommit.sha &&
     tip.name === lastCommit.branch &&
     !(tip.upstream && tip.ahead === 0);

@@ -138,6 +138,15 @@ describe("CommitBox", () => {
     await waitFor(() =>
       expect(commitChanges).toHaveBeenCalledWith("r1", "Merge branch 'main' of h", ""),
     );
+    // The new merge commit is the tip, but merges can't be undone: no Undo to fail.
+    act(() => {
+      useConflictStore.setState({ state: null });
+      useChangesStore.setState((s) => ({
+        status: s.status && { ...s.status, branch: { ...s.status.branch, tip: "abc" } },
+      }));
+    });
+    await waitFor(() => expect(summary.value).toBe(""));
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
   it("blocks committing during a rebase started elsewhere", () => {

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createBranch, previewBranchName } from "../../api/branches";
+import { useBranchStore } from "../../stores/branchStore";
 import { useChangesStore } from "../../stores/changesStore";
 import { Modal } from "../Modal";
 import { useAsyncEffect } from "../../hooks/useAsyncEffect";
@@ -12,6 +13,11 @@ export function NewBranchDialog() {
   const from = useChangesStore((s) => s.status?.branch.name);
   const [name, setName] = useState("");
   const [preview, setPreview] = useState("");
+  const isTaken = (branch: string) =>
+    useBranchStore.getState().branches?.local.some((b) => b.name === branch) ?? false;
+  const exists = useBranchStore(
+    (s) => preview !== "" && (s.branches?.local.some((b) => b.name === preview) ?? false),
+  );
 
   useAsyncEffect(
     async (live) => {
@@ -25,7 +31,7 @@ export function NewBranchDialog() {
     // Recompute rather than use `preview`: Enter can land before the preview for the
     // latest keystroke arrives, which would create the previous name.
     const branch = await previewBranchName(name);
-    if (!branch) return;
+    if (!branch || isTaken(branch)) return;
     const res = await mutate((id) => createBranch(id, branch));
     if (res?.status === "ok") {
       setName("");
@@ -51,6 +57,11 @@ export function NewBranchDialog() {
             Will be created as <code>{preview || "(no valid characters)"}</code>
           </p>
         )}
+        {exists && (
+          <p className="form-error" role="alert">
+            A branch named <code>{preview}</code> already exists.
+          </p>
+        )}
         <p className="muted">
           Starts from {from ? <strong>{from}</strong> : "the current commit"}. Your uncommitted
           changes come with you.
@@ -59,7 +70,7 @@ export function NewBranchDialog() {
           <button type="button" className="secondary" onClick={close}>
             Cancel
           </button>
-          <button type="submit" disabled={!preview}>
+          <button type="submit" disabled={!preview || exists}>
             Create branch
           </button>
         </div>
