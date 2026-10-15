@@ -65,7 +65,9 @@ pub async fn find(
         }))
 }
 
-/// Re-applies and removes a stash found by [`find`].
+/// Re-applies and removes a stash found by [`find`]. Ticked (staged) files come back ticked:
+/// the checkboxes are the real index, so a plain `stash pop` would untick them. If git can't
+/// restore the index it refuses before touching anything, and we pop without it.
 pub async fn restore(git: &GitBinary, root: &Path, saved: &SavedChanges) -> Result<(), GitError> {
     if !is_stash_ref(&saved.stash_ref) {
         return Err(GitError::Parse(format!(
@@ -73,10 +75,22 @@ pub async fn restore(git: &GitBinary, root: &Path, saved: &SavedChanges) -> Resu
             saved.stash_ref
         )));
     }
-    GitCommand::new(["stash", "pop", saved.stash_ref.as_str()], Access::Mutating)
-        .cwd(root)
-        .run(git)
-        .await?;
+    let pop = |index: bool| {
+        let mut args = vec!["stash", "pop"];
+        if index {
+            args.push("--index");
+        }
+        args.push(saved.stash_ref.as_str());
+        GitCommand::new(args, Access::Mutating).cwd(root).run(git)
+    };
+    match pop(true).await {
+        Err(GitError::Failed { stderr, .. }) if stderr.contains("without --index") => {
+            pop(false).await?;
+        }
+        other => {
+            other?;
+        }
+    }
     Ok(())
 }
 
@@ -122,6 +136,25 @@ mod tests {
         assert_eq!(find(&git, &repo, "main").await.unwrap(), None);
         let list = git_in(&repo, &["stash", "list"]).await;
         assert!(list.contains("manual"), "user's stash untouched: {list}");
+    }
+
+    #[tokio::test]
+    async fn restore_keeps_ticked_files_ticked() {
+        let (_tmp, repo) = init_repo().await;
+        let git = git();
+        write(&repo, "old.txt", "same\n");
+        write(&repo, "b.txt", "1\n");
+        commit_all(&repo, "init").await;
+
+        git_in(&repo, &["mv", "old.txt", "new.txt"]).await;
+        write(&repo, "b.txt", "2\n");
+        save(&git, &repo, "main").await.unwrap();
+        let saved = find(&git, &repo, "main").await.unwrap().unwrap();
+        restore(&git, &repo, &saved).await.unwrap();
+
+        let status = git_in(&repo, &["status", "--porcelain"]).await;
+        assert!(status.contains("R  old.txt -> new.txt"), "{status}");
+        assert!(status.contains(" M b.txt"), "{status}");
     }
 
     #[test]
