@@ -6,6 +6,13 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-16
+
+### Fixed
+
+- You can sign in to a Forgejo server that only lets signed-in users see it. Before, Tenajlo
+  stopped at "Only signed in user is allowed to call APIs" before you could paste your token.
+
 ## [1.1.1] - 2026-10-13
 
 ### Changed
@@ -86,7 +93,8 @@ First public release:
   theme.
 - First-run welcome, plain-language error messages, daily log files.
 
-[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/kovirlabs/tenajlo/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/kovirlabs/tenajlo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/kovirlabs/tenajlo/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/kovirlabs/tenajlo/compare/v1.0.1...v1.0.2
