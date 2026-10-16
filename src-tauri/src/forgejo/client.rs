@@ -28,7 +28,9 @@ pub const REQUIRED_SCOPES: [&str; 3] = ["read:user", "read:repository", "write:r
 pub struct ServerInfo {
     /// Normalized address, e.g. `https://git.example.com`.
     pub base_url: String,
-    pub version: String,
+    /// `None` when the server only answers signed-in users, so the version is hidden
+    /// until the token is checked.
+    pub version: Option<String>,
     /// Where the user creates a personal access token.
     pub token_settings_url: String,
     pub required_scopes: Vec<String>,
@@ -82,9 +84,18 @@ impl ForgejoClient {
     }
 
     /// `GET /api/v1/version`: checks the server is reachable, trusted and Forgejo-compatible.
+    ///
+    /// A server with `REQUIRE_SIGNIN_VIEW` refuses every API call without a token, this
+    /// one included. That reply still comes from Forgejo, so it counts as reachable; the
+    /// token check (`GET /api/v1/user`) is what confirms it.
     pub async fn server_info(&self, base: &Url) -> Result<ServerInfo, ForgejoError> {
-        let res: VersionResponse = match self.get_json(base, "api/v1/version", None).await {
-            Ok(v) => v,
+        let version = match self
+            .get_json::<VersionResponse>(base, "api/v1/version", None)
+            .await
+        {
+            Ok(v) => Some(v.version),
+            Err(ForgejoError::Unauthorized) => None,
+            Err(ForgejoError::Http { status: 403, body }) if is_sign_in_required(&body) => None,
             Err(ForgejoError::Http { status: 404, .. }) => {
                 return Err(ForgejoError::NotForgejo("no /api/v1/version".into()))
             }
@@ -92,7 +103,7 @@ impl ForgejoClient {
         };
         Ok(ServerInfo {
             base_url: base_string(base),
-            version: res.version,
+            version,
             token_settings_url: join(base, "user/settings/applications").into(),
             required_scopes: REQUIRED_SCOPES.iter().map(|s| (*s).to_owned()).collect(),
         })
@@ -174,6 +185,13 @@ fn status_error(status: StatusCode, body: &str) -> ForgejoError {
             body,
         },
     }
+}
+
+/// Forgejo's (and Gitea's) 403 body when the server only answers signed-in users:
+/// `{"message":"Only signed in user is allowed to call APIs.", …}`.
+fn is_sign_in_required(body: &str) -> bool {
+    body.to_ascii_lowercase()
+        .contains("only signed in user is allowed")
 }
 
 fn classify(err: reqwest::Error) -> ForgejoError {
@@ -271,7 +289,7 @@ pub(crate) mod tests {
             .server_info(&base)
             .await
             .unwrap();
-        assert_eq!(info.version, "11.0.1+gitea-1.22.0");
+        assert_eq!(info.version.as_deref(), Some("11.0.1+gitea-1.22.0"));
         assert_eq!(
             info.token_settings_url,
             format!("{}/user/settings/applications", base_string(&base))
@@ -290,6 +308,46 @@ pub(crate) mod tests {
         assert!(matches!(
             client.server_info(&base).await,
             Err(ForgejoError::NotForgejo(_))
+        ));
+    }
+
+    #[tokio::test]
+    async fn sign_in_required_servers_are_accepted() {
+        let client = ForgejoClient::new().unwrap();
+        let (base, _) = fake_server(vec![(
+            "/api/v1/version",
+            "403 Forbidden",
+            r#"{"message":"Only signed in user is allowed to call APIs.","url":"https://h/api/swagger"}"#
+                .into(),
+        )])
+        .await;
+        let info = client.server_info(&base).await.unwrap();
+        assert_eq!(info.version, None);
+        assert_eq!(
+            info.token_settings_url,
+            format!("{}/user/settings/applications", base_string(&base))
+        );
+
+        let (base, _) = fake_server(vec![(
+            "/api/v1/version",
+            "401 Unauthorized",
+            r#"{"message":"token is required"}"#.into(),
+        )])
+        .await;
+        assert_eq!(client.server_info(&base).await.unwrap().version, None);
+    }
+
+    #[tokio::test]
+    async fn other_forbidden_replies_are_errors() {
+        let (base, _) = fake_server(vec![(
+            "/api/v1/version",
+            "403 Forbidden",
+            "<html>Blocked by proxy</html>".into(),
+        )])
+        .await;
+        assert!(matches!(
+            ForgejoClient::new().unwrap().server_info(&base).await,
+            Err(ForgejoError::Http { status: 403, .. })
         ));
     }
 

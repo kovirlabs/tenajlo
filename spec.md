@@ -218,7 +218,7 @@ When the credential helper protocol sends `store` (the login worked), save it on
 ### 6.4 Forgejo sign-in flow
 
 1. User enters an instance URL. Normalize it (add `https://`, strip trailing `/`).
-2. `GET {base}/api/v1/version` checks reachability and that it is Forgejo/Gitea compatible. On TLS error, show the internal-CA explanation.
+2. `GET {base}/api/v1/version` checks reachability and that it is Forgejo/Gitea compatible. On TLS error, show the internal-CA explanation. A server with `REQUIRE_SIGNIN_VIEW` answers this without a token with 403 "Only signed in user is allowed to call APIs." (or 401); treat that as reachable with an unknown version, and let step 4 confirm it.
 3. User pastes a PAT. Show a deep link to `{base}/user/settings/applications` and the required scopes: `read:user`, `read:repository`, `write:repository`.
 4. `GET {base}/api/v1/user` with `Authorization: token <PAT>`. On success, save the account and keychain entry.
 5. **v2:** OAuth2 authorization-code + PKCE flow against Forgejo's built-in OAuth2 provider, using a loopback redirect. This replaces PAT pasting for most users.

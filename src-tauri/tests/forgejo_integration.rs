@@ -44,7 +44,7 @@ async fn new_token(scopes: &[&str]) -> Secret {
 async fn sign_in_flow_against_forgejo() {
     let client = ForgejoClient::new().unwrap();
     let info = client.server_info(&base()).await.unwrap();
-    assert!(!info.version.is_empty());
+    assert!(info.version.is_some_and(|v| !v.is_empty()));
 
     let token = new_token(&["read:user", "read:repository", "write:repository"]).await;
     let user = client.current_user(&base(), &token).await.unwrap();
