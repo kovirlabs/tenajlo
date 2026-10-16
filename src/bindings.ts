@@ -614,7 +614,11 @@ export type SavedSecretInfo =
 export type ServerInfo = {
 	/**  Normalized address, e.g. `https://git.example.com`. */
 	baseUrl: string,
-	version: string,
+	/**
+	 *  `None` when the server only answers signed-in users, so the version is hidden
+	 *  until the token is checked.
+	 */
+	version: string | null,
 	/**  Where the user creates a personal access token. */
 	tokenSettingsUrl: string,
 	requiredScopes: string[],
