@@ -54,7 +54,9 @@ export function AppShell() {
       <Toolbar />
       <UpdateBanner />
       {body}
-      {repo && !repo.missing && <NewBranchDialog key={repo.id} />}
+      {/* Not `key={repo.id}`: RepositoryView is a sibling with that key, and React
+          duplicates siblings that share a key (old repositories stay on screen). */}
+      {repo && !repo.missing && <NewBranchDialog key={`new-branch:${repo.id}`} />}
       <CloneDialog />
       <NewRepositoryDialog />
       <SettingsDialog />
