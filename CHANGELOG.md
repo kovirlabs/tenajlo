@@ -9,7 +9,7 @@ All notable changes to Tenajlo are listed here. The format follows
 ### Changed
 
 - The app icon has light and shadow, so it looks three-dimensional in the Dock, taskbar and on
-  desktop shortcuts.
+  desktop shortcuts. On macOS it is the same size as other icons in the Dock.
 
 ## [1.1.3] - 2026-10-17
 
