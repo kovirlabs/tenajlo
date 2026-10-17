@@ -6,6 +6,13 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-10-17
+
+### Fixed
+
+- Switching to, adding or opening another repository shows only that repository. Before, the
+  previous repository's file list and diff stayed on screen and the new ones stacked below.
+
 ## [1.1.2] - 2026-10-16
 
 ### Fixed
@@ -93,7 +100,8 @@ First public release:
   theme.
 - First-run welcome, plain-language error messages, daily log files.
 
-[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/kovirlabs/tenajlo/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/kovirlabs/tenajlo/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/kovirlabs/tenajlo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/kovirlabs/tenajlo/compare/v1.0.2...v1.1.0
