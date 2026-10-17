@@ -1,6 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <rect width="1024" height="1024" rx="224" fill="#2b3a4a"/>
-  <path d="M232 360h560c0 88-72 140-176 152v88h-208v-88C304 500 232 448 232 360z" fill="#e8edf2"/>
-  <rect x="352" y="600" width="320" height="64" rx="16" fill="#e8edf2"/>
-  <rect x="296" y="664" width="432" height="72" rx="20" fill="#f08a3c"/>
+  <defs>
+    <!-- Light comes from above: tiles and faces are lighter at the top. -->
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d5268"/>
+      <stop offset="0.55" stop-color="#2b3a4a"/>
+      <stop offset="1" stop-color="#1d2834"/>
+    </linearGradient>
+    <linearGradient id="tile-edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="0.3" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.25"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.35" stop-color="#e3e9ef"/>
+      <stop offset="1" stop-color="#a9b6c3"/>
+    </linearGradient>
+    <linearGradient id="metal-side" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000000" stop-opacity="0.18"/>
+      <stop offset="0.3" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="0.7" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.22"/>
+    </linearGradient>
+    <linearGradient id="horn-shadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d2834" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#1d2834" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d9e1e8"/>
+      <stop offset="1" stop-color="#9aa8b6"/>
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffb27a"/>
+      <stop offset="0.4" stop-color="#f08a3c"/>
+      <stop offset="1" stop-color="#c2611d"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="160%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="224" fill="url(#tile)"/>
+  <rect x="6" y="6" width="1012" height="1012" rx="218" fill="none" stroke="url(#tile-edge)" stroke-width="12"/>
+
+  <!-- Shadow the anvil casts on the tile. -->
+  <g fill="#0b1118" opacity="0.55" filter="url(#soft)" transform="translate(0 28)">
+    <path d="M232 360h560c0 88-72 140-176 152v88h-208v-88C304 500 232 448 232 360z"/>
+    <rect x="296" y="600" width="432" height="136" rx="20"/>
+  </g>
+
+  <!-- Anvil body: top face, horn and waist. -->
+  <path d="M232 360h560c0 88-72 140-176 152v88h-208v-88C304 500 232 448 232 360z" fill="url(#metal)"/>
+  <path d="M408 512h208v88h-208z" fill="url(#metal-side)"/>
+  <path d="M408 500h208v56h-208z" fill="url(#horn-shadow)"/>
+  <rect x="232" y="360" width="560" height="14" fill="#ffffff" opacity="0.9"/>
+
+  <!-- Foot plate and the orange base it stands on. -->
+  <rect x="352" y="600" width="320" height="64" rx="16" fill="url(#plate)"/>
+  <rect x="352" y="600" width="320" height="8" rx="4" fill="#ffffff" opacity="0.6"/>
+  <rect x="296" y="664" width="432" height="72" rx="20" fill="url(#base)"/>
+  <rect x="308" y="668" width="408" height="8" rx="4" fill="#ffffff" opacity="0.45"/>
 </svg>
