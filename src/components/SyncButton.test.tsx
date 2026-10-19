@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { SyncState } from "../bindings";
 import { useSyncStore } from "../stores/syncStore";
+import { useUiStore } from "../stores/uiStore";
 import { SyncButton, syncLabel } from "./SyncButton";
 
 const state = (action: SyncState["action"], ahead = 0, behind = 0): SyncState => ({
@@ -51,5 +52,15 @@ describe("sync button", () => {
     expect(screen.getByText("Writing objects 40%")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(cancel).toHaveBeenCalled();
+  });
+
+  it("offers to publish a repository that has no remote", () => {
+    const run = vi.fn(async () => {});
+    useSyncStore.setState({ state: state({ type: "NoRemote" }), running: null, run });
+    useUiStore.setState({ dialog: null });
+    render(<SyncButton />);
+    fireEvent.click(screen.getByRole("button", { name: /Publish repository/ }));
+    expect(useUiStore.getState().dialog).toBe("publishRepository");
+    expect(run).not.toHaveBeenCalled();
   });
 });

@@ -2,10 +2,14 @@ import type { SyncRequest, SyncState } from "../bindings";
 import { formatProgress } from "../lib/progress";
 import { formatRelative } from "../lib/time";
 import { useSyncStore } from "../stores/syncStore";
+import { useUiStore } from "../stores/uiStore";
 
 type Label = { request: SyncRequest; title: string; detail: string; badge?: string };
 
-/** Spec §8.1: Publish branch / Fetch origin / Pull origin (↓3) / Push origin (↑2). */
+/**
+ * Spec §8.1: Publish branch / Fetch origin / Pull origin (↓3) / Push origin (↑2). A repository
+ * with no remote gets "Publish repository" instead, which opens a dialog rather than syncing.
+ */
 export function syncLabel(state: SyncState): Label | null {
   const { action, ahead, behind, lastFetched } = state;
   const fetched =
@@ -67,6 +71,22 @@ export function SyncButton() {
           Cancel
         </button>
       </div>
+    );
+  }
+
+  if (state?.action.type === "NoRemote") {
+    return (
+      <button
+        type="button"
+        className="toolbar-button sync-button"
+        title="Put this repository on a Forgejo server"
+        onClick={() => useUiStore.getState().openDialog("publishRepository")}
+      >
+        <span className="toolbar-label">
+          <small>Not on a server yet</small>
+          <span className="toolbar-value">Publish repository</span>
+        </span>
+      </button>
     );
   }
 

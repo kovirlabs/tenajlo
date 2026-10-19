@@ -242,6 +242,7 @@ When the credential helper protocol sends `store` (the login worked), save it on
 | Repos for clone dialog | `GET /api/v1/user/repos?limit=50&page=N` — includes org repos reachable through teams (verified on Forgejo 11); listing orgs would need the extra `read:organization` scope |
 | User's orgs | `GET /api/v1/user/orgs` |
 | SSH keys (v1.1) | `GET/POST /api/v1/user/keys` |
+| Publish repository (v1.2) | `POST /api/v1/user/repos`, `POST /api/v1/orgs/{org}/repos`, `GET /api/v1/users/{user}/orgs/{org}/permissions` (`can_create_repository`) |
 
 The client handles pagination via the `Link` / `X-Total-Count` headers, caches responses briefly with a refresh button, and uses a 15 s timeout.
 
@@ -275,6 +276,8 @@ The layout mirrors GitHub Desktop, which users may already know.
 - **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff.
 - **Branch dropdown:** filter, current, recent, other local, remote-only (check out creates a tracking branch), plus "New branch…". When switching with local changes, offer *Bring changes* or *Stash and switch* (GitHub Desktop behavior).
 - **Toolbar sync button:** context-aware label: *Publish branch* / *Fetch origin* / *Pull origin (↓3)* / *Push origin (↑2)*, with a progress bar during the operation.
+- **Publish repository (v1.2):** when the repository has no remote, the sync button reads *Publish repository* and opens a dialog: account (one per server), owner (the user or an organization where `can_create_repository` is true), name (prefilled with the folder name), description, *Private* (default on), and HTTPS or SSH (if the server has SSH turned off, its `ssh_url` is empty and HTTPS is used). Rust creates the repository on Forgejo, adds it as `origin`, and the dialog then runs the normal *Publish branch* push for the current branch (with progress, LFS and cancel). If that push fails, the repository and `origin` stay, and the sync button offers *Publish branch* to retry. A repository with no commits can't be published ("Make your first commit, then publish"); nothing is created on the server. Forgejo errors map to plain language: 409 → "You already have a repository named X", 422 → the name rules (letters, numbers, `-`, `_`, `.`).
+  - **Scopes:** creating under the user needs `write:user` and `write:repository`; in an organization, `write:organization` (which also allows listing the user's organizations). Sign-in doesn't ask for these. When the dialog opens, Tenajlo checks the token the same way as SSH key upload, by posting an empty repository: 403 "required scope" means the scope is missing, 422 means it is there, and nothing is created either way. Without the scopes, the dialog offers to replace the token with one that has `read:user`, `write:user`, `read:repository`, `write:repository` and `write:organization`. Verified against Forgejo 11.
 - **Auth prompts:** HTTPS credentials, SSH passphrase, and host-key confirmation dialogs, all driven by `auth-prompt` events.
 - **Accounts dialog (M4 interim):** list, sign in, sign out; opened from the repository dropdown and the no-repository screen. One account per server. Folds into Settings in M6.
 - **Settings:** accounts, git identity, default clone path, external editor (VS Code / Notepad++ / custom), pull strategy, background fetch interval (default 5 min, 0 = off), new-commit notifications (v1.1, default on: after a background fetch, a desktop notification when the current branch fell further behind its upstream, only while Tenajlo isn't focused; sent from Rust, no WebView permission), theme (system / light / dark), git binary override.
@@ -347,6 +350,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 | M5 | SSH | System OpenSSH, passphrase prompt, host-key confirmation, clone via SSH URL |
 | M6 | Polish and ship v1.0 | Merge on pull divergence + conflict banner, settings screen, Git LFS (bundled git-lfs, progress, auth), error mapping, Windows NSIS installer (unsigned at first; signing added once a certificate is chosen), user docs |
 | v1.1 | Nice-to-haves | Hunk/line staging, SSH key generate + upload, auto-update, background fetch notifications, remembered SSH passphrases, saving prompt credentials |
+| v1.2 | Publish repository | Create the repository on Forgejo (user or organization) from a local repo with no remote, add `origin`, publish the branch (§8.1) |
 | v2 | Forgejo native | OAuth2 PKCE sign-in, open PR in browser from branch, PR status badge |
 
 ---

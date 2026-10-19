@@ -34,8 +34,9 @@ pub struct RemoteRepository {
     pub ssh_url: String,
 }
 
+/// A repository as the API returns it.
 #[derive(Deserialize)]
-struct ApiRepo {
+pub(super) struct ApiRepo {
     full_name: String,
     name: String,
     owner: ApiOwner,
@@ -55,17 +56,9 @@ struct ApiOwner {
     login: String,
 }
 
-/// Every repository the user can access (own, collaborator, and team), sorted by
-/// `owner/name` and de-duplicated.
-pub async fn list_repositories(
-    client: &ForgejoClient,
-    base: &Url,
-    token: &Secret,
-) -> Result<Vec<RemoteRepository>, ForgejoError> {
-    let repos: Vec<ApiRepo> = all_pages(client, base, &["user", "repos"], token).await?;
-    let mut out: Vec<RemoteRepository> = repos
-        .into_iter()
-        .map(|r| RemoteRepository {
+impl From<ApiRepo> for RemoteRepository {
+    fn from(r: ApiRepo) -> Self {
+        Self {
             full_name: r.full_name,
             owner: r.owner.login,
             name: r.name,
@@ -74,8 +67,19 @@ pub async fn list_repositories(
             archived: r.archived,
             clone_url: r.clone_url,
             ssh_url: r.ssh_url,
-        })
-        .collect();
+        }
+    }
+}
+
+/// Every repository the user can access (own, collaborator, and team), sorted by
+/// `owner/name` and de-duplicated.
+pub async fn list_repositories(
+    client: &ForgejoClient,
+    base: &Url,
+    token: &Secret,
+) -> Result<Vec<RemoteRepository>, ForgejoError> {
+    let repos: Vec<ApiRepo> = all_pages(client, base, &["user", "repos"], token).await?;
+    let mut out: Vec<RemoteRepository> = repos.into_iter().map(Into::into).collect();
     out.sort_by_key(|r| r.full_name.to_lowercase());
     out.dedup_by(|a, b| a.full_name.eq_ignore_ascii_case(&b.full_name));
     Ok(out)

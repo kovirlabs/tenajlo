@@ -19,6 +19,7 @@ pub mod branches;
 pub mod changes;
 pub mod clone;
 pub mod merge;
+pub mod publish;
 pub mod remote_op;
 pub mod repo;
 pub mod repos;

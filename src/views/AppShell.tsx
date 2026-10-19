@@ -3,6 +3,7 @@ import { SettingsDialog } from "../components/settings/SettingsDialog";
 import { AuthPromptDialog } from "../components/AuthPromptDialog";
 import { CloneDialog } from "../components/clone/CloneDialog";
 import { NewRepositoryDialog } from "../components/NewRepositoryDialog";
+import { PublishRepositoryDialog } from "../components/PublishRepositoryDialog";
 import { ErrorDialog } from "../components/ErrorDialog";
 import { NewBranchDialog } from "../components/branches/NewBranchDialog";
 import { useShortcuts } from "../hooks/useShortcuts";
@@ -59,6 +60,7 @@ export function AppShell() {
       {repo && !repo.missing && <NewBranchDialog key={`new-branch:${repo.id}`} />}
       <CloneDialog />
       <NewRepositoryDialog />
+      <PublishRepositoryDialog />
       <SettingsDialog />
       <AuthPromptDialog />
       <ErrorDialog />

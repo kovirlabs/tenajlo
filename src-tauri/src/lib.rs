@@ -62,6 +62,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::ssh_keys::create_ssh_key,
             commands::ssh_keys::get_account_ssh_keys,
             commands::ssh_keys::add_ssh_key,
+            commands::publish::get_publish_options,
+            commands::publish::publish_repository,
             commands::clone::list_forgejo_repositories,
             commands::clone::suggest_clone_path,
             commands::clone::choose_clone_folder,

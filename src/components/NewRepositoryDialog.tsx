@@ -79,7 +79,7 @@ function NewRepositoryForm({ onClose }: { onClose: () => void }) {
       </label>
       <p className="muted">
         Tenajlo creates a new folder named after the repository, ready for your first commit. To
-        share it, create an empty repository on Forgejo and publish to it.
+        share it, commit, then click Publish repository in the toolbar.
       </p>
       <InlineError error={error} />
       <div className="dialog-actions">

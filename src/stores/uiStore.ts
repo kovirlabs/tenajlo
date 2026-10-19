@@ -2,7 +2,8 @@ import { create } from "zustand";
 import type { AppError } from "../bindings";
 
 export type Tab = "changes" | "history";
-export type Dialog = "newBranch" | "newRepository" | "clone" | "settings" | null;
+export type Dialog =
+  "newBranch" | "newRepository" | "publishRepository" | "clone" | "settings" | null;
 export type SettingsTab =
   "accounts" | "ssh" | "passwords" | "git" | "appearance" | "repositories" | "about";
 

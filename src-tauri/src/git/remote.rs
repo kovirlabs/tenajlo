@@ -49,6 +49,20 @@ pub async fn remote_url(
     Ok((!url.is_empty()).then_some(url))
 }
 
+/// `git remote add -- <name> <url>`. Callers hold the mutation lock.
+pub async fn add_remote(
+    git: &GitBinary,
+    root: &Path,
+    name: &str,
+    url: &str,
+) -> Result<(), GitError> {
+    GitCommand::new(["remote", "add", "--", name, url], Access::Mutating)
+        .cwd(root)
+        .run(git)
+        .await?;
+    Ok(())
+}
+
 /// Unix seconds of the last fetch, from FETCH_HEAD's mtime.
 pub async fn last_fetched(git: &GitBinary, root: &Path) -> Result<Option<u32>, GitError> {
     let out = GitCommand::new(["rev-parse", "--git-path", "FETCH_HEAD"], Access::ReadOnly)
@@ -254,6 +268,51 @@ mod tests {
         write(&repo, "a.txt", "1\n");
         commit_all(&repo, "init").await;
         (tmp, repo, origin)
+    }
+
+    #[tokio::test]
+    async fn added_remote_can_be_published_to() {
+        let (tmp, repo) = init_repo().await;
+        write(&repo, "a.txt", "1\n");
+        commit_all(&repo, "init").await;
+        let bare = tmp.path().join("new server repo.git");
+        let bare_str = bare.to_str().unwrap();
+        git_in(tmp.path(), &["init", "-q", "--bare", bare_str]).await;
+        let git = git();
+
+        add_remote(&git, &repo, "origin", bare_str).await.unwrap();
+        assert_eq!(list_remotes(&git, &repo).await.unwrap(), ["origin"]);
+        assert_eq!(
+            remote_url(&git, &repo, "origin", true)
+                .await
+                .unwrap()
+                .as_deref(),
+            Some(bare_str)
+        );
+        assert!(
+            add_remote(&git, &repo, "origin", bare_str).await.is_err(),
+            "an existing remote isn't replaced"
+        );
+        push(
+            &git,
+            &repo,
+            "origin",
+            "main",
+            "main",
+            true,
+            RemoteRun::quiet(),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            status(&git, &repo)
+                .await
+                .unwrap()
+                .branch
+                .upstream
+                .as_deref(),
+            Some("origin/main")
+        );
     }
 
     #[tokio::test]

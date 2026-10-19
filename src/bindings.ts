@@ -108,6 +108,13 @@ export const commands = {
 	 *  token's permission first, so nothing is sent with a token that can't add keys.
 	 */
 	addSshKey: (accountId: string, fileName: string, title: string) => typedError<null, AppError>(__TAURI_INVOKE("add_ssh_key", { accountId, fileName, title })),
+	/**  What `account_id`'s token allows for publishing. Creates nothing. */
+	getPublishOptions: (accountId: string) => typedError<PublishOptions, AppError>(__TAURI_INVOKE("get_publish_options", { accountId })),
+	/**
+	 *  Creates `name` on `account_id`'s server, under `organization` or the user, and adds it as
+	 *  `origin`. With `ssh`, the SSH address is used if the server has SSH turned on.
+	 */
+	publishRepository: (repoId: string, accountId: string, organization: string | null, name: string, description: string, isPrivate: boolean, ssh: boolean) => typedError<RemoteRepository, AppError>(__TAURI_INVOKE("publish_repository", { repoId, accountId, organization, name, description, isPrivate, ssh })),
 	/**  Repositories the account can clone: its own and its organizations'. */
 	listForgejoRepositories: (accountId: string) => typedError<RemoteRepository[], AppError>(__TAURI_INVOKE("list_forgejo_repositories", { accountId })),
 	/**
@@ -550,6 +557,21 @@ export type PromptKind =
 { type: "HostKey"; host: string; key_type: string; fingerprint: string } | 
 /**  Anything else git asks; shown verbatim. */
 { type: "Other"; prompt: string };
+
+/**  Where an account may publish to. */
+export type PublishOptions = {
+	accountId: string,
+	/**  The signed-in user, the default owner. */
+	login: string,
+	/**  Whether the token may create repositories for the user. */
+	userAllowed: boolean,
+	/**  Organizations the user may create repositories in, sorted. Empty when the token can't. */
+	organizations: string[],
+	/**  The token can't list or create in organizations; a new token would allow it. */
+	organizationsNeedToken: boolean,
+	/**  Permissions for a replacement token. */
+	requiredScopes: string[],
+};
 
 /**  What Pull does (spec §13.5: fast-forward only unless the user chooses otherwise). */
 export type PullStrategy = 
