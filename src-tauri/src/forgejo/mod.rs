@@ -1,8 +1,9 @@
-//! Forgejo REST API (spec §7): server checks, sign-in, and repository listing.
+//! Forgejo REST API (spec §7): server checks, sign-in, repository listing and creation.
 
 pub mod address;
 pub mod client;
 pub mod keys;
+pub mod publish;
 pub mod repos;
 
 pub use client::{ForgejoClient, ForgejoUser, ServerInfo};

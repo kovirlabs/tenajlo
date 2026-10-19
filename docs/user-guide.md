@@ -101,6 +101,7 @@ Right-click a file for more: **Open in editor**, **Show in folder**, **Discard c
 
 The button in the toolbar always shows the next useful step:
 
+- **Publish repository**: this repository isn't on a server yet (see below).
 - **Publish branch**: your branch isn't on the server yet.
 - **Push origin ↑2**: you have 2 commits the server doesn't have.
 - **Pull origin ↓3**: the server has 3 commits you don't have.
@@ -108,6 +109,26 @@ The button in the toolbar always shows the next useful step:
 
 Tenajlo also checks the server every few minutes in the background (change or turn this off
 in **Settings → Repositories**).
+
+### Put a new repository on the server (publish)
+
+A repository you created with **New…**, or added from your computer, starts out only on your
+computer. To share it:
+
+1. Make at least one commit.
+2. Click **Publish repository** in the toolbar.
+3. Choose the **Owner**: your own account or an organization you can create repositories in.
+4. Check the **Name** (it starts as the folder name), add a description if you like, and
+   choose whether to **Keep this repository private**.
+5. Choose **HTTPS** or **SSH**, the same as when cloning, and click **Publish repository**.
+
+Tenajlo creates the repository on Forgejo, then publishes your current branch to it. If the
+upload stops partway, click **Publish branch** to try again; the repository on the server stays.
+
+Creating repositories needs more permissions than signing in: `write:user` and
+`write:repository` for your own account, and `write:organization` for organizations. If your
+access token doesn't have them, Tenajlo says so and offers **Update the token**. Create a new
+token with the permissions it lists and paste it.
 
 ### When you and someone else both changed the branch
 
