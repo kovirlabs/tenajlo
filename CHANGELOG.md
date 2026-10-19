@@ -6,6 +6,17 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-19
+
+### Added
+
+- **Publish repository**: a repository that's only on your computer can now be put on your
+  Forgejo server from the toolbar. Choose your own account or an organization, a name, and
+  whether it's private; Tenajlo creates the repository on the server and publishes your branch
+  to it. This needs extra access token permissions (`write:user` and `write:repository`, plus
+  `write:organization` for organizations). If your token doesn't have them, Tenajlo offers to
+  replace it.
+
 ### Changed
 
 - The app icon has light and shadow, so it looks three-dimensional in the Dock, taskbar and on
@@ -105,7 +116,8 @@ First public release:
   theme.
 - First-run welcome, plain-language error messages, daily log files.
 
-[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/kovirlabs/tenajlo/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/kovirlabs/tenajlo/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/kovirlabs/tenajlo/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/kovirlabs/tenajlo/compare/v1.1.0...v1.1.1
