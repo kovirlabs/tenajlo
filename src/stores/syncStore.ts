@@ -10,6 +10,9 @@ type SyncStoreState = {
   repoId: string | null;
   state: SyncState | null;
   running: Running | null;
+  /** A background fetch (useBackgroundFetch) is running. Changes made meanwhile wait for it. */
+  backgroundFetching: boolean;
+  setBackgroundFetching: (on: boolean) => void;
   refresh: (repoId: string) => Promise<void>;
   run: (request: SyncRequest) => Promise<void>;
   cancel: () => void;
@@ -20,6 +23,8 @@ export const useSyncStore = create<SyncStoreState>((set, get) => ({
   repoId: null,
   state: null,
   running: null,
+  backgroundFetching: false,
+  setBackgroundFetching: (on) => set({ backgroundFetching: on }),
 
   refresh: async (repoId) => {
     if (get().repoId !== repoId) set({ repoId, state: null, running: null });

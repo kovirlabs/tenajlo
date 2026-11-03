@@ -1,22 +1,38 @@
 import { useState } from "react";
-import type { Identity } from "../bindings";
+import type { Identity, SyncRequest } from "../bindings";
 import { commitChanges, getIdentity, undoCommit } from "../api/changes";
 import { IdentityDialog } from "../components/IdentityDialog";
 import { useChangesStore } from "../stores/changesStore";
 import { useMerging } from "../stores/conflictStore";
+import { useDraft, useDraftStore } from "../stores/draftStore";
+import { useSyncStore } from "../stores/syncStore";
 import { useAsyncEffect } from "../hooks/useAsyncEffect";
 
-/** Summary + description + "Commit to <branch>" (spec §8). Ctrl/Cmd+Enter commits. */
+/** Summary + description + "Commit to <branch>" (spec §8). Ctrl/Cmd+Enter commits. The
+ *  message is a per-repository draft, so switching repositories doesn't lose it. */
+/** What a queued change is waiting for, in plain words. */
+const WAITING_LABEL: Record<SyncRequest, string> = {
+  Fetch: "fetch",
+  Pull: "pull",
+  PullMerge: "pull",
+  Push: "push",
+  Publish: "publish",
+};
+
 export function CommitBox({ repoId }: { repoId: string }) {
   const status = useChangesStore((s) => s.status);
   const busy = useChangesStore((s) => s.busy);
   const mutate = useChangesStore((s) => s.mutate);
-  const [typedSummary, setSummary] = useState("");
+  const draft = useDraft(repoId);
+  const updateDraft = useDraftStore((s) => s.update);
+  const clearDraft = useDraftStore((s) => s.clear);
+  const { description, summaryTouched } = draft;
   // Until the user types, a merge's summary is prefilled from git's merge message.
-  const [summaryTouched, setSummaryTouched] = useState(false);
   const { merging, otherOperation, summary: mergeSummary } = useMerging();
-  const summary = !summaryTouched && merging && mergeSummary ? mergeSummary : typedSummary;
-  const [description, setDescription] = useState("");
+  const summary = !summaryTouched && merging && mergeSummary ? mergeSummary : draft.summary;
+  const waitingFor = useSyncStore((s) =>
+    s.running ? s.running.request : s.backgroundFetching ? "Fetch" : null,
+  );
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [askIdentity, setAskIdentity] = useState(false);
   const [lastCommit, setLastCommit] = useState<{ sha: string; summary: string } | null>(null);
@@ -45,9 +61,7 @@ export function CommitBox({ repoId }: { repoId: string }) {
     const res = await mutate((id) => commitChanges(id, summary, description));
     if (res?.status === "ok") {
       setLastCommit({ sha: res.data, summary: committedSummary });
-      setSummary("");
-      setSummaryTouched(false);
-      setDescription("");
+      clearDraft(repoId);
     }
   };
 
@@ -56,8 +70,11 @@ export function CommitBox({ repoId }: { repoId: string }) {
     const { sha } = lastCommit;
     const res = await mutate((id) => undoCommit(id, sha));
     if (res?.status === "ok") {
-      setSummary(res.data.summary);
-      setDescription(res.data.description);
+      updateDraft(repoId, {
+        summary: res.data.summary,
+        summaryTouched: true,
+        description: res.data.description,
+      });
       setLastCommit(null);
     }
   };
@@ -89,10 +106,7 @@ export function CommitBox({ repoId }: { repoId: string }) {
         placeholder="Summary (required)"
         aria-label="Commit summary"
         value={summary}
-        onChange={(e) => {
-          setSummary(e.target.value);
-          setSummaryTouched(true);
-        }}
+        onChange={(e) => updateDraft(repoId, { summary: e.target.value, summaryTouched: true })}
         onKeyDown={onKeyDown}
       />
       <textarea
@@ -100,10 +114,15 @@ export function CommitBox({ repoId }: { repoId: string }) {
         aria-label="Commit description"
         rows={3}
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={(e) => updateDraft(repoId, { description: e.target.value })}
         onKeyDown={onKeyDown}
       />
       {conflicts && <p className="commit-hint">Resolve conflicts before committing.</p>}
+      {busy && waitingFor && (
+        <p className="commit-hint muted" role="status">
+          Waiting for the {WAITING_LABEL[waitingFor]} to finish…
+        </p>
+      )}
       {missingIdentity && (
         <p className="commit-hint">
           Git needs your name and email.{" "}

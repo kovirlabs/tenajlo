@@ -193,10 +193,11 @@ export const pumpControlDiff: FileDiff = {
 
 const commit = (n: number, summary: string, author: string, hoursAgo: number): Commit => {
   // Deterministic, realistic-looking 40-hex-digit IDs.
-  let x = n * 2654435761;
+  // 32-bit integer LCG: plain float maths loses precision and made most IDs all zeros.
+  let x = Math.imul(n, 2654435761) >>> 0;
   const sha = Array.from({ length: 40 }, () => {
-    x = (x * 1103515245 + 12345) % 2147483648;
-    return (x % 16).toString(16);
+    x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+    return (x >>> 28).toString(16);
   }).join("");
   return {
     sha,
@@ -207,6 +208,8 @@ const commit = (n: number, summary: string, author: string, hoursAgo: number): C
     authorDate: ago(hoursAgo * HOUR),
     summary,
     body: "",
+    // Matches the toolbar's "↑2": the two newest commits are only on this computer.
+    unpushed: n <= 2,
   };
 };
 

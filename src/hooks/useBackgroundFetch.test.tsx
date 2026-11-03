@@ -36,7 +36,11 @@ describe("useBackgroundFetch", () => {
       repoId: "r1",
       running: null,
       refresh,
-      state: { action: { type: "Fetch", remote: "origin" } } as unknown as SyncState,
+      // Fetched just now, so opening the repository doesn't fetch again.
+      state: {
+        action: { type: "Fetch", remote: "origin" },
+        lastFetched: Date.now() / 1000,
+      } as unknown as SyncState,
     });
   });
   afterEach(() => {
@@ -52,6 +56,28 @@ describe("useBackgroundFetch", () => {
     await act(async () => vi.advanceTimersByTimeAsync(60_000));
     expect(backgroundFetch).toHaveBeenCalledWith("r1");
     expect(refresh).toHaveBeenCalledWith("r1");
+  });
+
+  it("fetches on open and on focus only when the last fetch is stale", async () => {
+    useSettingsStore.setState({ settings: settings(5) });
+    const stale = { action: { type: "Fetch", remote: "origin" }, lastFetched: null };
+    useSyncStore.setState({ state: stale as unknown as SyncState });
+    render(<Probe />);
+    expect(backgroundFetch).toHaveBeenCalledTimes(1);
+    expect(useSyncStore.getState().backgroundFetching).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    expect(useSyncStore.getState().backgroundFetching).toBe(false);
+
+    // Just fetched: focusing the window does nothing.
+    const fresh = { ...stale, lastFetched: Date.now() / 1000 };
+    useSyncStore.setState({ state: fresh as unknown as SyncState });
+    window.dispatchEvent(new Event("focus"));
+    expect(backgroundFetch).toHaveBeenCalledTimes(1);
+
+    // Two minutes later it's stale again.
+    await act(async () => vi.advanceTimersByTimeAsync(2 * 60_000));
+    window.dispatchEvent(new Event("focus"));
+    expect(backgroundFetch).toHaveBeenCalledTimes(2);
   });
 
   it("skips while a sync runs and when turned off", async () => {

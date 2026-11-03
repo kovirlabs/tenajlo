@@ -86,4 +86,29 @@ describe("ChangesList", () => {
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.length).toBeLessThan(100);
   });
+
+  it("moves with the arrow keys and stages with Space", () => {
+    setStatus([file("a.txt"), file("b.txt", { staged: "Full" })]);
+    const setStaged = vi.fn(async () => {});
+    useChangesStore.setState({ setStaged, busy: false });
+    render(<ChangesList />);
+    const list = screen.getByRole("listbox", { name: "Changed files" });
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    expect(useChangesStore.getState().selectedPath).toBe("b.txt");
+    fireEvent.keyDown(list, { key: " " });
+    expect(setStaged).toHaveBeenCalledWith(["b.txt"], false);
+  });
+
+  it("offers to try again after an error", () => {
+    const refresh = vi.fn(async () => {});
+    useChangesStore.setState({
+      repoId: "r",
+      refresh,
+      status: null,
+      error: { kind: "Internal", message: "Couldn't read the repository.", details: null } as never,
+    });
+    render(<ChangesList />);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledWith("r");
+  });
 });
