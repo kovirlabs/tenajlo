@@ -6,6 +6,19 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **New dark theme**: dark mode now uses warm, sun-toned colors with an orange accent, and
+  checkboxes use the accent color instead of the system blue. The website's dark mode matches.
+
+### Fixed
+
+- **Cancel now works while a push or pull is waiting.** If a background fetch was still running,
+  clicking Cancel on a push or pull did nothing, and the push still ran once the fetch finished.
+  Now it stops right away.
+- **Ctrl+Shift+P and Ctrl+Shift+N are ignored while a dialog is open**, so they can no longer
+  start a push or open New Branch behind Settings or another dialog.
+
 ## [1.2.0] - 2026-10-19
 
 ### Added

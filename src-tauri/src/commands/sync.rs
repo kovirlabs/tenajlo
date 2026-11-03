@@ -51,9 +51,11 @@ pub async fn sync(
     }
     let id = parse_id(&repo_id)?;
     check_op_id(&op_id)?;
-    let (root, _guard) = state.repos.lock_repo(id).await?;
-    let git = state.git()?;
+    // Register for cancellation before queueing for the repo lock: a push waiting behind a
+    // background fetch must still respond to Cancel, and must not run once cancelled.
     let (cancel, _op) = state.operations.start(&op_id);
+    let (root, _guard) = state.repos.lock_repo_cancellable(id, &cancel).await?;
+    let git = state.git()?;
 
     let current = status::status(&git, &root).await?;
     let remotes = remote::list_remotes(&git, &root).await?;

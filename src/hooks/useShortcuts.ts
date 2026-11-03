@@ -27,6 +27,8 @@ export function useShortcuts(repoOpen: boolean) {
     if (!repoOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return;
+      // Like Ctrl+T: never act behind an open dialog (a push from inside Settings, say).
+      if (useUiStore.getState().dialog !== null) return;
       const key = e.key.toLowerCase();
       if (key === "n") {
         e.preventDefault();

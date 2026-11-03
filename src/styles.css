@@ -16,47 +16,49 @@
   --diff-del-bg: #ffebe9;
   --diff-hunk-bg: #ddf4ff;
   color-scheme: light dark;
+  /* Checkboxes and radios use the brand accent, not the OS blue. */
+  accent-color: var(--accent);
   font-family: system-ui, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
 }
 
-/* Dark: follows the OS unless Settings → Appearance picks a theme (data-theme on <html>). */
+/* Dark ("solar": warm ember neutrals, sun-orange accent): follows the OS unless Settings → Appearance picks a theme (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #161b22;
-    --bg-subtle: #0d1117;
-    --fg: #e6edf3;
-    --fg-muted: #9aa5b1;
-    --border: #30363d;
-    --accent: #f08a3c;
-    --accent-fg: #161b22;
+    --bg: #1e1813;
+    --bg-subtle: #16110d;
+    --fg: #f3e8db;
+    --fg-muted: #b8a794;
+    --border: #43372c;
+    --accent: #f7a541;
+    --accent-fg: #1e1813;
     --accent-fg-weight: 600;
-    --danger: #ff7b72;
-    --added: #3fb950;
-    --modified: #d29922;
-    --selection: #1f3a5f;
-    --diff-add-bg: #12261e;
-    --diff-del-bg: #2d1416;
-    --diff-hunk-bg: #121d2f;
+    --danger: #ff8f7d;
+    --added: #9bd36a;
+    --modified: #f2c14e;
+    --selection: #4d3520;
+    --diff-add-bg: #1f2a16;
+    --diff-del-bg: #36191a;
+    --diff-hunk-bg: #2e2318;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #161b22;
-  --bg-subtle: #0d1117;
-  --fg: #e6edf3;
-  --fg-muted: #9aa5b1;
-  --border: #30363d;
-  --accent: #f08a3c;
-  --accent-fg: #161b22;
+  --bg: #1e1813;
+  --bg-subtle: #16110d;
+  --fg: #f3e8db;
+  --fg-muted: #b8a794;
+  --border: #43372c;
+  --accent: #f7a541;
+  --accent-fg: #1e1813;
   --accent-fg-weight: 600;
-  --danger: #ff7b72;
-  --added: #3fb950;
-  --modified: #d29922;
-  --selection: #1f3a5f;
-  --diff-add-bg: #12261e;
-  --diff-del-bg: #2d1416;
-  --diff-hunk-bg: #121d2f;
+  --danger: #ff8f7d;
+  --added: #9bd36a;
+  --modified: #f2c14e;
+  --selection: #4d3520;
+  --diff-add-bg: #1f2a16;
+  --diff-del-bg: #36191a;
+  --diff-hunk-bg: #2e2318;
   color-scheme: dark;
 }
 

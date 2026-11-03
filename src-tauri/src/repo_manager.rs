@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use tokio::sync::OwnedMutexGuard;
+use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
 use crate::git::error::GitError;
@@ -186,6 +187,20 @@ impl RepoManager {
         Ok((root, lock.lock_owned().await))
     }
 
+    /// Like [`Self::lock_repo`], but gives up with [`GitError::Cancelled`] if `cancel` fires
+    /// while waiting, so a queued fetch/pull/push can be cancelled before it starts.
+    pub async fn lock_repo_cancellable(
+        &self,
+        id: Uuid,
+        cancel: &CancellationToken,
+    ) -> Result<(PathBuf, OwnedMutexGuard<()>), RepoError> {
+        tokio::select! {
+            biased;
+            () = cancel.cancelled() => Err(RepoError::Git(GitError::Cancelled)),
+            locked = self.lock_repo(id) => locked,
+        }
+    }
+
     fn save(&self, file: &RepositoriesFile) -> Result<(), StoreError> {
         if self.read_only {
             tracing::warn!("repository list is read-only this session; not saving");
@@ -309,6 +324,28 @@ mod tests {
             mgr.lock_repo(Uuid::new_v4()).await,
             Err(RepoError::UnknownRepository)
         ));
+    }
+
+    #[tokio::test]
+    async fn cancelling_while_waiting_for_the_lock_gives_up() {
+        let data = tempfile::tempdir().unwrap();
+        let (_tmp, repo) = init_repo().await;
+        let mgr = std::sync::Arc::new(RepoManager::load(data.path()));
+        let id: Uuid = mgr.add(&git(), &repo).await.unwrap().id.parse().unwrap();
+        let (_root, guard) = mgr.lock_repo(id).await.unwrap();
+        let cancel = CancellationToken::new();
+        let waiter = {
+            let (mgr, cancel) = (mgr.clone(), cancel.clone());
+            tokio::spawn(async move { mgr.lock_repo_cancellable(id, &cancel).await.map(|_| ()) })
+        };
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        assert!(!waiter.is_finished(), "must wait while the lock is held");
+        cancel.cancel();
+        let result = waiter.await.unwrap();
+        assert!(matches!(result, Err(RepoError::Git(GitError::Cancelled))));
+        drop(guard);
+        // An already-cancelled token never takes the lock, even when it is free.
+        assert!(mgr.lock_repo_cancellable(id, &cancel).await.is_err());
     }
 
     #[test]
