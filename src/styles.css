@@ -1,20 +1,24 @@
 :root {
-  --bg: #ffffff;
-  --bg-subtle: #f4f6f8;
-  --fg: #1b232c;
-  --fg-muted: #57606a;
-  --border: #d0d7de;
+  --bg: #fffdf9;
+  --bg-subtle: #f8f2e9;
+  --fg: #2b2119;
+  --fg-muted: #6b5b4b;
+  --border: #e6d9c8;
   --accent: #b5551a;
   --accent-fg: #ffffff;
   /* Bold when --accent-fg is dark text on the light accent: normal weight reads too thin. */
   --accent-fg-weight: 400;
   --danger: #b42318;
-  --added: #1a7f37;
-  --modified: #9a6700;
-  --selection: #dbe9fb;
-  --diff-add-bg: #e6ffec;
-  --diff-del-bg: #ffebe9;
-  --diff-hunk-bg: #ddf4ff;
+  --added: #3d7a1d;
+  --modified: #94570a;
+  --selection: #fbe4cb;
+  --diff-add-bg: #e9f4dc;
+  --diff-del-bg: #fde7e1;
+  --diff-hunk-bg: #f7ebd8;
+  /* Letter on the solid status badges (FileStatusIcon). */
+  --badge-fg: #ffffff;
+  /* Second stop of the sunrise band across the top of the toolbar. */
+  --sun: #e8a33a;
   color-scheme: light dark;
   /* Checkboxes and radios use the brand accent, not the OS blue. */
   accent-color: var(--accent);
@@ -22,7 +26,8 @@
   font-size: 14px;
 }
 
-/* Dark ("solar": warm ember neutrals, sun-orange accent): follows the OS unless Settings → Appearance picks a theme (data-theme on <html>). */
+/* Warm "solar" palette: paper and sand in light, ember neutrals in dark, sun-orange accent.
+   Dark follows the OS unless Settings → Appearance picks a theme (data-theme on <html>). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #1e1813;
@@ -40,6 +45,8 @@
     --diff-add-bg: #1f2a16;
     --diff-del-bg: #36191a;
     --diff-hunk-bg: #2e2318;
+    --badge-fg: #1e1813;
+    --sun: #ffd166;
   }
 }
 
@@ -59,6 +66,8 @@
   --diff-add-bg: #1f2a16;
   --diff-del-bg: #36191a;
   --diff-hunk-bg: #2e2318;
+  --badge-fg: #1e1813;
+  --sun: #ffd166;
   color-scheme: dark;
 }
 
@@ -161,8 +170,19 @@ button:focus-visible {
 }
 
 .toolbar {
-  gap: 1px;
-  padding: 0;
+  gap: 6px;
+  padding: 7px 8px 6px;
+  /* A thin sunrise band along the top edge: Tenajlo's signature. */
+  background-image: linear-gradient(90deg, var(--accent), var(--sun));
+  background-size: 100% 3px;
+  background-repeat: no-repeat;
+}
+
+.toolbar-mark {
+  width: 26px;
+  height: 26px;
+  margin: 0 4px 0 2px;
+  flex: none;
 }
 
 .popover {
@@ -184,9 +204,8 @@ button:focus-visible {
   flex: 0 1 220px;
   min-width: 140px;
   padding: 0 12px;
-  border: 0;
-  border-right: 1px solid var(--border);
-  border-radius: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
   color: var(--fg);
   font-weight: 400;
@@ -199,6 +218,7 @@ button:focus-visible {
 .toolbar-button:hover,
 .toolbar-button[aria-expanded="true"] {
   background: var(--bg);
+  border-color: var(--border);
 }
 
 .toolbar-label {
@@ -232,8 +252,9 @@ button:focus-visible {
   max-height: calc(100vh - 64px);
   overflow-y: auto;
   background: var(--bg);
+  margin-top: 4px;
   border: 1px solid var(--border);
-  border-radius: 0 0 6px 6px;
+  border-radius: 8px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
 }
 
@@ -351,24 +372,35 @@ code {
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--border);
+  gap: 2px;
+  margin: 8px;
+  padding: 3px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 9px;
 }
 
 .tab {
   flex: 1;
   border: 0;
-  border-radius: 0;
-  border-bottom: 2px solid transparent;
+  border-radius: 6px;
   background: transparent;
   color: var(--fg-muted);
   font-weight: 400;
-  padding: 8px;
+  padding: 5px 8px;
+}
+
+.tab:hover {
+  color: var(--fg);
 }
 
 .tab[aria-selected="true"] {
   color: var(--fg);
   font-weight: 600;
-  border-bottom-color: var(--accent);
+  background: var(--bg);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 14%),
+    inset 0 -2px 0 var(--accent);
 }
 
 .list-header {
@@ -377,6 +409,7 @@ code {
   gap: 8px;
   padding: 6px 12px;
   color: var(--fg-muted);
+  border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   font-size: 0.85rem;
 }
@@ -425,6 +458,7 @@ code {
 
 .file-row.selected {
   background: var(--selection);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .file-path {
@@ -435,26 +469,33 @@ code {
 }
 
 .status-icon {
+  flex: none;
   width: 18px;
+  height: 18px;
+  line-height: 18px;
+  border-radius: 5px;
   text-align: center;
+  font-size: 0.75rem;
   font-weight: 700;
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--badge-fg);
+  background: var(--status, var(--fg-muted));
 }
 
 .status-untracked,
 .status-added {
-  color: var(--added);
+  --status: var(--added);
 }
 
 .status-modified,
 .status-renamed,
 .status-copied {
-  color: var(--modified);
+  --status: var(--modified);
 }
 
 .status-deleted,
 .status-conflicted {
-  color: var(--danger);
+  --status: var(--danger);
 }
 
 .pane-message {
@@ -569,6 +610,7 @@ code {
 
 .commit-row.selected {
   background: var(--selection);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .commit-summary,
@@ -843,7 +885,7 @@ button.danger {
   min-width: 230px;
   padding: 0 12px;
   height: 100%;
-  border-right: 1px solid var(--border);
+  box-sizing: border-box;
 }
 
 .sync-button.running progress {

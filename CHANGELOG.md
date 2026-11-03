@@ -8,8 +8,11 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ### Changed
 
-- **New dark theme**: dark mode now uses warm, sun-toned colors with an orange accent, and
-  checkboxes use the accent color instead of the system blue. The website's dark mode matches.
+- **New look**: warm "solar" colors in both themes (paper and sand in light mode, ember tones
+  in dark mode) with a sun-orange accent. The toolbar has a sunrise band, the app icon and
+  rounded buttons; Changes/History is a pill switch; the selected file or commit gets an accent
+  bar; and file status badges are solid. Checkboxes use the accent color instead of the system
+  blue. The website's dark mode matches.
 
 ### Fixed
 
