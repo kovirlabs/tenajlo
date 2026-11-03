@@ -169,7 +169,9 @@ pub fn generate(
     write_new(&private_path, private_text.as_bytes(), 0o600)?;
     if let Err(e) = write_new(&public_path, format!("{public_text}\n").as_bytes(), 0o644) {
         // Don't leave half a key pair behind.
-        let _ = fs::remove_file(&private_path);
+        if let Err(cleanup) = fs::remove_file(&private_path) {
+            tracing::warn!(file = %DEFAULT_KEY, error = %cleanup, "could not remove a half-written SSH key");
+        }
         return Err(e);
     }
     tracing::info!(file = %DEFAULT_KEY, "generated an SSH key");

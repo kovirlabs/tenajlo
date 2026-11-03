@@ -440,3 +440,6 @@ impl From<AccountError> for AppError {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
