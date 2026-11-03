@@ -62,6 +62,20 @@ describe("file context menu", () => {
     expect(discardChanges).toHaveBeenCalledWith("r1", ["a.txt"]);
   });
 
+  it("discards all changes from the list header, skipping conflicts", async () => {
+    const ua = vi
+      .spyOn(navigator, "userAgent", "get")
+      .mockReturnValue("Mozilla/5.0 (Windows NT 10.0)");
+    setup([file("a.txt", "Modified"), file("b.txt", "Untracked"), file("c.txt", "Conflicted")]);
+    fireEvent.contextMenu(screen.getByText("3 changed files"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Discard all changes…" }));
+    expect(screen.getByText(/2 files will be undone/)).toBeTruthy();
+    expect(screen.getByText(/moved to the Recycle Bin/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Discard 2 files" }));
+    expect(discardChanges).toHaveBeenCalledWith("r1", ["a.txt", "b.txt"]);
+    ua.mockRestore();
+  });
+
   it("offers ignore options for new files", async () => {
     setup([file("logs/run.log", "Untracked")]);
     fireEvent.contextMenu(screen.getByText("logs/run.log"));

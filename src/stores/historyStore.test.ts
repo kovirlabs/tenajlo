@@ -20,6 +20,7 @@ const commit = (n: number): Commit => ({
   authorDate: "2026-01-01T00:00:00+00:00",
   summary: `commit ${n}`,
   body: "",
+  unpushed: false,
 });
 
 const page = (from: number, count: number) =>

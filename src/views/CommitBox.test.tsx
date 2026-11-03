@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { FileChange, Identity } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { useConflictStore } from "../stores/conflictStore";
+import { useDraftStore } from "../stores/draftStore";
+import { useSyncStore } from "../stores/syncStore";
 import { CommitBox } from "./CommitBox";
 
 const identity = vi.fn<() => Promise<{ status: "ok"; data: Identity }>>();
@@ -48,6 +50,7 @@ describe("CommitBox", () => {
   beforeEach(() => {
     commitChanges.mockClear();
     useConflictStore.setState({ repoId: "r1", state: null });
+    useDraftStore.setState({ drafts: {} });
   });
 
   it("commits with Ctrl+Enter and clears the message", async () => {
@@ -120,5 +123,26 @@ describe("CommitBox", () => {
     expect(
       (screen.getByRole("button", { name: /Commit to main/ }) as HTMLButtonElement).disabled,
     ).toBe(true);
+  });
+
+  it("keeps the draft when switching away and back", () => {
+    setup("Full");
+    fireEvent.change(screen.getByLabelText("Commit summary"), { target: { value: "Half done" } });
+    cleanup();
+    render(<CommitBox repoId="r1" />);
+    expect((screen.getByLabelText("Commit summary") as HTMLInputElement).value).toBe("Half done");
+    cleanup();
+    render(<CommitBox repoId="r2" />);
+    expect((screen.getByLabelText("Commit summary") as HTMLInputElement).value).toBe("");
+  });
+
+  it("says what a queued change is waiting for", () => {
+    setup("Full");
+    act(() => {
+      useChangesStore.setState({ busy: true });
+      useSyncStore.setState({ running: { opId: "o", request: "Push", progress: null } });
+    });
+    expect(screen.getByText("Waiting for the push to finish…")).toBeTruthy();
+    act(() => useSyncStore.setState({ running: null }));
   });
 });

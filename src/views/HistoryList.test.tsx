@@ -13,6 +13,7 @@ const commit = (n: number): Commit => ({
   authorDate: new Date().toISOString(),
   summary: `Commit ${n}`,
   body: "",
+  unpushed: false,
 });
 
 describe("HistoryList", () => {
@@ -32,6 +33,23 @@ describe("HistoryList", () => {
     expect(selectCommit).toHaveBeenCalledWith(commit(2).sha);
     // Two rows fit in the viewport, so the end is visible.
     expect(loadMore).toHaveBeenCalled();
+  });
+
+  it("moves the selection with the arrow keys and marks unpushed commits", () => {
+    const selectCommit = vi.fn(async () => {});
+    useHistoryStore.setState({
+      commits: [{ ...commit(1), unpushed: true }, commit(2)],
+      error: null,
+      loading: false,
+      selectedSha: commit(1).sha,
+      selectCommit,
+      loadMore: vi.fn(async () => {}),
+    });
+    render(<HistoryList />);
+    expect(screen.getAllByText("Not pushed")).toHaveLength(1);
+    const list = screen.getByRole("listbox", { name: "Commits" });
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    expect(selectCommit).toHaveBeenCalledWith(commit(2).sha);
   });
 
   it("shows an empty state", () => {

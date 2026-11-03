@@ -21,6 +21,9 @@ pub struct Commit {
     pub author_date: String,
     pub summary: String,
     pub body: String,
+    /// Not on any remote yet ("only on your computer"). Set by [`crate::git::log::history`];
+    /// always false from the parser.
+    pub unpushed: bool,
 }
 
 /// A file changed by a commit.
@@ -54,6 +57,7 @@ pub fn parse_log(output: &[u8]) -> Vec<Commit> {
             author_date: f[5].to_owned(),
             summary: f[6].to_owned(),
             body: f[7].trim_end().to_owned(),
+            unpushed: false,
         })
         .filter(|c| !c.sha.is_empty())
         .collect()

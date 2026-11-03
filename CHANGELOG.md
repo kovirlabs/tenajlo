@@ -6,6 +6,19 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Keyboard-friendly lists**: in Changes, History and a commit's files, the arrow keys (and
+  Home, End, Page Up, Page Down) move the selection, Space ticks or unticks a file, and the
+  Menu key or Shift+F10 opens the right-click menu.
+- **Discard all changes…**: right-click the "changed files" line (or any file) to undo every
+  change at once. Discarded files go to the Recycle Bin on Windows (the dialog now says so) or
+  the Trash elsewhere.
+- **Not pushed** marker in History for commits that are only on your computer, and a way to
+  copy a commit's full ID (right-click, or **Copy ID** above its files).
+- **Remove from list…**: right-click a repository in the repository list to take it off
+  Tenajlo's list. Its files stay where they are.
+
 ### Changed
 
 - **New look**: warm "solar" colors in both themes (paper and sand in light mode, ember tones
@@ -14,7 +27,17 @@ All notable changes to Tenajlo are listed here. The format follows
   bar; and file status badges are solid. Checkboxes use the accent color instead of the system
   blue. The website's dark mode matches.
 
+- **Commit messages are kept per repository** while Tenajlo is open, so switching to
+  another repository and back no longer loses a half-written summary.
+- Tenajlo now also checks the server when you open a repository or come back to the window,
+  if it last checked over a minute ago (only when background checks are on).
+- If you start a commit while a fetch, pull or push is running, the commit box says it's
+  waiting for it to finish. In the repository list, Enter opens the first match, and the
+  filter is cleared each time the list opens.
+
 ### Fixed
+
+- When the list of changes can't be loaded, there's now a **Try again** button.
 
 - **Cancel now works while a push or pull is waiting.** If a background fetch was still running,
   clicking Cancel on a push or pull did nothing, and the push still ran once the fetch finished.

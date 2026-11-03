@@ -30,6 +30,8 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
   const close = useEffectEvent(onClose);
 
   useEffect(() => {
+    // Give focus back to whatever had it (the list row, for keyboard users) on close.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current?.querySelector("button")?.focus();
     const onDown = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) close();
@@ -42,6 +44,7 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
+      if (opener?.isConnected) opener.focus();
     };
   }, []);
 
