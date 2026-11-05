@@ -125,7 +125,9 @@ impl AccountManager {
         if let Err(e) = saved {
             if previous.as_ref().map(AccountEntry::keychain_key) != Some(entry.keychain_key()) {
                 let key = entry.keychain_key();
-                let _ = self.blocking(move |s| s.delete(&key)).await;
+                if let Err(cleanup) = self.blocking(move |s| s.delete(&key)).await {
+                    tracing::warn!(error = %cleanup, "could not remove the new token after failing to save the account");
+                }
             }
             return Err(e);
         }

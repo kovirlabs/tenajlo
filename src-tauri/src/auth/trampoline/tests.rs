@@ -3,8 +3,14 @@
 use super::*;
 use crate::auth::saved_secrets::SavedSecrets;
 use crate::auth::secrets::Secret;
+use std::net::Ipv4Addr;
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use tenajlo_askpass::CredentialOp;
+use tenajlo_askpass::{
+    credential_helper_config, CredentialOp, Fields, Mode, Request, Response, ENV_TOKEN,
+};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpStream;
 
 /// Fake user: answers with `answer`, counting prompts.
 fn user(answer: Option<AuthAnswer>) -> (PromptFn, Arc<AtomicUsize>, Arc<Mutex<Vec<PromptKind>>>) {

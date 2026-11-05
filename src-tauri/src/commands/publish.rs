@@ -1,6 +1,8 @@
 //! "Publish repository" (spec §8.1, v1.2): create the repository on Forgejo and connect the
 //! local one to it as `origin`. The UI then runs the normal "Publish branch" sync.
 
+use std::path::Path;
+
 use serde::Serialize;
 use tauri::State;
 
@@ -9,6 +11,7 @@ use crate::error::AppError;
 use crate::forgejo::address::normalize_base_url;
 use crate::forgejo::publish::{self, CreateRepoError, NewRepository, Owner, PUBLISH_SCOPES};
 use crate::forgejo::repos::RemoteRepository;
+use crate::git::exec::GitBinary;
 use crate::git::{remote, status};
 use crate::state::AppState;
 
@@ -128,12 +131,24 @@ pub async fn publish_repository(
         .map_err(|e| create_error(&state, &account, e, owner, name))?;
     tracing::info!(server = %crate::redact::redact(&account.base_url), "created a repository to publish to");
 
+    connect_origin(&git, &root, &created, ssh).await?;
+    Ok(created)
+}
+
+/// Adds the just-created repository as `origin`, using its SSH address with `ssh` when the
+/// server has one. On failure the message says the repository was already created.
+async fn connect_origin(
+    git: &GitBinary,
+    root: &Path,
+    created: &RemoteRepository,
+    ssh: bool,
+) -> Result<(), AppError> {
     let url = if ssh && !created.ssh_url.is_empty() {
         &created.ssh_url
     } else {
         &created.clone_url
     };
-    remote::add_remote(&git, &root, ORIGIN, url)
+    remote::add_remote(git, root, ORIGIN, url)
         .await
         .map_err(|e| {
             AppError::internal(
@@ -143,8 +158,7 @@ pub async fn publish_repository(
                 ),
                 e.to_string(),
             )
-        })?;
-    Ok(created)
+        })
 }
 
 fn create_error(
@@ -173,5 +187,83 @@ fn create_error(
             "That name can't be used. Use letters, numbers, dashes (-), underscores (_) and dots (.), up to 100 characters.",
         ),
         CreateRepoError::Api(e) => super::account_api_error(state, account, e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::AppErrorKind;
+    use crate::git::test_support::{git, git_in, init_repo};
+
+    fn created(ssh_url: &str) -> RemoteRepository {
+        RemoteRepository {
+            full_name: "alice/plc".to_owned(),
+            owner: "alice".to_owned(),
+            name: "plc".to_owned(),
+            description: String::new(),
+            private: true,
+            archived: false,
+            clone_url: "https://git.example.com/alice/plc.git".to_owned(),
+            ssh_url: ssh_url.to_owned(),
+        }
+    }
+
+    async fn origin_url(repo: &Path) -> String {
+        git_in(repo, &["remote", "get-url", "origin"])
+            .await
+            .trim()
+            .to_owned()
+    }
+
+    #[tokio::test]
+    async fn connects_origin_preferring_ssh_when_offered() {
+        let (_tmp, repo) = init_repo().await;
+        let ssh = "ssh://git@git.example.com:2222/alice/plc.git";
+        connect_origin(&git(), &repo, &created(ssh), true)
+            .await
+            .unwrap();
+        assert_eq!(origin_url(&repo).await, ssh);
+
+        // No SSH on the server: HTTPS even when SSH was asked for.
+        let (_tmp, repo) = init_repo().await;
+        connect_origin(&git(), &repo, &created(""), true)
+            .await
+            .unwrap();
+        assert_eq!(
+            origin_url(&repo).await,
+            "https://git.example.com/alice/plc.git"
+        );
+    }
+
+    #[tokio::test]
+    async fn failing_to_add_origin_says_the_repository_was_created() {
+        let (_tmp, repo) = init_repo().await;
+        // Something added `origin` after the up-front check: `git remote add` fails.
+        git_in(
+            &repo,
+            &[
+                "remote",
+                "add",
+                "origin",
+                "https://elsewhere.example.com/x.git",
+            ],
+        )
+        .await;
+
+        let err = connect_origin(&git(), &repo, &created(""), false)
+            .await
+            .unwrap_err();
+        assert_eq!(err.kind, AppErrorKind::Internal);
+        assert_eq!(
+            err.message,
+            "Tenajlo created alice/plc on the server but couldn't connect this repository to it."
+        );
+        assert!(err.details.is_some_and(|d| !d.is_empty()));
+        // The existing remote is left alone.
+        assert_eq!(
+            origin_url(&repo).await,
+            "https://elsewhere.example.com/x.git"
+        );
     }
 }

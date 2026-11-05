@@ -161,7 +161,7 @@ impl SavedSecrets {
         let saved = self.get(entry.keychain_key()).await;
         if saved.is_some_and(|s| s.expose() == password) {
             tracing::info!("forgetting a saved login the server rejected");
-            let _ = self.forget(&entry.keychain_key()).await;
+            log_forget_failure(self.forget(&entry.keychain_key()).await, "login");
         }
     }
 
@@ -203,7 +203,7 @@ impl SavedSecrets {
             key: key.to_owned(),
         }
         .keychain_key();
-        let _ = self.forget(&id).await;
+        log_forget_failure(self.forget(&id).await, "SSH key passphrase");
     }
 
     /// Forgets the saved secret `id` (from [`Self::list`]): keychain entry, then metadata.
@@ -235,11 +235,14 @@ impl SavedSecrets {
         match self.blocking(move |s| s.get(&k)).await {
             Ok(Some(secret)) => Some(secret),
             Ok(None) => {
-                let _ = self.write(|file| {
+                let dropped = self.write(|file| {
                     file.logins.retain(|l| l.keychain_key() != key);
                     file.passphrases.retain(|p| p.keychain_key() != key);
                     true
                 });
+                if let Err(e) = dropped {
+                    tracing::warn!(error = %e, "could not drop a saved secret missing from the keychain");
+                }
                 None
             }
             Err(e) => {
@@ -261,7 +264,9 @@ impl SavedSecrets {
         let k = key.clone();
         self.blocking(move |s| s.set(&k, &secret)).await?;
         if let Err(e) = self.write(add) {
-            let _ = self.blocking(move |s| s.delete(&key)).await;
+            if let Err(cleanup) = self.blocking(move |s| s.delete(&key)).await {
+                tracing::warn!(error = %cleanup, "could not remove a keychain entry after failing to save it");
+            }
             return Err(e);
         }
         Ok(())
@@ -308,6 +313,17 @@ fn normalize_host(protocol: &str, host: &str) -> String {
     let host = host.to_ascii_lowercase();
     host.strip_suffix(default_port)
         .map_or_else(|| host.clone(), str::to_owned)
+}
+
+/// Warns when forgetting a rejected secret failed. Nothing saved (`Unknown`) isn't a failure,
+/// and a missing keychain entry already counts as deleted.
+fn log_forget_failure(result: Result<(), SavedSecretError>, what: &str) {
+    match result {
+        Ok(()) | Err(SavedSecretError::Unknown) => {}
+        Err(e) => {
+            tracing::warn!(error = %e, kind = what, "could not forget a rejected saved secret")
+        }
+    }
 }
 
 #[cfg(test)]
