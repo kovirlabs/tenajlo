@@ -21,7 +21,7 @@ export const useDraftStore = create<DraftState>((set) => ({
     })),
   clear: (repoId) =>
     set((s) => {
-      const { [repoId]: _cleared, ...rest } = s.drafts;
+      const rest = Object.fromEntries(Object.entries(s.drafts).filter(([id]) => id !== repoId));
       return { drafts: rest };
     }),
 }));
