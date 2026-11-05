@@ -1,3 +1,4 @@
+import mark from "../../src-tauri/app-icon.svg";
 import { useSelectedRepository } from "../stores/repoStore";
 import { useUiStore } from "../stores/uiStore";
 import { BranchDropdown } from "./BranchDropdown";
@@ -8,6 +9,7 @@ export function Toolbar() {
   const repo = useSelectedRepository();
   return (
     <header className="toolbar">
+      <img className="toolbar-mark" src={mark} alt="" aria-hidden="true" />
       <RepoDropdown />
       {repo && !repo.missing && (
         <>

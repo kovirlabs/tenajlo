@@ -6,6 +6,22 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **New look**: warm "solar" colors in both themes (paper and sand in light mode, ember tones
+  in dark mode) with a sun-orange accent. The toolbar has a sunrise band, the app icon and
+  rounded buttons; Changes/History is a pill switch; the selected file or commit gets an accent
+  bar; and file status badges are solid. Checkboxes use the accent color instead of the system
+  blue. The website's dark mode matches.
+
+### Fixed
+
+- **Cancel now works while a push or pull is waiting.** If a background fetch was still running,
+  clicking Cancel on a push or pull did nothing, and the push still ran once the fetch finished.
+  Now it stops right away.
+- **Ctrl+Shift+P and Ctrl+Shift+N are ignored while a dialog is open**, so they can no longer
+  start a push or open New Branch behind Settings or another dialog.
+
 ## [1.2.0] - 2026-10-19
 
 ### Added
