@@ -159,6 +159,9 @@ export function CommitBox({ repoId }: { repoId: string }) {
         onKeyDown={onKeyDown}
       />
       {conflicts && <p className="commit-hint">Resolve conflicts before committing.</p>}
+      {!conflicts && !merging && !anyStaged && (status?.files.length ?? 0) > 0 && (
+        <p className="commit-hint">Tick the files to include in this commit.</p>
+      )}
       {lockedByOthers && (
         <p className="commit-hint" role="status">
           {lockedByOthers}
