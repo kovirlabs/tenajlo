@@ -368,6 +368,20 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 | v1.4 | Engineering files and Forgejo links | LFS file locks, binary/image previews with LFS sizes, branch pull request link and badge, commit checks and *View on Forgejo*, plain sync wording (§8.1) |
 | v2 | Forgejo native | OAuth2 PKCE sign-in. Deferred 2026-11-05: Forgejo has no dynamic client registration, so each server's admin must register a Tenajlo OAuth2 app with a loopback redirect and Tenajlo needs its client ID; access tokens expire (about 1 h), so a refresh token must be kept in the keychain, a new stored-secret format. PAT sign-in stays. |
 
+### 12.1 Backlog
+
+Found in the hand tests of 2026-10-15 and 2026-11-06 and not yet done. Each is small.
+
+1. **New repository remembers its folder.** Location always starts at the default clone folder, so making several repositories elsewhere means retyping the path. Needs a persistence decision (§13 question 6).
+2. **Sync button during a merge** offers *Get commits*, which can only fail. Show the merge state (e.g. disabled, "Finish the merge first") until it is committed or aborted.
+3. **Empty Changes pane** only says "No changes to show." Suggest the next step, as GitHub Desktop does: send or publish if there are commits to send, otherwise *Show in folder* / *Open in editor*.
+4. **Publish repository over SSH** is offered even when the server has SSH turned off, and a failed first push leaves an `origin` that can't be changed in Tenajlo. Hide SSH when the server reports it off; let a half-done publish (server repository created, then a failure) be retried by connecting to the empty repository instead of failing with "name taken".
+5. **Publish options** fail entirely when one organization lookup fails; fall back to the user's own account.
+6. **Forgejo page links** trust the host in the server's `html_url`; require the account's scheme and host, or build the URL from the account address.
+7. **Image previews** reload on every status refresh; key them on the file's own status entry.
+8. **LFS locks:** compare paths case-insensitively where the file system is (Windows, `core.ignorecase`); take the repository lock for listings too (git-lfs can write `.git/config`); say "no server" rather than "doesn't support locks" when the repository has no remote.
+9. **Forgejo link loads** can finish out of order (`forgejoStore`); a cancel sent before an operation registers is lost.
+
 ---
 
 ## 13. Open questions
@@ -377,3 +391,4 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 3. **Internal CA:** When a server's certificate comes from a company CA deployed through Group Policy, schannel trusts it on Windows. On Linux and macOS the CA has to be installed in the OS trust store manually.
 4. ~~**Distribution:**~~ **Answered:** public release under Kovir Labs, Apache-2.0: NSIS installer built by GitHub Actions (not code-signed: decided 2026-10-10), public docs, no organization-specific defaults in the UI. From v1.0.1, releases also include a Linux `.deb` (needs system git 2.40+) and an ad-hoc-signed, un-notarized macOS `.dmg` for Apple Silicon (notarization not planned: decided 2026-10-10). Update packages for all three are signed with Tenajlo's update key (§10 item 8).
 5. ~~**Pull default:**~~ **Answered:** ff-only by default. On divergence, offer "Merge the server's changes" (a merge commit); conflicts go to the conflict banner. Rebase is a Settings option without guided conflict UI.
+6. **Where does New repository remember its folder?** (a) only until Tenajlo closes, no file change; (b) a new `lastNewRepositoryParent` in `settings.json` (schema version bump and migration); (c) reuse "New clones go in", changing it when the user picks another folder (simplest, but surprising if they only wanted it once).
