@@ -83,6 +83,32 @@ describe("CommitBox", () => {
     );
   });
 
+  it("stops offering Undo once the commit is pushed or on another branch", async () => {
+    setup("Full");
+    const summary = screen.getByLabelText("Commit summary") as HTMLInputElement;
+    fireEvent.change(summary, { target: { value: "Fix pump" } });
+    await waitFor(() => expect(identity).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /Commit to main/ }));
+    await waitFor(() => expect(summary.value).toBe(""));
+    const setBranch = (branch: { name: string; upstream: string | null; ahead: number }) =>
+      act(() =>
+        useChangesStore.setState((s) => ({
+          status: s.status && {
+            ...s.status,
+            branch: { ...s.status.branch, tip: "abc", ...branch },
+          },
+        })),
+      );
+
+    setBranch({ name: "main", upstream: "origin/main", ahead: 1 });
+    expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
+    expect(screen.getByText(/Committed just now/)).toBeTruthy();
+    setBranch({ name: "main", upstream: "origin/main", ahead: 0 });
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    setBranch({ name: "other", upstream: null, ahead: 0 });
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+
   it("is disabled with nothing staged or no summary", () => {
     setup("None");
     fireEvent.change(screen.getByLabelText("Commit summary"), { target: { value: "x" } });
