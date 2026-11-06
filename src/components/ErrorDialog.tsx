@@ -8,6 +8,9 @@ import { Modal } from "./Modal";
 export function errorTitle(error: AppError | null): string {
   if (error?.gitKind === "PushRejected") return "The server has newer commits";
   if (error?.gitKind === "PullDiverged") return "You and the server both have new commits";
+  if (error?.gitKind === "LfsFileLocked") return "Someone else has these files locked";
+  if (error?.gitKind === "LfsAlreadyLocked") return "This file is already locked";
+  if (error?.gitKind === "LfsLockNotYours") return "This lock is someone else's";
   if (error?.kind === "SignInRequired") return "Sign in again";
   if (error?.kind === "InvalidInput") return "Can't do that";
   return "Something went wrong";

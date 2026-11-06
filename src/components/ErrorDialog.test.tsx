@@ -56,5 +56,8 @@ describe("ErrorDialog", () => {
   it("keeps the generic title for real failures", () => {
     expect(errorTitle(error("Git", null))).toBe("Something went wrong");
     expect(errorTitle(error("InvalidInput", null))).toBe("Can't do that");
+    expect(errorTitle({ ...error("Git", null), gitKind: "LfsFileLocked" })).toBe(
+      "Someone else has these files locked",
+    );
   });
 });
