@@ -36,7 +36,12 @@ pub fn repo_for_remote(
                 .is_some_and(|h| host.eq_ignore_ascii_case(h))
     };
 
-    let path = if let Ok(url) = Url::parse(remote_url) {
+    // `host:owner/name.git` also parses as a URL (with the scheme "host"), so only these three
+    // schemes are URLs here; anything else is tried as scp-like.
+    let url = Url::parse(remote_url)
+        .ok()
+        .filter(|u| matches!(u.scheme(), "https" | "http" | "ssh"));
+    let path = if let Some(url) = url {
         match url.scheme() {
             "https" | "http" => {
                 if !hosts_remote(base_url, remote_url) {
@@ -142,6 +147,19 @@ mod tests {
         assert_eq!(
             repo_for_remote(base, None, "git@GIT.example.com:team/x.git"),
             r("team", "x")
+        );
+        // scp-like without a user (the user comes from ~/.ssh/config).
+        assert_eq!(
+            repo_for_remote(base, None, "git.example.com:team/x.git"),
+            r("team", "x")
+        );
+        assert_eq!(
+            repo_for_remote(base, None, "other.example.com:team/x.git"),
+            None
+        );
+        assert_eq!(
+            repo_for_remote(base, None, "file:///C:/repos/team/x.git"),
+            None
         );
         assert_eq!(repo_for_remote(base, None, "git@other:team/x.git"), None);
         assert_eq!(

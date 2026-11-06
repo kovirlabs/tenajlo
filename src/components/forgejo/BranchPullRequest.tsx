@@ -42,15 +42,17 @@ export function BranchPullRequestSection({ close }: { close: () => void }) {
         <span className="pr-pill">#{number}</span> {title}
       </button>
     );
-  } else if (pushed && branch !== link.defaultBranch) {
+  } else if (pushed && link.serverBranch !== link.defaultBranch) {
+    // The server's name for the branch: a local `fix` may be `evan/fix` there.
+    const head = link.serverBranch;
     item = (
       <button
         type="button"
         className="picker-item"
-        title={`Compare ${branch} with ${link.defaultBranch} on Forgejo`}
+        title={`Compare ${head} with ${link.defaultBranch} on Forgejo`}
         onClick={() => {
           close();
-          void open({ type: "NewPullRequest", branch });
+          void open({ type: "NewPullRequest", branch: head });
         }}
       >
         Create pull request…
