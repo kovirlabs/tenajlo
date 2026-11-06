@@ -7,7 +7,8 @@ type Props = { x: number; y: number; items: MenuItem[]; onClose: () => void };
 
 /**
  * Right-click menu at a screen position, nudged to stay inside the window.
- * Closes on outside click, Escape, or selection.
+ * Closes on outside click, Escape, Tab, or selection. Arrow keys, Home and End move between
+ * items (ported from polish/after-ui-test d00b7a6).
  */
 export function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null);
@@ -32,19 +33,42 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
   useEffect(() => {
     // Give focus back to whatever had it (the list row, for keyboard users) on close.
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    ref.current?.querySelector("button")?.focus();
+    // The ref is already cleared when the cleanup runs.
+    const menu = ref.current;
+    menu?.querySelector("button")?.focus();
     const onDown = (e: MouseEvent) => {
       if (!ref.current?.contains(e.target as Node)) close();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape" || e.key === "Tab") {
+        e.preventDefault();
+        close();
+        return;
+      }
+      const buttons = [
+        ...(menu?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []),
+      ];
+      if (buttons.length === 0) return;
+      const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const next = {
+        ArrowDown: (at + 1) % buttons.length,
+        ArrowUp: (at - 1 + buttons.length) % buttons.length,
+        Home: 0,
+        End: buttons.length - 1,
+      }[e.key];
+      if (next === undefined) return;
+      e.preventDefault();
+      buttons[next]?.focus();
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
-      if (opener?.isConnected) opener.focus();
+      // Unless something else took focus meanwhile, such as a dialog the chosen item opened.
+      const now = document.activeElement;
+      const free = now === null || now === document.body || Boolean(menu?.contains(now));
+      if (free && opener?.isConnected) opener.focus();
     };
   }, []);
 
