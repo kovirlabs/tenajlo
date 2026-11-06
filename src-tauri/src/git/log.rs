@@ -1,10 +1,16 @@
 //! Commit history and commit file lists (spec §5.3).
 
+use std::collections::HashSet;
 use std::path::Path;
 
 use super::error::GitError;
 use super::exec::{Access, GitBinary, GitCommand};
 use super::parse::log::{parse_log, parse_name_status, Commit, CommitFile, LOG_FORMAT};
+use super::remote;
+
+/// Most commits [`mark_unpushed`] looks at. A branch rarely has this many commits that aren't
+/// on a remote; past it, older commits just aren't marked.
+const MAX_UNPUSHED: u32 = 5000;
 
 /// Up to `limit` commits reachable from HEAD, skipping the first `skip`. Empty for a new repository.
 pub async fn history(
@@ -46,7 +52,41 @@ pub async fn history(
         }
         return Err(GitError::failed(&out.stderr, &out.stdout, out.exit_code));
     }
-    Ok(parse_log(&out.stdout))
+    let mut commits = parse_log(&out.stdout);
+    mark_unpushed(git, root, &mut commits).await?;
+    Ok(commits)
+}
+
+/// Marks the commits that no remote-tracking branch contains yet. Repositories without a
+/// remote are left unmarked: everything there is local, so the marker would add nothing.
+async fn mark_unpushed(
+    git: &GitBinary,
+    root: &Path,
+    commits: &mut [Commit],
+) -> Result<(), GitError> {
+    if commits.is_empty() || remote::list_remotes(git, root).await?.is_empty() {
+        return Ok(());
+    }
+    let out = GitCommand::new(
+        [
+            "rev-list".to_owned(),
+            format!("--max-count={MAX_UNPUSHED}"),
+            "HEAD".to_owned(),
+            "--not".to_owned(),
+            "--remotes".to_owned(),
+            "--".to_owned(),
+        ],
+        Access::ReadOnly,
+    )
+    .cwd(root)
+    .run(git)
+    .await?;
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let unpushed: HashSet<&str> = stdout.lines().collect();
+    for commit in commits {
+        commit.unpushed = unpushed.contains(commit.sha.as_str());
+    }
+    Ok(())
 }
 
 /// Files changed by `sha`, against its first parent (merge commits included).
@@ -85,7 +125,34 @@ pub fn is_commit_hash(s: &str) -> bool {
 mod tests {
     use super::*;
     use crate::git::parse::status::FileStatusKind;
-    use crate::git::test_support::{commit_all, git, git_in, init_repo, write};
+    use crate::git::test_support::{commit_all, git, git_in, init_repo, with_bare_origin, write};
+
+    #[tokio::test]
+    async fn marks_commits_not_on_a_remote() {
+        let (_tmp, repo) = init_repo().await;
+        let git = git();
+        write(&repo, "a.txt", "1\n");
+        commit_all(&repo, "pushed").await;
+        let local = history(&git, &repo, 0, 50).await.unwrap();
+        assert!(!local[0].unpushed, "no remote: nothing is marked");
+
+        with_bare_origin(&repo).await;
+        let unpublished = history(&git, &repo, 0, 50).await.unwrap();
+        assert!(
+            unpublished[0].unpushed,
+            "remote exists but the branch isn't on it"
+        );
+
+        git_in(&repo, &["push", "-q", "-u", "origin", "main"]).await;
+        write(&repo, "a.txt", "2\n");
+        commit_all(&repo, "local only").await;
+        let all = history(&git, &repo, 0, 50).await.unwrap();
+        let marks: Vec<_> = all
+            .iter()
+            .map(|c| (c.summary.as_str(), c.unpushed))
+            .collect();
+        assert_eq!(marks, [("local only", true), ("pushed", false)]);
+    }
 
     #[tokio::test]
     async fn history_and_files() {

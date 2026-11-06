@@ -273,7 +273,7 @@ The layout mirrors GitHub Desktop, which users may already know.
 - **Repository list (dropdown):** recent repos, filter box, "Add local…", "Clone…", "Create new…" (`git init`).
 - **Clone dialog:** tabs for *Your Forgejo repos* (list from API) and *URL*. Choose HTTPS or SSH URL (SSH from M5; M4 clones HTTPS only), then the local path. Default path is `~/Documents/Tenajlo/<repo>`, configurable.
 - **Changes tab:** file list with checkboxes (stage state), status icons, and a right-click menu (discard, ignore, reveal in explorer, open in editor). Commit box at the bottom. From v1.1, the diff has a checkbox per changed line and per hunk (Shift+click for a range), which stages those lines in the real index. Each line's staged state comes from comparing the HEAD → index and index → working tree diffs. Rename, conflict, symlink, submodule, and filtered or re-encoded files (LFS, `working-tree-encoding`) stay whole-file only.
-- **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff.
+- **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff. From v1.3, commits no remote-tracking branch contains are marked *Not pushed* (only when the repository has a remote), and a commit's full ID can be copied (right-click, or *Copy ID* in the commit header).
 - **Branch dropdown:** filter, current, recent, other local, remote-only (check out creates a tracking branch), plus "New branch…". When switching with local changes, offer *Bring changes* or *Stash and switch* (GitHub Desktop behavior).
 - **Toolbar sync button:** context-aware label: *Publish branch* / *Fetch origin* / *Pull origin (↓3)* / *Push origin (↑2)*, with a progress bar during the operation.
 - **Publish repository (v1.2):** when the repository has no remote, the sync button reads *Publish repository* and opens a dialog: account (one per server), owner (the user or an organization where `can_create_repository` is true), name (prefilled with the folder name), description, *Private* (default on), and HTTPS or SSH (if the server has SSH turned off, its `ssh_url` is empty and HTTPS is used). Rust creates the repository on Forgejo, adds it as `origin`, and the dialog then runs the normal *Publish branch* push for the current branch (with progress, LFS and cancel). If that push fails, the repository and `origin` stay, and the sync button offers *Publish branch* to retry. A repository with no commits can't be published ("Make your first commit, then publish"); nothing is created on the server. Forgejo errors map to plain language: 409 → "You already have a repository named X", 422 → the name rules (letters, numbers, `-`, `_`, `.`).
@@ -286,7 +286,9 @@ The layout mirrors GitHub Desktop, which users may already know.
 ### 8.2 UX rules
 - Every mutating action shows progress and is undoable or confirmable. Discarding changes moves untracked files to the OS trash, never hard-deletes.
 - Error dialogs show a plain-language message first and raw git output behind "Details".
-- Keyboard shortcuts follow GitHub Desktop where sensible (`Ctrl+Enter` commit, `Ctrl+Shift+P` push, `Ctrl+Shift+N` new branch, `Ctrl+T` repo list).
+- Keyboard shortcuts follow GitHub Desktop where sensible (`Ctrl+Enter` commit, `Ctrl+Shift+P` push, `Ctrl+Shift+N` new branch, `Ctrl+T` repo list). Toolbar shortcuts do nothing while a dialog is open.
+- Lists (changed files, history, a commit's files) are keyboard-driven listboxes: arrows/Home/End/Page keys move the selection, Space stages, the Menu key or Shift+F10 opens the row's menu (v1.3).
+- Visual identity: Tenajlo's own warm "solar" palette (light and dark), not GitHub's Primer colors or toolbar/tab shapes.
 - Respect the OS dark/light setting. Meet WCAG AA contrast.
 
 ---
@@ -351,6 +353,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 | M6 | Polish and ship v1.0 | Merge on pull divergence + conflict banner, settings screen, Git LFS (bundled git-lfs, progress, auth), error mapping, Windows NSIS installer (unsigned at first; signing added once a certificate is chosen), user docs |
 | v1.1 | Nice-to-haves | Hunk/line staging, SSH key generate + upload, auto-update, background fetch notifications, remembered SSH passphrases, saving prompt credentials |
 | v1.2 | Publish repository | Create the repository on Forgejo (user or organization) from a local repo with no remote, add `origin`, publish the branch (§8.1) |
+| v1.3 | Polish | Keyboard-driven lists, *Discard all changes…*, per-repository commit drafts (in memory), *Remove from list…* in the repository dropdown, "waiting for the fetch/push" hint, fetch on repository open and window focus when the last fetch is over a minute old (same on/off setting), *Not pushed* marker and *Copy ID* in History, solar theme |
 | v2 | Forgejo native | OAuth2 PKCE sign-in, open PR in browser from branch, PR status badge |
 
 ---

@@ -1192,3 +1192,31 @@ label.radio {
 .welcome {
   width: min(480px, 90vw);
 }
+
+/* Keyboard-driven lists: a ring when focused from the keyboard. Rows show the selection. */
+.vlist:focus-visible,
+.commit-files:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.vlist:focus,
+.commit-files:focus {
+  outline-color: var(--accent);
+}
+
+.unpushed-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--accent-fg);
+  background: var(--accent);
+}
+
+.pane-message button {
+  margin-top: 8px;
+}

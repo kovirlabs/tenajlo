@@ -351,6 +351,11 @@ export type Commit = {
 	authorDate: string,
 	summary: string,
 	body: string,
+	/**
+	 *  Not on any remote yet ("only on your computer"). Set by [`crate::git::log::history`];
+	 *  always false from the parser.
+	 */
+	unpushed: boolean,
 };
 
 /**  A file changed by a commit. */

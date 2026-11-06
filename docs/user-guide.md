@@ -96,6 +96,12 @@ there, ready to commit again.
 
 Right-click a file for more: **Open in editor**, **Show in folder**, **Discard changes…**
 (discarded new files go to the Recycle Bin, so you can get them back), and **Ignore**.
+Right-click the "changed files" line above the list for **Discard all changes…**.
+
+Your summary and description are kept if you switch to another repository and come back.
+
+You can also use the keyboard: the arrow keys move through the list, Space ticks or unticks
+the selected file, and the Menu key (or Shift+F10) opens its right-click menu.
 
 ## Share and get changes (push, pull, fetch)
 
@@ -107,8 +113,16 @@ The button in the toolbar always shows the next useful step:
 - **Pull origin ↓3**: the server has 3 commits you don't have.
 - **Fetch origin**: check the server for changes.
 
-Tenajlo also checks the server every few minutes in the background (change or turn this off
-in **Settings → Repositories**).
+Tenajlo also checks the server every few minutes in the background, and when you open a
+repository or come back to the window (change or turn this off in **Settings → Repositories**).
+While a check, push or pull is running, a commit or other change you start waits for it to
+finish; the commit box says so.
+
+In **History**, commits marked **Not pushed** are only on your computer so far. Right-click a
+commit (or use the **Copy ID** link above its files) to copy its full commit ID.
+
+To take a repository off Tenajlo's list, open the repository list, right-click it, and choose
+**Remove from list…**. Its folder and files stay on your computer.
 
 ### Put a new repository on the server (publish)
 
