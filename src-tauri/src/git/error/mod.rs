@@ -52,6 +52,14 @@ pub enum GitErrorKind {
     TlsRevocationCheck,
     /// Git LFS couldn't transfer large files.
     LfsFailed,
+    /// The push changes files someone else has locked (git-lfs lock verification).
+    LfsFileLocked,
+    /// Someone (maybe you) already holds the lock being taken.
+    LfsAlreadyLocked,
+    /// Unlocking a lock that belongs to someone else without forcing.
+    LfsLockNotYours,
+    /// The server has no Git LFS locking API.
+    LfsLocksUnsupported,
     Unknown,
 }
 

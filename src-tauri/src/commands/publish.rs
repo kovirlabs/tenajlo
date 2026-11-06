@@ -131,6 +131,8 @@ pub async fn publish_repository(
         .map_err(|e| create_error(&state, &account, e, owner, name))?;
     tracing::info!(server = %crate::redact::redact(&account.base_url), "created a repository to publish to");
 
+    // The repository now has a remote: look its Forgejo links up again.
+    state.repo_links.forget(id);
     connect_origin(&git, &root, &created, ssh).await?;
     Ok(created)
 }

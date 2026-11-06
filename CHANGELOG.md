@@ -6,15 +6,55 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **File locks for large files**: in repositories that use Git LFS, lock a CAD model or PLC
+  project before editing it so nobody else changes it at the same time. The sidebar shows how
+  many files are locked; **Manage** lists every lock with who holds it, and lets you lock a
+  file, unlock yours, or force-unlock someone else's. Locked files get a padlock in your
+  changes, the commit box warns when you include a file someone else has locked, and Tenajlo
+  won't push changes to such a file until it's unlocked.
+- **Previews for binary files**: instead of "this binary file has changed", see the size
+  before and after, and images side by side. Files stored with Git LFS show their real size
+  (not the pointer) and their lock.
+- **Pull requests and checks**: when you're signed in to the repository's server, the branch
+  menu shows the branch's open pull request (and its number next to the branch name), or
+  offers **Create pull request…** once the branch is pushed. In History, pushed commits show
+  whether their checks passed, failed or are still running, with **View on Forgejo**.
+
+- **Keyboard-friendly lists**: in Changes, History and a commit's files, the arrow keys (and
+  Home, End, Page Up, Page Down) move the selection, Space ticks or unticks a file, and the
+  Menu key or Shift+F10 opens the right-click menu.
+- **Discard all changes…**: right-click the "changed files" line (or any file) to undo every
+  change at once. Discarded files go to the Recycle Bin on Windows (the dialog now says so) or
+  the Trash elsewhere.
+- **Not pushed** marker in History for commits that are only on your computer, and a way to
+  copy a commit's full ID (right-click, or **Copy ID** above its files).
+- **Remove from list…**: right-click a repository in the repository list to take it off
+  Tenajlo's list. Its files stay where they are.
+
 ### Changed
 
+- **Clearer sync button**: it now says what it will do: **Check for changes**, **Get 3
+  commits**, **Send 2 commits** or **Publish branch**, with "Checked 3 minutes ago" below.
+  Point at it for a full sentence that also names the git command (fetch, pull or push).
 - **New look**: warm "solar" colors in both themes (paper and sand in light mode, ember tones
   in dark mode) with a sun-orange accent. The toolbar has a sunrise band, the app icon and
   rounded buttons; Changes/History is a pill switch; the selected file or commit gets an accent
   bar; and file status badges are solid. Checkboxes use the accent color instead of the system
   blue. The website's dark mode matches.
 
+- **Commit messages are kept per repository** while Tenajlo is open, so switching to
+  another repository and back no longer loses a half-written summary.
+- Tenajlo now also checks the server when you open a repository or come back to the window,
+  if it last checked over a minute ago (only when background checks are on).
+- If you start a commit while a fetch, pull or push is running, the commit box says it's
+  waiting for it to finish. In the repository list, Enter opens the first match, and the
+  filter is cleared each time the list opens.
+
 ### Fixed
+
+- When the list of changes can't be loaded, there's now a **Try again** button.
 
 - **Cancel now works while a push or pull is waiting.** If a background fetch was still running,
   clicking Cancel on a push or pull did nothing, and the push still ran once the fetch finished.

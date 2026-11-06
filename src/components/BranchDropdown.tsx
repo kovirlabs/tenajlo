@@ -7,6 +7,7 @@ import { useUiStore } from "../stores/uiStore";
 import { ContextMenu } from "./ContextMenu";
 import { Popover } from "./Popover";
 import { DeleteBranchDialog } from "./branches/DeleteBranchDialog";
+import { BranchPullRequestSection, PullRequestPill } from "./forgejo/BranchPullRequest";
 import { SwitchDialog } from "./branches/SwitchDialog";
 
 /** Toolbar "Current branch" dropdown: switch, create, delete. */
@@ -44,12 +45,15 @@ export function BranchDropdown() {
       <Popover
         ariaLabel="Current branch"
         label={
-          <span className="toolbar-label">
-            <small>Current branch</small>
-            <span className="toolbar-value" title={current}>
-              {current}
+          <>
+            <span className="toolbar-label">
+              <small>Current branch</small>
+              <span className="toolbar-value" title={current}>
+                {current}
+              </span>
             </span>
-          </span>
+            <PullRequestPill />
+          </>
         }
       >
         {(close) => (
@@ -66,6 +70,7 @@ export function BranchDropdown() {
               <Section title="Current branch">
                 <li className="picker-item current">{current}</li>
               </Section>
+              <BranchPullRequestSection close={close} />
               <Section title="Other branches">
                 {others.map((b) => (
                   <BranchItem

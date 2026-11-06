@@ -193,10 +193,11 @@ export const pumpControlDiff: FileDiff = {
 
 const commit = (n: number, summary: string, author: string, hoursAgo: number): Commit => {
   // Deterministic, realistic-looking 40-hex-digit IDs.
-  let x = n * 2654435761;
+  // 32-bit integer LCG: plain float maths loses precision and made most IDs all zeros.
+  let x = Math.imul(n, 2654435761) >>> 0;
   const sha = Array.from({ length: 40 }, () => {
-    x = (x * 1103515245 + 12345) % 2147483648;
-    return (x % 16).toString(16);
+    x = (Math.imul(x, 1103515245) + 12345) >>> 0;
+    return (x >>> 28).toString(16);
   }).join("");
   return {
     sha,
@@ -207,6 +208,8 @@ const commit = (n: number, summary: string, author: string, hoursAgo: number): C
     authorDate: ago(hoursAgo * HOUR),
     summary,
     body: "",
+    // Matches the toolbar's "↑2": the two newest commits are only on this computer.
+    unpushed: n <= 2,
   };
 };
 
@@ -309,3 +312,48 @@ export const remoteRepositories: RemoteRepository[] = [
   remote("acme", "standards", "Tag naming and coding standards", false),
   remote("sam", "notes", "Personal notes and scripts"),
 ];
+
+/** Git LFS file locks (v1.4): one of ours on a changed file, one of a colleague's. */
+export const locks = [
+  {
+    id: "14",
+    path: "cad/impeller-housing.SLDPRT",
+    owner: "sam",
+    lockedAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    ours: true,
+  },
+  {
+    id: "15",
+    path: "cad/pump-base.SLDASM",
+    owner: "priya",
+    lockedAt: new Date(Date.now() - 26 * 3600_000).toISOString(),
+    ours: false,
+  },
+];
+
+/** A CAD file stored in Git LFS (v1.4 previews): the diff is its pointer. */
+export const impellerLfsDiff = {
+  type: "Lfs",
+  old: { oid: "c52f0d630543e6f5eda8432f240153a68fa2ed86b89c1436035d57478e74ac5e", size: 2_811_904 },
+  new: { oid: "3727fc1d4560c5c075139889a8ff24812ca6853081b91e7410c02c20f2c0fda3", size: 2_906_112 },
+};
+
+export const impellerPreview = {
+  old: { size: 2_811_904, lfs: true, image: null },
+  new: { size: 2_906_112, lfs: true, image: null },
+};
+
+/** Forgejo links (v1.4): the branch's pull request and a commit's checks. */
+export const branchLink = {
+  fullName: "controls/pump-station-controls",
+  defaultBranch: "main",
+  pull: { number: 42, title: "Add low suction pressure alarm" },
+};
+
+export const commitChecks = {
+  state: "Failure",
+  checks: [
+    { context: "build / compile (push)", state: "Success", description: "Successful in 48s" },
+    { context: "test / simulate (push)", state: "Failure", description: "Failing after 1m12s" },
+  ],
+};

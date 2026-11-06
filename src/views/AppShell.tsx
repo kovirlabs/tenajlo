@@ -6,6 +6,7 @@ import { NewRepositoryDialog } from "../components/NewRepositoryDialog";
 import { PublishRepositoryDialog } from "../components/PublishRepositoryDialog";
 import { ErrorDialog } from "../components/ErrorDialog";
 import { NewBranchDialog } from "../components/branches/NewBranchDialog";
+import { LocksDialog } from "../components/locks/LocksDialog";
 import { useShortcuts } from "../hooks/useShortcuts";
 import { Toolbar } from "../components/Toolbar";
 import { UpdateBanner } from "../components/UpdateBanner";
@@ -58,6 +59,7 @@ export function AppShell() {
       {/* Not `key={repo.id}`: RepositoryView is a sibling with that key, and React
           duplicates siblings that share a key (old repositories stay on screen). */}
       {repo && !repo.missing && <NewBranchDialog key={`new-branch:${repo.id}`} />}
+      {repo && !repo.missing && <LocksDialog key={`locks:${repo.id}`} repoId={repo.id} />}
       <CloneDialog />
       <NewRepositoryDialog />
       <PublishRepositoryDialog />

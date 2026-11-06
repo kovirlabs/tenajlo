@@ -46,6 +46,8 @@ export const commands = {
 	getCommitFiles: (repoId: string, sha: string) => typedError<CommitFile[], AppError>(__TAURI_INVOKE("get_commit_files", { repoId, sha })),
 	/**  Diff of one file within a commit. */
 	getCommitDiff: (repoId: string, sha: string, path: string, oldPath: string | null) => typedError<FileDiff, AppError>(__TAURI_INVOKE("get_commit_diff", { repoId, sha, path, oldPath })),
+	/**  Sizes and image previews for a binary or Git LFS file's two versions (spec §8.1, v1.4). */
+	getBinaryPreview: (repoId: string, source: PreviewSource) => typedError<BinaryPreview, AppError>(__TAURI_INVOKE("get_binary_preview", { repoId, source })),
 	/**  Local and remote branches. */
 	getBranches: (repoId: string) => typedError<BranchList, AppError>(__TAURI_INVOKE("get_branches", { repoId })),
 	/**
@@ -55,6 +57,46 @@ export const commands = {
 	watchRepository: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { repoId })),
 	/**  Whether the repository uses Git LFS and whether git-lfs is installed (for a warning). */
 	getLfsStatus: (repoId: string) => typedError<LfsStatus, AppError>(__TAURI_INVOKE("get_lfs_status", { repoId })),
+	/**
+	 *  The branch's repository on Forgejo and its open pull request. `None` when the remote isn't
+	 *  on a signed-in account's server.
+	 */
+	getBranchLink: (repoId: string, branch: string) => typedError<{
+	/**  `owner/name` on the server. */
+	fullName: string,
+	defaultBranch: string,
+	/**  The open pull request from this branch, if any. */
+	pull: PullRequest | null,
+} | null, AppError>(__TAURI_INVOKE("get_branch_link", { repoId, branch })),
+	/**  A commit's checks (Forgejo Actions and other CI). `None` when the repository isn't linked. */
+	getCommitChecks: (repoId: string, sha: string) => typedError<{
+	state: CheckState | null,
+	checks: Check[],
+} | null, AppError>(__TAURI_INVOKE("get_commit_checks", { repoId, sha })),
+	/**
+	 *  Opens a page of the repository's website. URLs are built in Rust from the `html_url` the
+	 *  server returned; the WebView never supplies one.
+	 */
+	openForgejoPage: (repoId: string, page: ForgejoPage) => typedError<null, AppError>(__TAURI_INVOKE("open_forgejo_page", { repoId, page })),
+	/**  Every lock on the server. `background` (the refresh after a fetch) never prompts. */
+	listLfsLocks: (repoId: string, background: boolean) => typedError<LfsLocks, AppError>(__TAURI_INVOKE("list_lfs_locks", { repoId, background })),
+	/**  Locks `path` (repository-relative, as in the changes list). */
+	lockLfsFile: (repoId: string, path: string) => typedError<LfsLock, AppError>(__TAURI_INVOKE("lock_lfs_file", { repoId, path })),
+	/**  Lets the user pick a file in the repository and locks it. `None` if they cancelled. */
+	lockPickedLfsFile: (repoId: string) => typedError<{
+	/**  Server-side lock id (a string in the LFS API). */
+	id: string,
+	/**  Repository-relative path with `/` separators. */
+	path: string,
+	/**  The server user name of whoever holds the lock. */
+	owner: string,
+	/**  RFC 3339 time the lock was taken (as the server reports it). */
+	lockedAt: string,
+	/**  The lock belongs to the signed-in user (so it can be unlocked without forcing). */
+	ours: boolean,
+} | null, AppError>(__TAURI_INVOKE("lock_picked_lfs_file", { repoId })),
+	/**  Removes lock `lock_id`. `force` removes someone else's lock (the UI confirms first). */
+	unlockLfsFile: (repoId: string, lockId: string, force: boolean) => typedError<null, AppError>(__TAURI_INVOKE("unlock_lfs_file", { repoId, lockId, force })),
 	/**  Stages (`staged = true`) or unstages the given changed files. */
 	setStaged: (repoId: string, paths: string[], staged: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_staged", { repoId, paths, staged })),
 	/**
@@ -302,6 +344,12 @@ export type AvailableUpdate = {
 	releaseUrl: string,
 };
 
+/**  Both versions; `None` where the file doesn't exist (added or deleted). */
+export type BinaryPreview = {
+	old: FileVersion | null,
+	new: FileVersion | null,
+};
+
 export type Branch = {
 	/**  Short name: `main`, or `origin/main` for remote branches. */
 	name: string,
@@ -317,6 +365,15 @@ export type Branch = {
 };
 
 export type BranchKind = "Local" | "Remote";
+
+/**  The current branch on Forgejo. */
+export type BranchLink = {
+	/**  `owner/name` on the server. */
+	fullName: string,
+	defaultBranch: string,
+	/**  The open pull request from this branch, if any. */
+	pull: PullRequest | null,
+};
 
 /**  Branches grouped the way the branch dropdown shows them. */
 export type BranchList = {
@@ -340,6 +397,17 @@ export type BranchState = {
 	upstreamGone: boolean,
 };
 
+/**  One check of a commit. */
+export type Check = {
+	/**  e.g. `build / test (push)`. */
+	context: string,
+	state: CheckState,
+	description: string,
+};
+
+/**  The combined result of a commit's checks (Forgejo Actions and other CI). */
+export type CheckState = "Pending" | "Success" | "Warning" | "Failure";
+
 /**  One commit in the History list. */
 export type Commit = {
 	sha: string,
@@ -351,6 +419,17 @@ export type Commit = {
 	authorDate: string,
 	summary: string,
 	body: string,
+	/**
+	 *  Not on any remote yet ("only on your computer"). Set by [`crate::git::log::history`];
+	 *  always false from the parser.
+	 */
+	unpushed: boolean,
+};
+
+/**  A commit's checks. `state` is `None` when the commit has none. */
+export type CommitChecks = {
+	state: CheckState | null,
+	checks: Check[],
 };
 
 /**  A file changed by a commit. */
@@ -411,12 +490,37 @@ export type FileChange = {
 };
 
 /**  A file's diff, ready to render. */
-export type FileDiff = { type: "Text"; hunks: DiffHunk[] } | { type: "Binary" } | { type: "TooLarge" } | 
+export type FileDiff = { type: "Text"; hunks: DiffHunk[] } | { type: "Binary" } | 
+/**
+ *  A file stored in Git LFS: git only sees its pointer. `None` on the side where the file
+ *  doesn't exist (added or deleted).
+ */
+{ type: "Lfs"; old: LfsPointer | null; new: LfsPointer | null } | { type: "TooLarge" } | 
 /**  No content changes (e.g. only the file mode changed). */
 { type: "Unchanged" };
 
 /**  What happened to a file, as shown in the Changes list. */
 export type FileStatusKind = "Untracked" | "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "Conflicted";
+
+/**  One version of the file. */
+export type FileVersion = {
+	/**  Size of the real file (for LFS, from the pointer). A `number` in TypeScript. */
+	size: number,
+	/**  Stored in Git LFS. */
+	lfs: boolean,
+	/**
+	 *  A `data:` URL when this is a PNG, JPEG, GIF, WebP or BMP image within the size limit
+	 *  whose content is on this computer.
+	 */
+	image: string | null,
+};
+
+/**  A page on the repository's website, built only from its `html_url`. */
+export type ForgejoPage = { type: "Repository" } | { type: "PullRequest"; number: number } | 
+/**  Compare `branch` with the default branch, where Forgejo offers "New pull request". */
+{ type: "NewPullRequest"; branch: string } | 
+/**  `sha` must be a validated hash. */
+{ type: "Commit"; sha: string };
 
 /**  Typed classification of a failed git invocation. */
 export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | 
@@ -443,7 +547,15 @@ export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" |
 /**  Windows couldn't check the certificate's revocation status (internal CA, offline CRL). */
 "TlsRevocationCheck" | 
 /**  Git LFS couldn't transfer large files. */
-"LfsFailed" | "Unknown";
+"LfsFailed" | 
+/**  The push changes files someone else has locked (git-lfs lock verification). */
+"LfsFileLocked" | 
+/**  Someone (maybe you) already holds the lock being taken. */
+"LfsAlreadyLocked" | 
+/**  Unlocking a lock that belongs to someone else without forcing. */
+"LfsLockNotYours" | 
+/**  The server has no Git LFS locking API. */
+"LfsLocksUnsupported" | "Unknown";
 
 /**  Result of the startup git check, sent to the UI. */
 export type GitInfo = {
@@ -475,6 +587,41 @@ export type GitVersion = {
 export type Identity = {
 	name: string | null,
 	email: string | null,
+};
+
+/**  A Git LFS file lock on the server. */
+export type LfsLock = {
+	/**  Server-side lock id (a string in the LFS API). */
+	id: string,
+	/**  Repository-relative path with `/` separators. */
+	path: string,
+	/**  The server user name of whoever holds the lock. */
+	owner: string,
+	/**  RFC 3339 time the lock was taken (as the server reports it). */
+	lockedAt: string,
+	/**  The lock belongs to the signed-in user (so it can be unlocked without forcing). */
+	ours: boolean,
+};
+
+/**  The repository's file locks. */
+export type LfsLocks = {
+	/**
+	 *  False when locks don't apply: no Git LFS, git-lfs missing, no remote, or a server
+	 *  without the locking API. The UI then hides everything lock-related.
+	 */
+	available: boolean,
+	locks: LfsLock[],
+};
+
+/**  What a Git LFS pointer says about the real file. */
+export type LfsPointer = {
+	/**  SHA-256 of the content, 64 lowercase hex characters. */
+	oid: string,
+	/**
+	 *  Size of the real file in bytes. Exported to TypeScript as `number` (the JSON carries
+	 *  the full value; exact up to 2^53).
+	 */
+	size: number,
 };
 
 /**  Whether a repository needs LFS and whether this computer has it. */
@@ -531,6 +678,13 @@ export type OperationState = {
 	mergeSummary: string | null,
 };
 
+/**  Which file version pair to describe. */
+export type PreviewSource = 
+/**  HEAD (old) against the working tree (new). */
+{ type: "Working"; path: string; oldPath: string | null } | 
+/**  A commit's first parent (old) against the commit (new). */
+{ type: "Commit"; sha: string; path: string; oldPath: string | null };
+
 /**  One progress update, e.g. `Receiving objects: 45% (450/1000)`. */
 export type Progress = {
 	/**  `Receiving objects`, `Resolving deltas`, `Writing objects`, … */
@@ -571,6 +725,12 @@ export type PublishOptions = {
 	organizationsNeedToken: boolean,
 	/**  Permissions for a replacement token. */
 	requiredScopes: string[],
+};
+
+/**  An open pull request. */
+export type PullRequest = {
+	number: number,
+	title: string,
 };
 
 /**  What Pull does (spec §13.5: fast-forward only unless the user chooses otherwise). */

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { FileChange } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
+import { useLockStore } from "../stores/lockStore";
 import { ChangesList } from "./ChangesList";
 
 const file = (path: string, over: Partial<FileChange> = {}): FileChange => ({
@@ -85,5 +86,53 @@ describe("ChangesList", () => {
     const rows = screen.getAllByRole("option");
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.length).toBeLessThan(100);
+  });
+
+  it("moves with the arrow keys and stages with Space", () => {
+    setStatus([file("a.txt"), file("b.txt", { staged: "Full" })]);
+    const setStaged = vi.fn(async () => {});
+    useChangesStore.setState({ setStaged, busy: false });
+    render(<ChangesList />);
+    const list = screen.getByRole("listbox", { name: "Changed files" });
+    fireEvent.keyDown(list, { key: "ArrowDown" });
+    expect(useChangesStore.getState().selectedPath).toBe("b.txt");
+    fireEvent.keyDown(list, { key: " " });
+    expect(setStaged).toHaveBeenCalledWith(["b.txt"], false);
+  });
+
+  it("offers to try again after an error", () => {
+    const refresh = vi.fn(async () => {});
+    useChangesStore.setState({
+      repoId: "r",
+      refresh,
+      status: null,
+      error: { kind: "Internal", message: "Couldn't read the repository.", details: null } as never,
+    });
+    render(<ChangesList />);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledWith("r");
+  });
+
+  it("marks locked files and offers Lock / Unlock in the menu", async () => {
+    setStatus([file("mine.bin"), file("theirs.bin"), file("free.bin")]);
+    useLockStore.setState({
+      repoId: "r",
+      available: true,
+      busy: false,
+      locks: [
+        { id: "1", path: "mine.bin", owner: "me", lockedAt: "", ours: true },
+        { id: "2", path: "theirs.bin", owner: "alice", lockedAt: "", ours: false },
+      ],
+    });
+    render(<ChangesList />);
+    expect(screen.getByLabelText("Locked by you")).toBeTruthy();
+    expect(screen.getByLabelText("Locked by alice")).toBeTruthy();
+
+    fireEvent.contextMenu(screen.getByText("free.bin"));
+    expect(await screen.findByRole("menuitem", { name: "Lock file" })).toBeTruthy();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.contextMenu(screen.getByText("mine.bin"));
+    expect(await screen.findByRole("menuitem", { name: "Unlock file" })).toBeTruthy();
+    useLockStore.setState({ available: false, locks: [] });
   });
 });

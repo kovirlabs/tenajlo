@@ -1,7 +1,10 @@
 //! Application-wide state managed by Tauri.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
+
+use uuid::Uuid;
 
 use crate::auth::accounts::AccountManager;
 use crate::auth::broker::PromptBroker;
@@ -12,6 +15,7 @@ use crate::forgejo::ForgejoClient;
 use crate::git::error::GitError;
 use crate::git::exec::GitBinary;
 use crate::operations::Operations;
+use crate::repo_links::RepoLinks;
 use crate::repo_manager::RepoManager;
 use crate::settings::SettingsManager;
 use crate::watcher::RepoWatcher;
@@ -35,6 +39,33 @@ pub struct AppState {
     pub trampoline: Option<Trampoline>,
     /// The `tenajlo-askpass` sidecar; `None` if missing.
     pub askpass: Option<PathBuf>,
+    pub lock_support: LockSupport,
+    /// The Forgejo repository behind each open repository's remote (v1.4 links).
+    pub repo_links: RepoLinks,
+}
+
+/// Repositories whose server answered a lock listing, so pushes verify locks (spec §8.1).
+#[derive(Default)]
+pub struct LockSupport(Mutex<HashSet<Uuid>>);
+
+impl LockSupport {
+    /// Records whether `repo`'s server supports Git LFS locks.
+    pub fn set(&self, repo: Uuid, supported: bool) {
+        let mut set = self.0.lock().unwrap_or_else(|p| p.into_inner());
+        if supported {
+            set.insert(repo);
+        } else {
+            set.remove(&repo);
+        }
+    }
+
+    /// True once a lock listing for `repo` succeeded this session.
+    pub fn get(&self, repo: Uuid) -> bool {
+        self.0
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .contains(&repo)
+    }
 }
 
 impl AppState {
@@ -64,6 +95,8 @@ impl AppState {
             prompts,
             trampoline,
             askpass,
+            lock_support: LockSupport::default(),
+            repo_links: RepoLinks::default(),
         }
     }
 

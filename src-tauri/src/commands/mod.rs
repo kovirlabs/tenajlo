@@ -18,6 +18,8 @@ pub mod auth;
 pub mod branches;
 pub mod changes;
 pub mod clone;
+pub mod forgejo_links;
+pub mod locks;
 pub mod merge;
 pub mod publish;
 pub mod remote_op;

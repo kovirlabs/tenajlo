@@ -48,7 +48,7 @@ mockIPC(
         return conflict ? f.conflictStatus : f.status;
       case "get_working_diff":
         return {
-          diff: path?.endsWith(".SLDPRT") ? { type: "Binary" } : f.pumpControlDiff,
+          diff: path?.endsWith(".SLDPRT") ? f.impellerLfsDiff : f.pumpControlDiff,
           lines: null,
         };
       case "get_history":
@@ -65,6 +65,14 @@ mockIPC(
         return conflict ? f.conflictOperation : f.noOperation;
       case "get_lfs_status":
         return { used: true, installed: true };
+      case "get_branch_link":
+        return f.branchLink;
+      case "get_commit_checks":
+        return f.commitChecks;
+      case "get_binary_preview":
+        return f.impellerPreview;
+      case "list_lfs_locks":
+        return { available: true, locks: f.locks };
       case "get_saved_changes":
         return null;
       case "get_identity":

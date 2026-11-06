@@ -96,6 +96,19 @@ there, ready to commit again.
 
 Right-click a file for more: **Open in editor**, **Show in folder**, **Discard changes…**
 (discarded new files go to the Recycle Bin, so you can get them back), and **Ignore**.
+Right-click the "changed files" line above the list for **Discard all changes…**.
+
+Your summary and description are kept if you switch to another repository and come back.
+
+You can also use the keyboard: the arrow keys move through the list, Space ticks or unticks
+the selected file, and the Menu key (or Shift+F10) opens its right-click menu.
+
+### Images, CAD models and other binary files
+
+Git can't show line-by-line changes for binary files. Instead, Tenajlo shows the file's size
+before and after, and for images (PNG, JPEG, GIF, WebP and BMP up to 10 MB) the old and new
+picture side by side. Files stored with Git LFS are marked **Stored with Git LFS**, with their
+real size and, if the file is locked, who holds the lock.
 
 ## Share and get changes (push, pull, fetch)
 
@@ -103,12 +116,24 @@ The button in the toolbar always shows the next useful step:
 
 - **Publish repository**: this repository isn't on a server yet (see below).
 - **Publish branch**: your branch isn't on the server yet.
-- **Push origin ↑2**: you have 2 commits the server doesn't have.
-- **Pull origin ↓3**: the server has 3 commits you don't have.
-- **Fetch origin**: check the server for changes.
+- **Send 2 commits ↑2**: you have 2 commits the server doesn't have (git calls this _push_).
+- **Get 3 commits ↓3**: the server has 3 commits you don't have (_pull_).
+- **Check for changes**: ask the server whether anyone has sent new commits (_fetch_). Your
+  files don't change.
 
-Tenajlo also checks the server every few minutes in the background (change or turn this off
-in **Settings → Repositories**).
+Point at the button to see exactly what it will do. If you and the server both have new
+commits, it shows **Get** first: get theirs, then send yours.
+
+Tenajlo also checks the server every few minutes in the background, and when you open a
+repository or come back to the window (change or turn this off in **Settings → Repositories**).
+While a check, push or pull is running, a commit or other change you start waits for it to
+finish; the commit box says so.
+
+In **History**, commits marked **Not pushed** are only on your computer so far. Right-click a
+commit (or use the **Copy ID** link above its files) to copy its full commit ID.
+
+To take a repository off Tenajlo's list, open the repository list, right-click it, and choose
+**Remove from list…**. Its folder and files stay on your computer.
 
 ### Put a new repository on the server (publish)
 
@@ -154,6 +179,18 @@ have unfinished changes when switching, Tenajlo asks whether to **Bring my chang
 other branch or **Leave my changes** on the branch you're leaving (you get them back when you
 return).
 
+### Pull requests and checks on Forgejo
+
+When you're signed in to the repository's Forgejo server, Tenajlo links to it:
+
+- If your branch has an open pull request, its number appears next to the branch name (for
+  example **#42**). Open the **Current branch** menu and click it to see it on Forgejo.
+- If your branch is on the server but has no pull request yet, the menu offers **Create pull
+  request…**, which opens Forgejo's page for it.
+- In **History**, a commit that's on the server shows its checks (such as Forgejo Actions
+  builds): **Checks passed**, **Checks failed** or **Checks running**. Point at it to see each
+  check. **View on Forgejo** (also in the right-click menu) opens the commit in your browser.
+
 ## Large files (Git LFS)
 
 Repositories with CAD models, PLC archives and other large files often use Git LFS. Tenajlo
@@ -161,6 +198,25 @@ handles it automatically: large files are uploaded and downloaded with your othe
 
 On Linux and macOS, install Git LFS first. If a repository needs it and it's missing, Tenajlo
 shows a warning and won't commit or push, so large files aren't stored the wrong way.
+
+### Lock files before you edit them
+
+CAD models and PLC projects can't be merged: if two people change the same file, one of them
+loses their work. In repositories that use Git LFS, Tenajlo shows a line at the top of the
+sidebar, such as "2 files locked (1 by you)", when the server supports file locks.
+
+- **Lock a file before editing it.** Click **Manage**, then **Lock a file…** and choose it. A
+  file you've already changed can also be locked from its right-click menu (**Lock file**).
+- Locked files in your changes show a padlock: grey for yours, red with the person's name for
+  someone else's.
+- If you include a file someone else has locked, the commit box warns you, and Tenajlo won't
+  push it until they unlock it.
+- When you're done, push your changes, then **Unlock** the file (in **Manage**, or **Unlock
+  file** in the right-click menu).
+- **Force unlock…** removes someone else's lock. Only use it when they've finished or left the
+  lock by mistake.
+
+The list refreshes when you open the repository and whenever Tenajlo checks the server.
 
 ## SSH keys
 

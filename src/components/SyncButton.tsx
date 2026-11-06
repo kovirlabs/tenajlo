@@ -4,18 +4,28 @@ import { formatRelative } from "../lib/time";
 import { useSyncStore } from "../stores/syncStore";
 import { useUiStore } from "../stores/uiStore";
 
-type Label = { request: SyncRequest; title: string; detail: string; badge?: string };
+type Label = {
+  request: SyncRequest;
+  title: string;
+  detail: string;
+  /** A full sentence saying what the click does, ending with the git command it runs. */
+  tooltip: string;
+  badge?: string;
+};
+
+const commits = (n: number) => `${n} ${n === 1 ? "commit" : "commits"}`;
 
 /**
- * Spec §8.1: Publish branch / Fetch origin / Pull origin (↓3) / Push origin (↑2). A repository
- * with no remote gets "Publish repository" instead, which opens a dialog rather than syncing.
+ * Spec §8.1 (v1.4): the button says what it will do, not the git verb: Check for changes /
+ * Get 3 commits / Send 2 commits / Publish branch. The tooltip names the git command. A
+ * repository with no remote gets "Publish repository" instead, which opens a dialog.
  */
 export function syncLabel(state: SyncState): Label | null {
   const { action, ahead, behind, lastFetched } = state;
-  const fetched =
+  const checked =
     lastFetched === null
-      ? "Never fetched"
-      : `Last fetched ${formatRelative(new Date(lastFetched * 1000).toISOString())}`;
+      ? "Never checked"
+      : `Checked ${formatRelative(new Date(lastFetched * 1000).toISOString())}`;
   switch (action.type) {
     case "NoRemote":
       return null;
@@ -24,31 +34,42 @@ export function syncLabel(state: SyncState): Label | null {
         request: "Publish",
         title: "Publish branch",
         detail: `Put this branch on ${action.remote}`,
+        tooltip: `This branch is only on your computer. Click to put it on ${action.remote} (git push).`,
       };
     case "Pull":
       return {
         request: "Pull",
-        title: `Pull ${action.remote}`,
-        detail: fetched,
+        title: `Get ${commits(behind)}`,
+        detail: checked,
         badge: ahead > 0 ? `↓${behind} ↑${ahead}` : `↓${behind}`,
+        tooltip:
+          ahead > 0
+            ? `${action.remote} has ${commits(behind)} you don't have, and you have ${commits(ahead)} it doesn't. Click to get theirs first; then you can send yours (git pull).`
+            : `Your branch is ${commits(behind)} behind ${action.remote}. Click to get ${behind === 1 ? "it" : "them"} (git pull).`,
       };
     case "Push":
       return {
         request: "Push",
-        title: `Push ${action.remote}`,
-        detail: fetched,
+        title: `Send ${commits(ahead)}`,
+        detail: checked,
         badge: `↑${ahead}`,
+        tooltip: `You have ${commits(ahead)} that ${ahead === 1 ? "isn't" : "aren't"} on ${action.remote} yet. Click to send ${ahead === 1 ? "it" : "them"} (git push).`,
       };
     case "Fetch":
-      return { request: "Fetch", title: `Fetch ${action.remote}`, detail: fetched };
+      return {
+        request: "Fetch",
+        title: "Check for changes",
+        detail: checked,
+        tooltip: `Ask ${action.remote} whether anyone has sent new commits. Nothing in your files changes (git fetch).`,
+      };
   }
 }
 
 const RUNNING_TITLE: Record<SyncRequest, string> = {
-  Fetch: "Fetching…",
-  Pull: "Pulling…",
+  Fetch: "Checking…",
+  Pull: "Getting commits…",
   PullMerge: "Merging…",
-  Push: "Pushing…",
+  Push: "Sending…",
   Publish: "Publishing…",
 };
 
@@ -96,7 +117,7 @@ export function SyncButton() {
     <button
       type="button"
       className="toolbar-button sync-button"
-      title={label.detail}
+      title={label.tooltip}
       onClick={() => void run(label.request)}
     >
       <span className="toolbar-label">

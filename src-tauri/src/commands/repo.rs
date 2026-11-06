@@ -4,6 +4,7 @@ use tauri::{AppHandle, State};
 
 use super::parse_id;
 use crate::error::AppError;
+use crate::git::binary_preview::{self, BinaryPreview, PreviewSource};
 use crate::git::branches;
 use crate::git::diff;
 use crate::git::lfs::{self, LfsStatus};
@@ -107,6 +108,21 @@ pub async fn get_commit_diff(
     check_sha(&sha)?;
     let root = state.repos.root(parse_id(&repo_id)?)?;
     Ok(diff::commit_file_diff(&state.git()?, &root, &sha, &path, old_path.as_deref()).await?)
+}
+
+/// Sizes and image previews for a binary or Git LFS file's two versions (spec §8.1, v1.4).
+#[tauri::command]
+#[specta::specta]
+pub async fn get_binary_preview(
+    state: State<'_, AppState>,
+    repo_id: String,
+    source: PreviewSource,
+) -> Result<BinaryPreview, AppError> {
+    if let PreviewSource::Commit { sha, .. } = &source {
+        check_sha(sha)?;
+    }
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    Ok(binary_preview::preview(&state.git()?, &root, &source).await?)
 }
 
 /// Local and remote branches.

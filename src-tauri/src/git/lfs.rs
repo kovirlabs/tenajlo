@@ -42,13 +42,20 @@ pub fn status(git: &GitBinary, root: &Path) -> LfsStatus {
 
 /// Uploads the LFS objects `branch` needs to `remote` (`git lfs push`), so a push never
 /// depends on the repository's pre-push hook being installed. Names must be validated.
+///
+/// `verify_locks` (the server supports locks): refuse when the push changes a file someone
+/// else has locked. Without it git-lfs only warns. Set per invocation, never in config.
 pub async fn push_objects(
     git: &GitBinary,
     root: &Path,
     remote: &str,
     branch: &str,
-    r: RemoteRun,
+    verify_locks: bool,
+    mut r: RemoteRun,
 ) -> Result<(), GitError> {
+    if verify_locks {
+        r.config.push("lfs.locksverify=true".into());
+    }
     run_remote(
         git,
         root,

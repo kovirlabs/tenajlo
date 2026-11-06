@@ -10,6 +10,7 @@ use serde::Serialize;
 use uuid::Uuid;
 
 use super::secrets::{Secret, SecretError, SecretStore};
+use crate::forgejo::remote_repo::{repo_for_remote, RepoRef};
 use crate::forgejo::ForgejoUser;
 use crate::store::accounts::{AccountEntry, AccountKind, AccountsFile, FILE_NAME};
 use crate::store::{self, StoreError};
@@ -177,6 +178,15 @@ impl AccountManager {
             .iter()
             .find(|a| hosts_remote(&a.base_url, remote_url))
             .cloned()
+    }
+
+    /// The account whose server holds `remote_url`'s repository, and which repository it is
+    /// (HTTPS or SSH remotes; spec §7, v1.4).
+    pub fn repo_for_remote(&self, remote_url: &str) -> Option<(AccountEntry, RepoRef)> {
+        self.data().accounts.iter().find_map(|a| {
+            repo_for_remote(&a.base_url, a.ssh_host.as_deref(), remote_url)
+                .map(|repo| (a.clone(), repo))
+        })
     }
 
     /// The account's token from the keychain; `None` if the entry is gone.

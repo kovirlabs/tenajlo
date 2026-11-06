@@ -1,5 +1,7 @@
 import { useMemo, useRef } from "react";
 import type { DiffLine, FileDiff, LineRef, LineStaging, StagedState } from "../bindings";
+import { formatSize } from "../lib/size";
+import { BinaryPreviewView, type PreviewProps } from "./BinaryPreviewView";
 import { StageCheckbox } from "./StageCheckbox";
 import { VirtualList } from "./VirtualList";
 
@@ -25,9 +27,12 @@ const GUTTER_PX = 160;
 export function DiffView({
   diff,
   staging,
+  preview,
 }: {
   diff: FileDiff;
   staging?: LineStagingProps | undefined;
+  /** Loads sizes and images for binary and LFS files. */
+  preview?: PreviewProps | undefined;
 }) {
   const rows = useMemo<Row[]>(() => {
     if (diff.type !== "Text") return [];
@@ -49,7 +54,21 @@ export function DiffView({
 
   switch (diff.type) {
     case "Binary":
-      return <p className="pane-message muted">This binary file has changed.</p>;
+      return preview ? (
+        <BinaryPreviewView preview={preview} lfs={false} />
+      ) : (
+        <p className="pane-message muted">This binary file has changed.</p>
+      );
+    case "Lfs":
+      return preview ? (
+        <BinaryPreviewView preview={preview} lfs />
+      ) : (
+        <p className="pane-message muted">
+          Stored with Git LFS
+          {diff.old && ` · was ${formatSize(diff.old.size)}`}
+          {diff.new && ` · now ${formatSize(diff.new.size)}`}
+        </p>
+      );
     case "TooLarge":
       return <p className="pane-message muted">This diff is too large to show.</p>;
     case "Unchanged":

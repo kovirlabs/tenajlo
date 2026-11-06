@@ -15,7 +15,7 @@ A cross-platform desktop Git client in the spirit of GitHub Desktop, built for s
 
 ## 2. Non-goals (v1)
 
-- Pull requests, issues, reviews, or other Forgejo web features beyond repository listing.
+- Pull requests, issues, reviews, or other Forgejo web features beyond repository listing. (v1.4 adds read-only links: the branch's pull request and the commit's checks, opened in the browser.)
 - Interactive rebase, cherry-pick UI, reflog browsing, bisect.
 - Submodule management (detect and warn only).
 - Multiple windows, tabs, or a plugin system.
@@ -243,6 +243,13 @@ When the credential helper protocol sends `store` (the login worked), save it on
 | User's orgs | `GET /api/v1/user/orgs` |
 | SSH keys (v1.1) | `GET/POST /api/v1/user/keys` |
 | Publish repository (v1.2) | `POST /api/v1/user/repos`, `POST /api/v1/orgs/{org}/repos`, `GET /api/v1/users/{user}/orgs/{org}/permissions` (`can_create_repository`) |
+| Repository for a remote (v1.4) | `GET /api/v1/repos/{owner}/{repo}` (`html_url`, `default_branch`) |
+| Branch pull request (v1.4) | `GET /api/v1/repos/{owner}/{repo}/pulls?state=open` (first match on `head.ref` from the same repository) |
+| Commit checks (v1.4) | `GET /api/v1/repos/{owner}/{repo}/commits/{sha}/status` (combined state of Forgejo Actions and other CI) |
+
+LFS file locks (v1.4) don't use `/api/v1`: they go through `git lfs locks/lock/unlock` (the Git LFS locking API), so the same credentials as push are used and nothing new is stored.
+
+**Remote → Forgejo repository (v1.4):** the `origin` URL (HTTPS, `ssh://` or `git@host:owner/repo`) is parsed in Rust into host, owner and name. It matches an account when the host is the account's host (HTTPS also needs the same port and sub-path); `GET /repos/{owner}/{repo}` then confirms it and gives `html_url`. Only the `html_url` the server returns, and paths below it, are ever opened in the browser. Without a matching account, the Forgejo links and badges are hidden.
 
 The client handles pagination via the `Link` / `X-Total-Count` headers, caches responses briefly with a refresh button, and uses a 15 s timeout.
 
@@ -273,11 +280,15 @@ The layout mirrors GitHub Desktop, which users may already know.
 - **Repository list (dropdown):** recent repos, filter box, "Add local…", "Clone…", "Create new…" (`git init`).
 - **Clone dialog:** tabs for *Your Forgejo repos* (list from API) and *URL*. Choose HTTPS or SSH URL (SSH from M5; M4 clones HTTPS only), then the local path. Default path is `~/Documents/Tenajlo/<repo>`, configurable.
 - **Changes tab:** file list with checkboxes (stage state), status icons, and a right-click menu (discard, ignore, reveal in explorer, open in editor). Commit box at the bottom. From v1.1, the diff has a checkbox per changed line and per hunk (Shift+click for a range), which stages those lines in the real index. Each line's staged state comes from comparing the HEAD → index and index → working tree diffs. Rename, conflict, symlink, submodule, and filtered or re-encoded files (LFS, `working-tree-encoding`) stay whole-file only.
-- **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff.
+- **History tab:** virtualized commit list (author, relative time, summary). Selecting one shows the changed files and diff. From v1.3, commits no remote-tracking branch contains are marked *Not pushed* (only when the repository has a remote), and a commit's full ID can be copied (right-click, or *Copy ID* in the commit header).
 - **Branch dropdown:** filter, current, recent, other local, remote-only (check out creates a tracking branch), plus "New branch…". When switching with local changes, offer *Bring changes* or *Stash and switch* (GitHub Desktop behavior).
-- **Toolbar sync button:** context-aware label: *Publish branch* / *Fetch origin* / *Pull origin (↓3)* / *Push origin (↑2)*, with a progress bar during the operation.
+- **Toolbar sync button:** context-aware label: *Publish branch* / *Fetch origin* / *Pull origin (↓3)* / *Push origin (↑2)*, with a progress bar during the operation. From v1.4 the labels are plain verbs (see *Plain sync wording* below).
 - **Publish repository (v1.2):** when the repository has no remote, the sync button reads *Publish repository* and opens a dialog: account (one per server), owner (the user or an organization where `can_create_repository` is true), name (prefilled with the folder name), description, *Private* (default on), and HTTPS or SSH (if the server has SSH turned off, its `ssh_url` is empty and HTTPS is used). Rust creates the repository on Forgejo, adds it as `origin`, and the dialog then runs the normal *Publish branch* push for the current branch (with progress, LFS and cancel). If that push fails, the repository and `origin` stay, and the sync button offers *Publish branch* to retry. A repository with no commits can't be published ("Make your first commit, then publish"); nothing is created on the server. Forgejo errors map to plain language: 409 → "You already have a repository named X", 422 → the name rules (letters, numbers, `-`, `_`, `.`).
   - **Scopes:** creating under the user needs `write:user` and `write:repository`; in an organization, `write:organization` (which also allows listing the user's organizations). Sign-in doesn't ask for these. When the dialog opens, Tenajlo checks the token the same way as SSH key upload, by posting an empty repository: 403 "required scope" means the scope is missing, 422 means it is there, and nothing is created either way. Without the scopes, the dialog offers to replace the token with one that has `read:user`, `write:user`, `read:repository`, `write:repository` and `write:organization`. Verified against Forgejo 11.
+- **LFS file locks (v1.4):** for repositories that use Git LFS (and git-lfs is installed). CAD and PLC files can't be merged, so locking one tells others you're editing it. Locks are listed with `git lfs locks --verify --json` when the repository opens, after every fetch and after locking or unlocking (the same background rules as fetch: no prompts). Changed files show *Locked by you* or *Locked by alice*. Right-click a changed file for *Lock file* / *Unlock file*. A sidebar line ("3 files locked · Manage") opens the *File locks* dialog: every lock with owner and time, *Unlock* for yours, *Force unlock…* (confirmed) for someone else's, and *Lock a file…* (native picker, limited to the repository) to lock before editing. When a checked file is locked by someone else, the commit box warns: "a.sldprt is locked by alice. The server will refuse your push until they unlock it." Servers without locking get a plain message in the dialog and no badges.
+- **Binary file previews (v1.4):** instead of "Binary file changed", the diff pane shows the size before and after. PNG, JPEG, GIF, WebP and BMP images up to 10 MB are shown side by side (old / new); images are passed as `data:` URLs (CSP `img-src data:`), never by file path. A Git LFS file (whose diff is the pointer) shows "Stored with Git LFS" and the real sizes from the pointer, plus the lock state.
+- **Forgejo links (v1.4):** when `origin` belongs to an account's server (§7), the branch dropdown shows the branch's open pull request (*#12 Fix pump timing*) with *Open pull request*, or *Create pull request* (`{html_url}/compare/{default}...{branch}`) for a pushed branch that has none. In History, the commit header has *View on Forgejo* and shows its checks (passing / failing / running, from the combined status); the right-click menu has *View on Forgejo* too, for pushed commits only. Lookups are cached briefly per repository and refresh after fetch and push.
+- **Plain sync wording (v1.4):** the sync button says what it will do, not the git verb: *Check for changes* (fetch), *Get 3 commits* (pull), *Send 2 commits* (push; when the branch is both ahead and behind, it gets first), *Publish branch*. The small line reads "Checked 3 minutes ago" and the tooltip is a full sentence ("Your branch is 3 commits behind origin. Click to get them (git pull)."), so the git term stays discoverable.
 - **Auth prompts:** HTTPS credentials, SSH passphrase, and host-key confirmation dialogs, all driven by `auth-prompt` events.
 - **Accounts dialog (M4 interim):** list, sign in, sign out; opened from the repository dropdown and the no-repository screen. One account per server. Folds into Settings in M6.
 - **Settings:** accounts, git identity, default clone path, external editor (VS Code / Notepad++ / custom), pull strategy, background fetch interval (default 5 min, 0 = off), new-commit notifications (v1.1, default on: after a background fetch, a desktop notification when the current branch fell further behind its upstream, only while Tenajlo isn't focused; sent from Rust, no WebView permission), theme (system / light / dark), git binary override.
@@ -286,7 +297,9 @@ The layout mirrors GitHub Desktop, which users may already know.
 ### 8.2 UX rules
 - Every mutating action shows progress and is undoable or confirmable. Discarding changes moves untracked files to the OS trash, never hard-deletes.
 - Error dialogs show a plain-language message first and raw git output behind "Details".
-- Keyboard shortcuts follow GitHub Desktop where sensible (`Ctrl+Enter` commit, `Ctrl+Shift+P` push, `Ctrl+Shift+N` new branch, `Ctrl+T` repo list).
+- Keyboard shortcuts follow GitHub Desktop where sensible (`Ctrl+Enter` commit, `Ctrl+Shift+P` push, `Ctrl+Shift+N` new branch, `Ctrl+T` repo list). Toolbar shortcuts do nothing while a dialog is open.
+- Lists (changed files, history, a commit's files) are keyboard-driven listboxes: arrows/Home/End/Page keys move the selection, Space stages, the Menu key or Shift+F10 opens the row's menu (v1.3).
+- Visual identity: Tenajlo's own warm "solar" palette (light and dark), not GitHub's Primer colors or toolbar/tab shapes.
 - Respect the OS dark/light setting. Meet WCAG AA contrast.
 
 ---
@@ -351,7 +364,9 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 | M6 | Polish and ship v1.0 | Merge on pull divergence + conflict banner, settings screen, Git LFS (bundled git-lfs, progress, auth), error mapping, Windows NSIS installer (unsigned at first; signing added once a certificate is chosen), user docs |
 | v1.1 | Nice-to-haves | Hunk/line staging, SSH key generate + upload, auto-update, background fetch notifications, remembered SSH passphrases, saving prompt credentials |
 | v1.2 | Publish repository | Create the repository on Forgejo (user or organization) from a local repo with no remote, add `origin`, publish the branch (§8.1) |
-| v2 | Forgejo native | OAuth2 PKCE sign-in, open PR in browser from branch, PR status badge |
+| v1.3 | Polish | Keyboard-driven lists, *Discard all changes…*, per-repository commit drafts (in memory), *Remove from list…* in the repository dropdown, "waiting for the fetch/push" hint, fetch on repository open and window focus when the last fetch is over a minute old (same on/off setting), *Not pushed* marker and *Copy ID* in History, solar theme |
+| v1.4 | Engineering files and Forgejo links | LFS file locks, binary/image previews with LFS sizes, branch pull request link and badge, commit checks and *View on Forgejo*, plain sync wording (§8.1) |
+| v2 | Forgejo native | OAuth2 PKCE sign-in. Deferred 2026-11-05: Forgejo has no dynamic client registration, so each server's admin must register a Tenajlo OAuth2 app with a loopback redirect and Tenajlo needs its client ID; access tokens expire (about 1 h), so a refresh token must be kept in the keychain, a new stored-secret format. PAT sign-in stays. |
 
 ---
 
