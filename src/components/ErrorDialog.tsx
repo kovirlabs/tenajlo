@@ -69,7 +69,7 @@ export function ErrorDialog() {
                   }}
                   autoFocus
                 >
-                  Pull
+                  Get the server&apos;s commits
                 </button>
               </>
             ) : (

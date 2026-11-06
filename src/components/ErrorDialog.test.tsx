@@ -48,7 +48,7 @@ describe("ErrorDialog", () => {
     useUiStore.setState({ error: { ...error("Git", null), gitKind: "PushRejected" } });
     render(<ErrorDialog />);
     expect(screen.getByText("The server has newer commits")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Pull" }));
+    fireEvent.click(screen.getByRole("button", { name: "Get the server's commits" }));
     expect(run).toHaveBeenCalledWith("Pull");
     expect(useUiStore.getState().error).toBeNull();
   });
