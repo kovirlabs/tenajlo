@@ -19,6 +19,7 @@ pub mod line_staging;
 pub mod log;
 pub mod merge;
 pub mod parse;
+pub mod primary_remote;
 mod process_tree;
 pub mod remote;
 pub mod repo_root;

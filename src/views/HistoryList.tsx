@@ -5,6 +5,7 @@ import { VirtualList, rowId } from "../components/VirtualList";
 import { listKeyHandler, menuPositionFor } from "../hooks/listKeys";
 import { copyText } from "../lib/clipboard";
 import { formatRelative } from "../lib/time";
+import { useForgejoStore } from "../stores/forgejoStore";
 import { useHistoryStore } from "../stores/historyStore";
 
 const ROW_HEIGHT = 52;
@@ -12,6 +13,7 @@ const ROW_HEIGHT = 52;
 type Menu = { commit: Commit; x: number; y: number } | null;
 
 export function HistoryList() {
+  const linked = useForgejoStore((s) => s.link !== null);
   const commits = useHistoryStore((s) => s.commits);
   const error = useHistoryStore((s) => s.error);
   const loading = useHistoryStore((s) => s.loading);
@@ -68,7 +70,20 @@ export function HistoryList() {
         <ContextMenu
           x={menu.x}
           y={menu.y}
-          items={[{ label: "Copy commit ID", onSelect: () => void copyText(menu.commit.sha) }]}
+          items={[
+            { label: "Copy commit ID", onSelect: () => void copyText(menu.commit.sha) },
+            ...(linked && !menu.commit.unpushed
+              ? [
+                  {
+                    label: "View on Forgejo",
+                    onSelect: () =>
+                      void useForgejoStore
+                        .getState()
+                        .open({ type: "Commit", sha: menu.commit.sha }),
+                  },
+                ]
+              : []),
+          ]}
           onClose={() => setMenu(null)}
         />
       )}

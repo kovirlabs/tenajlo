@@ -17,6 +17,10 @@ All notable changes to Tenajlo are listed here. The format follows
 - **Previews for binary files**: instead of "this binary file has changed", see the size
   before and after, and images side by side. Files stored with Git LFS show their real size
   (not the pointer) and their lock.
+- **Pull requests and checks**: when you're signed in to the repository's server, the branch
+  menu shows the branch's open pull request (and its number next to the branch name), or
+  offers **Create pull request…** once the branch is pushed. In History, pushed commits show
+  whether their checks passed, failed or are still running, with **View on Forgejo**.
 
 - **Keyboard-friendly lists**: in Changes, History and a commit's files, the arrow keys (and
   Home, End, Page Up, Page Down) move the selection, Space ticks or unticks a file, and the

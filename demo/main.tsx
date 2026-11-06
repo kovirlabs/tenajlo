@@ -65,6 +65,10 @@ mockIPC(
         return conflict ? f.conflictOperation : f.noOperation;
       case "get_lfs_status":
         return { used: true, installed: true };
+      case "get_branch_link":
+        return f.branchLink;
+      case "get_commit_checks":
+        return f.commitChecks;
       case "get_binary_preview":
         return f.impellerPreview;
       case "list_lfs_locks":

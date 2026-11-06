@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { getBinaryPreview } from "../api/diff";
 import { getCommitDiff } from "../api/history";
 import { FileStatusIcon } from "../components/FileStatusIcon";
+import { CommitChecksLine } from "../components/forgejo/CommitChecksLine";
 import { listKeyHandler } from "../hooks/listKeys";
 import { copyText } from "../lib/clipboard";
 import { useHistoryStore } from "../stores/historyStore";
@@ -54,6 +55,7 @@ export function CommitDetail({ repoId }: { repoId: string }) {
             {copied === commit.sha ? "Copied" : "Copy ID"}
           </button>
         </p>
+        <CommitChecksLine repoId={repoId} commit={commit} />
       </header>
       <div className="commit-split">
         <ul

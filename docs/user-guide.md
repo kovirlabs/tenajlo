@@ -175,6 +175,18 @@ have unfinished changes when switching, Tenajlo asks whether to **Bring my chang
 other branch or **Leave my changes** on the branch you're leaving (you get them back when you
 return).
 
+### Pull requests and checks on Forgejo
+
+When you're signed in to the repository's Forgejo server, Tenajlo links to it:
+
+- If your branch has an open pull request, its number appears next to the branch name (for
+  example **#42**). Open the **Current branch** menu and click it to see it on Forgejo.
+- If your branch is on the server but has no pull request yet, the menu offers **Create pull
+  request…**, which opens Forgejo's page for it.
+- In **History**, a commit that's on the server shows its checks (such as Forgejo Actions
+  builds): **Checks passed**, **Checks failed** or **Checks running**. Point at it to see each
+  check. **View on Forgejo** (also in the right-click menu) opens the commit in your browser.
+
 ## Large files (Git LFS)
 
 Repositories with CAD models, PLC archives and other large files often use Git LFS. Tenajlo

@@ -57,6 +57,27 @@ export const commands = {
 	watchRepository: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { repoId })),
 	/**  Whether the repository uses Git LFS and whether git-lfs is installed (for a warning). */
 	getLfsStatus: (repoId: string) => typedError<LfsStatus, AppError>(__TAURI_INVOKE("get_lfs_status", { repoId })),
+	/**
+	 *  The branch's repository on Forgejo and its open pull request. `None` when the remote isn't
+	 *  on a signed-in account's server.
+	 */
+	getBranchLink: (repoId: string, branch: string) => typedError<{
+	/**  `owner/name` on the server. */
+	fullName: string,
+	defaultBranch: string,
+	/**  The open pull request from this branch, if any. */
+	pull: PullRequest | null,
+} | null, AppError>(__TAURI_INVOKE("get_branch_link", { repoId, branch })),
+	/**  A commit's checks (Forgejo Actions and other CI). `None` when the repository isn't linked. */
+	getCommitChecks: (repoId: string, sha: string) => typedError<{
+	state: CheckState | null,
+	checks: Check[],
+} | null, AppError>(__TAURI_INVOKE("get_commit_checks", { repoId, sha })),
+	/**
+	 *  Opens a page of the repository's website. URLs are built in Rust from the `html_url` the
+	 *  server returned; the WebView never supplies one.
+	 */
+	openForgejoPage: (repoId: string, page: ForgejoPage) => typedError<null, AppError>(__TAURI_INVOKE("open_forgejo_page", { repoId, page })),
 	/**  Every lock on the server. `background` (the refresh after a fetch) never prompts. */
 	listLfsLocks: (repoId: string, background: boolean) => typedError<LfsLocks, AppError>(__TAURI_INVOKE("list_lfs_locks", { repoId, background })),
 	/**  Locks `path` (repository-relative, as in the changes list). */
@@ -345,6 +366,15 @@ export type Branch = {
 
 export type BranchKind = "Local" | "Remote";
 
+/**  The current branch on Forgejo. */
+export type BranchLink = {
+	/**  `owner/name` on the server. */
+	fullName: string,
+	defaultBranch: string,
+	/**  The open pull request from this branch, if any. */
+	pull: PullRequest | null,
+};
+
 /**  Branches grouped the way the branch dropdown shows them. */
 export type BranchList = {
 	current: string | null,
@@ -367,6 +397,17 @@ export type BranchState = {
 	upstreamGone: boolean,
 };
 
+/**  One check of a commit. */
+export type Check = {
+	/**  e.g. `build / test (push)`. */
+	context: string,
+	state: CheckState,
+	description: string,
+};
+
+/**  The combined result of a commit's checks (Forgejo Actions and other CI). */
+export type CheckState = "Pending" | "Success" | "Warning" | "Failure";
+
 /**  One commit in the History list. */
 export type Commit = {
 	sha: string,
@@ -383,6 +424,12 @@ export type Commit = {
 	 *  always false from the parser.
 	 */
 	unpushed: boolean,
+};
+
+/**  A commit's checks. `state` is `None` when the commit has none. */
+export type CommitChecks = {
+	state: CheckState | null,
+	checks: Check[],
 };
 
 /**  A file changed by a commit. */
@@ -467,6 +514,13 @@ export type FileVersion = {
 	 */
 	image: string | null,
 };
+
+/**  A page on the repository's website, built only from its `html_url`. */
+export type ForgejoPage = { type: "Repository" } | { type: "PullRequest"; number: number } | 
+/**  Compare `branch` with the default branch, where Forgejo offers "New pull request". */
+{ type: "NewPullRequest"; branch: string } | 
+/**  `sha` must be a validated hash. */
+{ type: "Commit"; sha: string };
 
 /**  Typed classification of a failed git invocation. */
 export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | 
@@ -671,6 +725,12 @@ export type PublishOptions = {
 	organizationsNeedToken: boolean,
 	/**  Permissions for a replacement token. */
 	requiredScopes: string[],
+};
+
+/**  An open pull request. */
+export type PullRequest = {
+	number: number,
+	title: string,
 };
 
 /**  What Pull does (spec §13.5: fast-forward only unless the user chooses otherwise). */

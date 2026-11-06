@@ -92,6 +92,17 @@ pub(super) async fn all_pages<T: serde::de::DeserializeOwned>(
     segments: &[&str],
     token: &Secret,
 ) -> Result<Vec<T>, ForgejoError> {
+    all_pages_with(client, base, segments, &[], token).await
+}
+
+/// [`all_pages`] with extra query parameters (e.g. `state=open`).
+pub(super) async fn all_pages_with<T: serde::de::DeserializeOwned>(
+    client: &ForgejoClient,
+    base: &Url,
+    segments: &[&str],
+    query: &[(&str, &str)],
+    token: &Secret,
+) -> Result<Vec<T>, ForgejoError> {
     let mut out = Vec::new();
     for page in 1..=MAX_PAGES {
         let mut url = join(base, "api/v1");
@@ -99,6 +110,7 @@ pub(super) async fn all_pages<T: serde::de::DeserializeOwned>(
             .map_err(|()| ForgejoError::InvalidUrl("cannot be a base".into()))?
             .extend(segments);
         url.query_pairs_mut()
+            .extend_pairs(query)
             .append_pair("limit", &PAGE_SIZE.to_string())
             .append_pair("page", &page.to_string());
         let items: Vec<T> = client.get_url(url, Some(token)).await?;

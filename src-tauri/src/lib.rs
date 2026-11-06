@@ -11,6 +11,7 @@ pub mod notifications;
 pub mod operations;
 pub mod os_trash;
 pub mod redact;
+pub mod repo_links;
 pub mod repo_manager;
 pub mod settings;
 pub mod state;
@@ -44,6 +45,9 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::repo::get_branches,
             commands::repo::watch_repository,
             commands::repo::get_lfs_status,
+            commands::forgejo_links::get_branch_link,
+            commands::forgejo_links::get_commit_checks,
+            commands::forgejo_links::open_forgejo_page,
             commands::locks::list_lfs_locks,
             commands::locks::lock_lfs_file,
             commands::locks::lock_picked_lfs_file,

@@ -1345,3 +1345,46 @@ label.radio {
   min-height: 120px;
   font-size: 12px;
 }
+
+/* Forgejo links (v1.4). */
+.pr-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  vertical-align: 1px;
+}
+
+.pr-item .pr-pill {
+  margin-left: 0;
+}
+
+.commit-checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+}
+
+.check-state {
+  font-weight: 600;
+}
+
+.check-success {
+  color: var(--added);
+}
+
+.check-failure {
+  color: var(--danger);
+}
+
+.check-pending,
+.check-warning {
+  color: var(--modified);
+}

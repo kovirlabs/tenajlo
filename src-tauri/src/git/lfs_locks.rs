@@ -6,10 +6,10 @@ use std::time::Duration;
 
 use super::error::GitError;
 use super::exec::{Access, GitBinary};
+use super::lfs;
 use super::parse::lfs_locks::{parse_new_lock, parse_unlock, parse_verified_locks, LfsLock};
-use super::remote::{self, run_remote_output, RemoteRun};
-use super::sync_plan::{self, SyncRequest};
-use super::{lfs, status};
+use super::primary_remote::primary_remote;
+use super::remote::{run_remote_output, RemoteRun};
 
 /// Lock calls are small API requests; a hung server shouldn't hold the UI for an hour.
 const LOCK_TIMEOUT: Duration = Duration::from_secs(60);
@@ -24,13 +24,7 @@ pub async fn lock_remote(
     if !lfs.used || !lfs.installed {
         return Ok(None);
     }
-    let current = status::status(git, root).await?;
-    let remotes = remote::list_remotes(git, root).await?;
-    let Ok(plan) = sync_plan::plan(SyncRequest::Fetch, &current, &remotes) else {
-        return Ok(None);
-    };
-    let name = plan.remote().to_owned();
-    let Some(url) = remote::remote_url(git, root, &name, false).await? else {
+    let Some((name, url)) = primary_remote(git, root).await? else {
         return Ok(None);
     };
     Ok(is_networked(&url).then_some((name, url)))

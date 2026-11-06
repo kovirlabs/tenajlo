@@ -342,3 +342,18 @@ export const impellerPreview = {
   old: { size: 2_811_904, lfs: true, image: null },
   new: { size: 2_906_112, lfs: true, image: null },
 };
+
+/** Forgejo links (v1.4): the branch's pull request and a commit's checks. */
+export const branchLink = {
+  fullName: "controls/pump-station-controls",
+  defaultBranch: "main",
+  pull: { number: 42, title: "Add low suction pressure alarm" },
+};
+
+export const commitChecks = {
+  state: "Failure",
+  checks: [
+    { context: "build / compile (push)", state: "Success", description: "Successful in 48s" },
+    { context: "test / simulate (push)", state: "Failure", description: "Failing after 1m12s" },
+  ],
+};

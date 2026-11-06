@@ -8,6 +8,7 @@ import { ConflictBanner } from "../components/conflicts/ConflictBanner";
 import { LfsBanner } from "../components/LfsBanner";
 import { LocksLine } from "../components/locks/LocksLine";
 import { useLockRefresh } from "../hooks/useLockRefresh";
+import { useForgejoLinkRefresh } from "../hooks/useForgejoLinkRefresh";
 import { ChangesList } from "./ChangesList";
 import { CommitBox } from "./CommitBox";
 import { CommitDetail } from "./CommitDetail";
@@ -30,6 +31,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   useRepoRefresh(repo.id);
   useBackgroundFetch(repo.id);
   useLockRefresh(repo.id);
+  useForgejoLinkRefresh(repo.id);
 
   return (
     <div className="repo-view">

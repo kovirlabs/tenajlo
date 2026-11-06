@@ -15,6 +15,7 @@ use crate::forgejo::ForgejoClient;
 use crate::git::error::GitError;
 use crate::git::exec::GitBinary;
 use crate::operations::Operations;
+use crate::repo_links::RepoLinks;
 use crate::repo_manager::RepoManager;
 use crate::settings::SettingsManager;
 use crate::watcher::RepoWatcher;
@@ -39,6 +40,8 @@ pub struct AppState {
     /// The `tenajlo-askpass` sidecar; `None` if missing.
     pub askpass: Option<PathBuf>,
     pub lock_support: LockSupport,
+    /// The Forgejo repository behind each open repository's remote (v1.4 links).
+    pub repo_links: RepoLinks,
 }
 
 /// Repositories whose server answered a lock listing, so pushes verify locks (spec §8.1).
@@ -93,6 +96,7 @@ impl AppState {
             trampoline,
             askpass,
             lock_support: LockSupport::default(),
+            repo_links: RepoLinks::default(),
         }
     }
 
