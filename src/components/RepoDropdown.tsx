@@ -105,16 +105,6 @@ export function RepoDropdown() {
                 className="secondary"
                 onClick={() => {
                   close();
-                  useUiStore.getState().openSettings("accounts");
-                }}
-              >
-                Accounts…
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => {
-                  close();
                   useUiStore.getState().openDialog("clone");
                 }}
               >
