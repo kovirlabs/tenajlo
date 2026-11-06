@@ -6,6 +6,29 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pushes always check file locks.** Before, Tenajlo only refused a push that changes someone
+  else's locked file if it had already listed the server's locks that session, and a setting
+  git-lfs writes after a server error could turn the check off for good. Otherwise git-lfs
+  only warned and the push went through.
+- People with read-only access see who has files locked. Before, the lock list was empty
+  for them.
+- A repository on a network share or a folder owned by another Windows account gets the
+  "owned by someone else" explanation again, instead of "This lock belongs to someone else".
+- History drops the **Not pushed** marker as soon as the commit is pushed.
+- A branch whose name on the server differs from yours (e.g. `fix` tracking `evan/fix`)
+  shows its pull request, and **Create pull request…** opens the right branch.
+- Turning pull requests off for a repository no longer hides commit checks and **View on
+  Forgejo**.
+- Forgejo links work for SSH remotes written as `host:owner/repo.git` (no `git@`).
+- Ctrl+Shift+P, Ctrl+Shift+N, Ctrl+T and Ctrl+, do nothing while a confirmation, error or
+  sign-in dialog is open, not just Settings and the other main dialogs.
+- "Checked 3 minutes ago" on the sync button keeps up with the clock.
+- Publish repository suggests a name the server accepts (a folder called "My Project" becomes
+  `My-Project`), can't be cancelled halfway, and says that names can't end in `.git`.
+- After a lock or unlock fails, the lock list reloads to match the server.
+
 ## [1.4.0] - 2026-11-05
 
 ### Added

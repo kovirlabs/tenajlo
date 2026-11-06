@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Account, AppError, PublishOptions, Repository } from "../bindings";
 import { getPublishOptions, publishRepository } from "../api/publish";
 import { useAsyncEffect } from "../hooks/useAsyncEffect";
@@ -120,6 +120,16 @@ function PublishBody({ repo, onClose }: { repo: Repository; onClose: () => void 
   );
 }
 
+/** The folder name as a Forgejo repository name: letters, digits, `-`, `_` and `.` only
+ *  (e.g. "My Project" → "My-Project"), without a `.git` ending. The user can still edit it. */
+export function suggestedName(folder: string): string {
+  return folder
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/\.git$/i, "")
+    .replace(/^[-.]+|[-.]+$/g, "")
+    .slice(0, 100);
+}
+
 type FormProps = {
   repo: Repository;
   options: PublishOptions;
@@ -131,12 +141,20 @@ type FormProps = {
 function PublishForm({ repo, options, onUpdateToken, onClose }: FormProps) {
   const owners = [...(options.userAllowed ? [""] : []), ...options.organizations];
   const [owner, setOwner] = useState(owners[0] ?? "");
-  const [name, setName] = useState(repo.name);
+  const [name, setName] = useState(() => suggestedName(repo.name));
   const [description, setDescription] = useState("");
   const [isPrivate, setIsPrivate] = useState(true);
   const [ssh, setSsh] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
+  // Closing with Escape while publishing unmounts the form; its result must still be seen.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   if (owners.length === 0) {
     return (
@@ -170,8 +188,12 @@ function PublishForm({ repo, options, onUpdateToken, onClose }: FormProps) {
       isPrivate,
       ssh,
     });
+    if (res.status === "error") {
+      if (!mounted.current) return useUiStore.getState().showError(res.error);
+      setBusy(false);
+      return setError(res.error);
+    }
     setBusy(false);
-    if (res.status === "error") return setError(res.error);
     onClose();
     // The repository now has `origin`; pushing the branch shows progress in the toolbar.
     await refreshRepo(repo.id);
@@ -243,7 +265,7 @@ function PublishForm({ repo, options, onUpdateToken, onClose }: FormProps) {
       </p>
       <InlineError error={error} />
       <div className="dialog-actions">
-        <button type="button" className="secondary" onClick={onClose}>
+        <button type="button" className="secondary" onClick={onClose} disabled={busy}>
           Cancel
         </button>
         <button type="submit" disabled={!ready}>

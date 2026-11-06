@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { SyncState } from "../bindings";
 import { useSyncStore } from "../stores/syncStore";
@@ -72,5 +72,26 @@ describe("sync button", () => {
     fireEvent.click(screen.getByRole("button", { name: /Publish repository/ }));
     expect(useUiStore.getState().dialog).toBe("publishRepository");
     expect(run).not.toHaveBeenCalled();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps "Checked … ago" current without a new fetch', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-06T12:00:00Z"));
+    const fetched = Date.parse("2026-11-06T12:00:00Z") / 1000;
+    useSyncStore.setState({
+      state: { ...state({ type: "Fetch", remote: "origin" }), lastFetched: fetched },
+      running: null,
+    });
+    render(<SyncButton />);
+    expect(screen.getByText("Checked just now")).toBeTruthy();
+    act(() => {
+      vi.setSystemTime(new Date("2026-11-06T12:02:00Z"));
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(screen.getByText("Checked 3 minutes ago")).toBeTruthy();
   });
 });

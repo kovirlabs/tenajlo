@@ -13,11 +13,15 @@ import { useTauriEvent } from "./useTauriEvent";
 /**
  * Loads repository data and keeps it fresh: on open, on `repo-changed` events from the
  * file watcher, and on window focus (fallback where watching isn't possible).
- * History reloads only when the HEAD commit changes.
+ * History reloads when the HEAD commit changes, and when a push or publish changes what is on
+ * the server (its "Not pushed" markers), which leaves HEAD where it was.
  */
 export function useRepoRefresh(repoId: string) {
   const refreshHistory = useHistoryStore((s) => s.refresh);
-  const tip = useChangesStore((s) => (s.repoId === repoId ? s.status?.branch.tip : undefined));
+  const branch = useChangesStore((s) => (s.repoId === repoId ? s.status?.branch : undefined));
+  const tip = branch?.tip;
+  const upstream = branch?.upstream;
+  const ahead = branch?.ahead;
 
   useEffect(() => {
     const refresh = () => void refreshRepo(repoId);
@@ -38,5 +42,5 @@ export function useRepoRefresh(repoId: string) {
   useEffect(() => {
     // `undefined` = status not loaded yet; `null` = no commits yet (still worth loading: empty).
     if (tip !== undefined) void refreshHistory(repoId);
-  }, [repoId, tip, refreshHistory]);
+  }, [repoId, tip, upstream, ahead, refreshHistory]);
 }
