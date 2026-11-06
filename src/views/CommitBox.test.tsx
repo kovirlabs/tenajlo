@@ -114,6 +114,7 @@ describe("CommitBox", () => {
     fireEvent.change(screen.getByLabelText("Commit summary"), { target: { value: "x" } });
     const button = screen.getByRole("button", { name: /Commit to main/ }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
+    expect(screen.getByText("Tick the files to include in this commit.")).toBeTruthy();
   });
 
   it("asks for an identity instead of committing when none is set", async () => {
