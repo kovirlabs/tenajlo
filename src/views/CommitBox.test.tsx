@@ -143,7 +143,7 @@ describe("CommitBox", () => {
       useChangesStore.setState({ busy: true });
       useSyncStore.setState({ running: { opId: "o", request: "Push", progress: null } });
     });
-    expect(screen.getByText("Waiting for the push to finish…")).toBeTruthy();
+    expect(screen.getByText("Waiting for the upload to finish…")).toBeTruthy();
     act(() => useSyncStore.setState({ running: null }));
   });
 

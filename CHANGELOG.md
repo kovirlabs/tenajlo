@@ -35,6 +35,9 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ### Changed
 
+- **Clearer sync button**: it now says what it will do: **Check for changes**, **Get 3
+  commits**, **Send 2 commits** or **Publish branch**, with "Checked 3 minutes ago" below.
+  Point at it for a full sentence that also names the git command (fetch, pull or push).
 - **New look**: warm "solar" colors in both themes (paper and sand in light mode, ember tones
   in dark mode) with a sun-orange accent. The toolbar has a sunrise band, the app icon and
   rounded buttons; Changes/History is a pill switch; the selected file or commit gets an accent

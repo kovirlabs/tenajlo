@@ -13,10 +13,10 @@ import { useAsyncEffect } from "../hooks/useAsyncEffect";
  *  message is a per-repository draft, so switching repositories doesn't lose it. */
 /** What a queued change is waiting for, in plain words. */
 const WAITING_LABEL: Record<SyncRequest, string> = {
-  Fetch: "fetch",
-  Pull: "pull",
-  PullMerge: "pull",
-  Push: "push",
+  Fetch: "check for changes",
+  Pull: "download",
+  PullMerge: "merge",
+  Push: "upload",
   Publish: "publish",
 };
 

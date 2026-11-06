@@ -116,9 +116,13 @@ The button in the toolbar always shows the next useful step:
 
 - **Publish repository**: this repository isn't on a server yet (see below).
 - **Publish branch**: your branch isn't on the server yet.
-- **Push origin ↑2**: you have 2 commits the server doesn't have.
-- **Pull origin ↓3**: the server has 3 commits you don't have.
-- **Fetch origin**: check the server for changes.
+- **Send 2 commits ↑2**: you have 2 commits the server doesn't have (git calls this _push_).
+- **Get 3 commits ↓3**: the server has 3 commits you don't have (_pull_).
+- **Check for changes**: ask the server whether anyone has sent new commits (_fetch_). Your
+  files don't change.
+
+Point at the button to see exactly what it will do. If you and the server both have new
+commits, it shows **Get** first: get theirs, then send yours.
 
 Tenajlo also checks the server every few minutes in the background, and when you open a
 repository or come back to the window (change or turn this off in **Settings → Repositories**).

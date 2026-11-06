@@ -18,13 +18,23 @@ describe("sync button", () => {
     expect(syncLabel(state({ type: "NoRemote" }))).toBeNull();
     expect(syncLabel(state({ type: "Publish", remote: "origin" }))?.title).toBe("Publish branch");
     expect(syncLabel(state({ type: "Pull", remote: "origin" }, 0, 3))).toMatchObject({
-      title: "Pull origin",
+      title: "Get 3 commits",
       badge: "↓3",
-      detail: "Never fetched",
+      detail: "Never checked",
+      tooltip: "Your branch is 3 commits behind origin. Click to get them (git pull).",
     });
-    expect(syncLabel(state({ type: "Pull", remote: "origin" }, 2, 3))?.badge).toBe("↓3 ↑2");
-    expect(syncLabel(state({ type: "Push", remote: "origin" }, 2))?.badge).toBe("↑2");
-    expect(syncLabel(state({ type: "Fetch", remote: "origin" }))?.request).toBe("Fetch");
+    const diverged = syncLabel(state({ type: "Pull", remote: "origin" }, 2, 3));
+    expect(diverged?.badge).toBe("↓3 ↑2");
+    expect(diverged?.tooltip).toMatch(/get theirs first/);
+    expect(syncLabel(state({ type: "Push", remote: "origin" }, 1))).toMatchObject({
+      title: "Send 1 commit",
+      badge: "↑1",
+      tooltip: "You have 1 commit that isn't on origin yet. Click to send it (git push).",
+    });
+    expect(syncLabel(state({ type: "Fetch", remote: "origin" }))).toMatchObject({
+      request: "Fetch",
+      title: "Check for changes",
+    });
   });
 
   it("runs the action and shows progress with cancel", () => {
@@ -37,7 +47,7 @@ describe("sync button", () => {
       cancel,
     });
     render(<SyncButton />);
-    fireEvent.click(screen.getByRole("button", { name: /Push origin/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Send 1 commit/ }));
     expect(run).toHaveBeenCalledWith("Push");
 
     act(() => {

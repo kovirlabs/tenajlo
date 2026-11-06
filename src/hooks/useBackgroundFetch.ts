@@ -13,7 +13,7 @@ function isStale(state: SyncState | null, now: number): boolean {
 
 /**
  * Fetches the open repository every few minutes (Settings → Repositories; spec §8.1) so the
- * sync button can say "Pull origin (↓3)", and also right after opening it and when the window
+ * sync button can say "Get 3 commits", and also right after opening it and when the window
  * regains focus if the last fetch is over a minute old. Turned off entirely when the interval
  * is 0. Skipped while another sync runs; failures are silent — the user's own fetch will
  * explain them.
