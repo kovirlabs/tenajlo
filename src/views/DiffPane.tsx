@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { LineRef, WorkingDiff } from "../bindings";
+import type { BinaryPreview, LineRef, WorkingDiff } from "../bindings";
 import type { Result } from "../api/result";
 import { DiffView } from "../components/DiffView";
 import { ErrorDetails } from "../components/ErrorDetails";
@@ -7,7 +7,13 @@ import { useDiffStore } from "../stores/diffStore";
 
 type Props = {
   /** What to show; null shows `empty`. Changing it (or `version`) reloads. */
-  source: { key: string; title: string; fetch: () => Promise<Result<WorkingDiff>> } | null;
+  source: {
+    key: string;
+    title: string;
+    fetch: () => Promise<Result<WorkingDiff>>;
+    /** For binary and LFS files: the file's path and how to load sizes and images. */
+    preview?: { path: string; fetch: () => Promise<Result<BinaryPreview>> };
+  } | null;
   /** Bump to re-fetch the same file (e.g. after the working tree changed). */
   version?: unknown;
   empty: string;
@@ -47,6 +53,7 @@ export function DiffPane({ source, version, empty, onStageLines, busy = false }:
       ) : diff && key === source.key ? (
         <DiffView
           diff={diff}
+          preview={source.preview && { key: source.key, ...source.preview }}
           staging={
             lines && onStageLines
               ? {

@@ -1,7 +1,7 @@
 import type { Repository } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { useUiStore, type Tab } from "../stores/uiStore";
-import { getWorkingDiff } from "../api/diff";
+import { getBinaryPreview, getWorkingDiff } from "../api/diff";
 import { useRepoRefresh } from "../hooks/useRepoRefresh";
 import { useBackgroundFetch } from "../hooks/useBackgroundFetch";
 import { ConflictBanner } from "../components/conflicts/ConflictBanner";
@@ -70,6 +70,16 @@ export function RepositoryView({ repo }: { repo: Repository }) {
                     key: `work:${repo.id}:${selectedPath}`,
                     title: selectedPath,
                     fetch: () => getWorkingDiff(repo.id, selectedPath),
+                    preview: {
+                      path: selectedPath,
+                      fetch: () =>
+                        getBinaryPreview(repo.id, {
+                          type: "Working",
+                          path: selectedPath,
+                          oldPath:
+                            status?.files.find((f) => f.path === selectedPath)?.oldPath ?? null,
+                        }),
+                    },
                   }
             }
             version={status}

@@ -1,4 +1,10 @@
-import { commands, type LineRef, type WorkingDiff } from "../bindings";
+import {
+  commands,
+  type BinaryPreview,
+  type LineRef,
+  type PreviewSource,
+  type WorkingDiff,
+} from "../bindings";
 import type { Result } from "./result";
 
 /** A changed file's diff against the last commit, with which lines are staged. */
@@ -18,4 +24,12 @@ export function setLinesStaged(
   staged: boolean,
 ): Promise<Result<null>> {
   return commands.setLinesStaged(repoId, path, token, lines, staged);
+}
+
+/** Sizes and image previews for a binary or Git LFS file (spec §8.1, v1.4). */
+export function getBinaryPreview(
+  repoId: string,
+  source: PreviewSource,
+): Promise<Result<BinaryPreview>> {
+  return commands.getBinaryPreview(repoId, source);
 }

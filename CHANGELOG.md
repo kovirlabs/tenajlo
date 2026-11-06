@@ -14,6 +14,9 @@ All notable changes to Tenajlo are listed here. The format follows
   file, unlock yours, or force-unlock someone else's. Locked files get a padlock in your
   changes, the commit box warns when you include a file someone else has locked, and Tenajlo
   won't push changes to such a file until it's unlocked.
+- **Previews for binary files**: instead of "this binary file has changed", see the size
+  before and after, and images side by side. Files stored with Git LFS show their real size
+  (not the pointer) and their lock.
 
 - **Keyboard-friendly lists**: in Changes, History and a commit's files, the arrow keys (and
   Home, End, Page Up, Page Down) move the selection, Space ticks or unticks a file, and the

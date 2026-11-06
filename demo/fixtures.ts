@@ -330,3 +330,15 @@ export const locks = [
     ours: false,
   },
 ];
+
+/** A CAD file stored in Git LFS (v1.4 previews): the diff is its pointer. */
+export const impellerLfsDiff = {
+  type: "Lfs",
+  old: { oid: "c52f0d630543e6f5eda8432f240153a68fa2ed86b89c1436035d57478e74ac5e", size: 2_811_904 },
+  new: { oid: "3727fc1d4560c5c075139889a8ff24812ca6853081b91e7410c02c20f2c0fda3", size: 2_906_112 },
+};
+
+export const impellerPreview = {
+  old: { size: 2_811_904, lfs: true, image: null },
+  new: { size: 2_906_112, lfs: true, image: null },
+};

@@ -103,6 +103,13 @@ Your summary and description are kept if you switch to another repository and co
 You can also use the keyboard: the arrow keys move through the list, Space ticks or unticks
 the selected file, and the Menu key (or Shift+F10) opens its right-click menu.
 
+### Images, CAD models and other binary files
+
+Git can't show line-by-line changes for binary files. Instead, Tenajlo shows the file's size
+before and after, and for images (PNG, JPEG, GIF, WebP and BMP up to 10 MB) the old and new
+picture side by side. Files stored with Git LFS are marked **Stored with Git LFS**, with their
+real size and, if the file is locked, who holds the lock.
+
 ## Share and get changes (push, pull, fetch)
 
 The button in the toolbar always shows the next useful step:

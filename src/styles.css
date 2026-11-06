@@ -1283,3 +1283,65 @@ label.radio {
 .locks-list .muted {
   flex: 1;
 }
+
+/* Binary and LFS file previews (v1.4). */
+.binary-preview {
+  padding: 16px;
+  overflow: auto;
+}
+
+.binary-preview p {
+  margin: 0 0 8px;
+}
+
+.binary-summary {
+  font-weight: 600;
+}
+
+.lfs-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: var(--accent-fg-weight);
+  font-size: 12px;
+}
+
+.image-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.image-side {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.image-side img,
+.image-missing {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  /* A checkerboard so transparent areas are visible in both themes. */
+  background: repeating-conic-gradient(var(--bg-subtle) 0 25%, var(--bg) 0 50%) 0 0 / 16px 16px;
+}
+
+/* Never enlarge a small image (it would blur); only shrink large ones. */
+.image-side img {
+  align-self: flex-start;
+}
+
+.image-missing {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  font-size: 12px;
+}

@@ -46,6 +46,8 @@ export const commands = {
 	getCommitFiles: (repoId: string, sha: string) => typedError<CommitFile[], AppError>(__TAURI_INVOKE("get_commit_files", { repoId, sha })),
 	/**  Diff of one file within a commit. */
 	getCommitDiff: (repoId: string, sha: string, path: string, oldPath: string | null) => typedError<FileDiff, AppError>(__TAURI_INVOKE("get_commit_diff", { repoId, sha, path, oldPath })),
+	/**  Sizes and image previews for a binary or Git LFS file's two versions (spec §8.1, v1.4). */
+	getBinaryPreview: (repoId: string, source: PreviewSource) => typedError<BinaryPreview, AppError>(__TAURI_INVOKE("get_binary_preview", { repoId, source })),
 	/**  Local and remote branches. */
 	getBranches: (repoId: string) => typedError<BranchList, AppError>(__TAURI_INVOKE("get_branches", { repoId })),
 	/**
@@ -321,6 +323,12 @@ export type AvailableUpdate = {
 	releaseUrl: string,
 };
 
+/**  Both versions; `None` where the file doesn't exist (added or deleted). */
+export type BinaryPreview = {
+	old: FileVersion | null,
+	new: FileVersion | null,
+};
+
 export type Branch = {
 	/**  Short name: `main`, or `origin/main` for remote branches. */
 	name: string,
@@ -435,12 +443,30 @@ export type FileChange = {
 };
 
 /**  A file's diff, ready to render. */
-export type FileDiff = { type: "Text"; hunks: DiffHunk[] } | { type: "Binary" } | { type: "TooLarge" } | 
+export type FileDiff = { type: "Text"; hunks: DiffHunk[] } | { type: "Binary" } | 
+/**
+ *  A file stored in Git LFS: git only sees its pointer. `None` on the side where the file
+ *  doesn't exist (added or deleted).
+ */
+{ type: "Lfs"; old: LfsPointer | null; new: LfsPointer | null } | { type: "TooLarge" } | 
 /**  No content changes (e.g. only the file mode changed). */
 { type: "Unchanged" };
 
 /**  What happened to a file, as shown in the Changes list. */
 export type FileStatusKind = "Untracked" | "Added" | "Modified" | "Deleted" | "Renamed" | "Copied" | "Conflicted";
+
+/**  One version of the file. */
+export type FileVersion = {
+	/**  Size of the real file (for LFS, from the pointer). A `number` in TypeScript. */
+	size: number,
+	/**  Stored in Git LFS. */
+	lfs: boolean,
+	/**
+	 *  A `data:` URL when this is a PNG, JPEG, GIF, WebP or BMP image within the size limit
+	 *  whose content is on this computer.
+	 */
+	image: string | null,
+};
 
 /**  Typed classification of a failed git invocation. */
 export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" | 
@@ -533,6 +559,17 @@ export type LfsLocks = {
 	locks: LfsLock[],
 };
 
+/**  What a Git LFS pointer says about the real file. */
+export type LfsPointer = {
+	/**  SHA-256 of the content, 64 lowercase hex characters. */
+	oid: string,
+	/**
+	 *  Size of the real file in bytes. Exported to TypeScript as `number` (the JSON carries
+	 *  the full value; exact up to 2^53).
+	 */
+	size: number,
+};
+
 /**  Whether a repository needs LFS and whether this computer has it. */
 export type LfsStatus = {
 	/**  `.gitattributes` routes files through the LFS filter, or `.lfsconfig` exists. */
@@ -586,6 +623,13 @@ export type OperationState = {
 	/**  First line of git's prepared merge message, to prefill the commit summary. */
 	mergeSummary: string | null,
 };
+
+/**  Which file version pair to describe. */
+export type PreviewSource = 
+/**  HEAD (old) against the working tree (new). */
+{ type: "Working"; path: string; oldPath: string | null } | 
+/**  A commit's first parent (old) against the commit (new). */
+{ type: "Commit"; sha: string; path: string; oldPath: string | null };
 
 /**  One progress update, e.g. `Receiving objects: 45% (450/1000)`. */
 export type Progress = {

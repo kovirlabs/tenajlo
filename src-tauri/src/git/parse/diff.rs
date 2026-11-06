@@ -2,6 +2,8 @@
 
 use serde::Serialize;
 
+use super::lfs_pointer::{pointer_change, LfsPointer};
+
 /// Above this many bytes of patch text, the diff is not rendered (GitHub Desktop's LargeText limit).
 pub const MAX_DIFF_BYTES: usize = 4_375_000;
 /// A single line longer than this marks the diff as too large (minified files, data dumps).
@@ -42,6 +44,12 @@ pub enum FileDiff {
         hunks: Vec<DiffHunk>,
     },
     Binary,
+    /// A file stored in Git LFS: git only sees its pointer. `None` on the side where the file
+    /// doesn't exist (added or deleted).
+    Lfs {
+        old: Option<LfsPointer>,
+        new: Option<LfsPointer>,
+    },
     TooLarge,
     /// No content changes (e.g. only the file mode changed).
     Unchanged,
@@ -158,7 +166,10 @@ pub fn parse_diff(output: &[u8]) -> FileDiff {
             lines,
         });
     }
-    FileDiff::Text { hunks }
+    match pointer_change(&hunks) {
+        Some((old, new)) => FileDiff::Lfs { old, new },
+        None => FileDiff::Text { hunks },
+    }
 }
 
 /// Parses `@@ -a[,b] +c[,d] @@ …`. A missing count means 1.

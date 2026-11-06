@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { getBinaryPreview } from "../api/diff";
 import { getCommitDiff } from "../api/history";
 import { FileStatusIcon } from "../components/FileStatusIcon";
 import { listKeyHandler } from "../hooks/listKeys";
@@ -89,6 +90,16 @@ export function CommitDetail({ repoId }: { repoId: string }) {
                     title: selectedFile.path,
                     fetch: () =>
                       getCommitDiff(repoId, commit.sha, selectedFile.path, selectedFile.oldPath),
+                    preview: {
+                      path: selectedFile.path,
+                      fetch: () =>
+                        getBinaryPreview(repoId, {
+                          type: "Commit",
+                          sha: commit.sha,
+                          path: selectedFile.path,
+                          oldPath: selectedFile.oldPath,
+                        }),
+                    },
                   }
                 : null
             }
