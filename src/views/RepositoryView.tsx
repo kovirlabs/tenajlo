@@ -12,6 +12,7 @@ import { useForgejoLinkRefresh } from "../hooks/useForgejoLinkRefresh";
 import { ChangesList } from "./ChangesList";
 import { CommitBox } from "./CommitBox";
 import { CommitDetail } from "./CommitDetail";
+import { diffTitle } from "../components/FilePath";
 import { DiffPane } from "./DiffPane";
 import { HistoryList } from "./HistoryList";
 
@@ -28,6 +29,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
   const status = useChangesStore((s) => s.status);
   const busy = useChangesStore((s) => s.busy);
   const setLinesStaged = useChangesStore((s) => s.setLinesStaged);
+  const renamedFrom = status?.files.find((f) => f.path === selectedPath)?.oldPath ?? null;
   useRepoRefresh(repo.id);
   useBackgroundFetch(repo.id);
   useLockRefresh(repo.id);
@@ -70,7 +72,8 @@ export function RepositoryView({ repo }: { repo: Repository }) {
                 ? null
                 : {
                     key: `work:${repo.id}:${selectedPath}`,
-                    title: selectedPath,
+                    title: diffTitle(selectedPath, renamedFrom),
+                    renamedFrom,
                     fetch: () => getWorkingDiff(repo.id, selectedPath),
                     preview: {
                       path: selectedPath,
@@ -78,8 +81,7 @@ export function RepositoryView({ repo }: { repo: Repository }) {
                         getBinaryPreview(repo.id, {
                           type: "Working",
                           path: selectedPath,
-                          oldPath:
-                            status?.files.find((f) => f.path === selectedPath)?.oldPath ?? null,
+                          oldPath: renamedFrom,
                         }),
                     },
                   }
