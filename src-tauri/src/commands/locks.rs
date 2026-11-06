@@ -59,8 +59,8 @@ pub async fn list_lfs_locks(
             interactive: !background,
         })
         .await?;
-    let run = remote_run(&app, &auth, &cancel, &repo_id, &op_id);
-    match lfs_locks::list(&git, &root, &name, run).await {
+    let make_run = || remote_run(&app, &auth, &cancel, &repo_id, &op_id);
+    match lfs_locks::list(&git, &root, &name, make_run).await {
         Ok(locks) => {
             state.lock_support.set(id, true);
             Ok(LfsLocks {

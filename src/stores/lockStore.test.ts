@@ -71,10 +71,16 @@ describe("lockStore", () => {
   it("shows a failed unlock in the error dialog", async () => {
     useLockStore.setState({ repoId: "r1", available: true, locks: [lock("b.bin", false)] });
     vi.mocked(unlockLfsFile).mockResolvedValueOnce({ status: "error", error: failure });
+    // Meanwhile the lock was removed elsewhere: the quiet reload after the error shows that.
+    vi.mocked(listLfsLocks).mockResolvedValueOnce({
+      status: "ok",
+      data: { available: true, locks: [] },
+    });
     await useLockStore.getState().unlock(lock("b.bin", false), false);
     expect(useUiStore.getState().error).toEqual(failure);
     expect(useLockStore.getState()).toMatchObject({ busy: false });
-    expect(useLockStore.getState().locks).toHaveLength(1);
+    expect(listLfsLocks).toHaveBeenCalledWith("r1", true);
+    await vi.waitFor(() => expect(useLockStore.getState().locks).toHaveLength(0));
   });
 
   it("ignores a listing that started before a lock finished", async () => {

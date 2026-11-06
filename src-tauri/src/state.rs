@@ -1,6 +1,6 @@
 //! Application-wide state managed by Tauri.
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 
@@ -44,27 +44,27 @@ pub struct AppState {
     pub repo_links: RepoLinks,
 }
 
-/// Repositories whose server answered a lock listing, so pushes verify locks (spec §8.1).
+/// Whether each repository's server has the Git LFS lock API, as learned this session from
+/// lock listings and pushes. Pushes verify locks unless it's known not to (spec §8.1).
 #[derive(Default)]
-pub struct LockSupport(Mutex<HashSet<Uuid>>);
+pub struct LockSupport(Mutex<HashMap<Uuid, bool>>);
 
 impl LockSupport {
     /// Records whether `repo`'s server supports Git LFS locks.
     pub fn set(&self, repo: Uuid, supported: bool) {
-        let mut set = self.0.lock().unwrap_or_else(|p| p.into_inner());
-        if supported {
-            set.insert(repo);
-        } else {
-            set.remove(&repo);
-        }
-    }
-
-    /// True once a lock listing for `repo` succeeded this session.
-    pub fn get(&self, repo: Uuid) -> bool {
         self.0
             .lock()
             .unwrap_or_else(|p| p.into_inner())
-            .contains(&repo)
+            .insert(repo, supported);
+    }
+
+    /// What is known about `repo`'s server; `None` before anything has asked it.
+    pub fn get(&self, repo: Uuid) -> Option<bool> {
+        self.0
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .get(&repo)
+            .copied()
     }
 }
 

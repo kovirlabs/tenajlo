@@ -7,7 +7,9 @@ use std::time::Duration;
 use super::error::GitError;
 use super::exec::{Access, GitBinary};
 use super::lfs;
-use super::parse::lfs_locks::{parse_new_lock, parse_unlock, parse_verified_locks, LfsLock};
+use super::parse::lfs_locks::{
+    merge_verified, parse_locks, parse_new_lock, parse_unlock, parse_verified_locks, LfsLock,
+};
 use super::primary_remote::primary_remote;
 use super::remote::{run_remote_output, RemoteRun};
 
@@ -44,21 +46,28 @@ fn is_networked(url: &str) -> bool {
 
 /// Every lock on `remote`'s server for this repository, marked ours or theirs. Doesn't change
 /// the repository, so it runs without the mutation lock. `remote` must be validated.
+///
+/// Two requests: the plain listing has every lock, and `--verify` says which are ours. The
+/// verify endpoint needs write access and shows a read-only user nothing, so it can't be
+/// the list on its own. `make_run` gives each request its own run (same prompts and cancel).
 pub async fn list(
     git: &GitBinary,
     root: &Path,
     remote: &str,
-    r: RemoteRun,
+    make_run: impl Fn() -> RemoteRun,
 ) -> Result<Vec<LfsLock>, GitError> {
-    let args = vec![
-        "lfs".into(),
-        "locks".into(),
-        "--verify".into(),
-        "--json".into(),
-        format!("--remote={remote}"),
-    ];
-    let out = run_remote_output(git, root, args, r, Access::ReadOnly, LOCK_TIMEOUT).await?;
-    parse_verified_locks(&out).map_err(GitError::Parse)
+    let listing = |verify: bool| {
+        let mut args: Vec<String> = vec!["lfs".into(), "locks".into()];
+        if verify {
+            args.push("--verify".into());
+        }
+        args.push("--json".into());
+        args.push(format!("--remote={remote}"));
+        run_remote_output(git, root, args, make_run(), Access::ReadOnly, LOCK_TIMEOUT)
+    };
+    let all = parse_locks(&listing(false).await?).map_err(GitError::Parse)?;
+    let verified = parse_verified_locks(&listing(true).await?).map_err(GitError::Parse)?;
+    Ok(merge_verified(all, verified))
 }
 
 /// Locks `path` (repository-relative, `/` separators) on `remote`'s server. git-lfs may make

@@ -4,6 +4,9 @@ use super::GitErrorKind;
 
 /// Ordered pattern table. First match wins, so more specific patterns go first.
 const PATTERNS: &[(&str, GitErrorKind)] = &[
+    // First: git's message goes on to say "'<path>' is owned by:", which the LFS lock
+    // pattern below would otherwise claim.
+    ("detected dubious ownership", GitErrorKind::DubiousOwnership),
     ("Authentication failed", GitErrorKind::AuthFailed),
     (
         "The requested URL returned error: 401",
@@ -101,7 +104,6 @@ const PATTERNS: &[(&str, GitErrorKind)] = &[
     ("Network is unreachable", GitErrorKind::HostUnreachable),
     ("No route to host", GitErrorKind::HostUnreachable),
     ("CONFLICT", GitErrorKind::MergeConflict),
-    ("detected dubious ownership", GitErrorKind::DubiousOwnership),
     ("is not fully merged", GitErrorKind::BranchNotMerged),
     ("a branch named", GitErrorKind::BranchExists),
     ("Please tell me who you are", GitErrorKind::IdentityMissing),
@@ -223,6 +225,18 @@ mod tests {
                 GitErrorKind::NotARepository,
             ),
             ("fatal: detected dubious ownership in repository at 'C:/Shared/repo'", GitErrorKind::DubiousOwnership),
+            (
+                // The whole message: it also says "is owned by", like an LFS lock error.
+                "fatal: detected dubious ownership in repository at 'C:/Shared/repo'\n\
+                 'C:/Shared/repo' is owned by:\n\
+                 \tBUILTIN/Administrators (S-1-5-32-544)\n\
+                 but the current user is:\n\
+                 \tCORP/evan (S-1-5-21-1-2-3-1001)\n\
+                 To add an exception for this directory, call:\n\
+                 \n\
+                 \tgit config --global --add safe.directory C:/Shared/repo",
+                GitErrorKind::DubiousOwnership,
+            ),
             ("error: the branch 'x' is not fully merged", GitErrorKind::BranchNotMerged),
             ("fatal: a branch named 'x' already exists", GitErrorKind::BranchExists),
             ("fatal: destination path 'r' already exists and is not an empty directory.", GitErrorKind::Unknown),
