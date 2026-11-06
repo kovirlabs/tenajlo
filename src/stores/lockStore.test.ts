@@ -76,4 +76,16 @@ describe("lockStore", () => {
     expect(useLockStore.getState()).toMatchObject({ busy: false });
     expect(useLockStore.getState().locks).toHaveLength(1);
   });
+
+  it("ignores a listing that started before a lock finished", async () => {
+    useLockStore.setState({ repoId: "r1", available: true, locks: [] });
+    let finishList: (v: Awaited<ReturnType<typeof listLfsLocks>>) => void = () => {};
+    vi.mocked(listLfsLocks).mockReturnValueOnce(new Promise((r) => (finishList = r)));
+    const loading = useLockStore.getState().load("r1", true);
+    vi.mocked(lockLfsFile).mockResolvedValueOnce({ status: "ok", data: lock("a.bin", true) });
+    await useLockStore.getState().lock("a.bin");
+    finishList({ status: "ok", data: { available: true, locks: [] } });
+    await loading;
+    expect(useLockStore.getState().locks.map((l) => l.path)).toEqual(["a.bin"]);
+  });
 });

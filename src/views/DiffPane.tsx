@@ -53,7 +53,7 @@ export function DiffPane({ source, version, empty, onStageLines, busy = false }:
       ) : diff && key === source.key ? (
         <DiffView
           diff={diff}
-          preview={source.preview && { key: source.key, ...source.preview }}
+          preview={source.preview && { key: source.key, version, ...source.preview }}
           staging={
             lines && onStageLines
               ? {

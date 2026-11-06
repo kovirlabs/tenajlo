@@ -68,7 +68,12 @@ impl RepoLinks {
                 return Ok(linked);
             }
         }
-        let linked = lookup(accounts, client, git, root).await?.map(Arc::new);
+        let Some(found) = lookup(accounts, client, git, root).await? else {
+            // No account for the remote: cheap to check again (no network call), and the user
+            // may sign in at any moment.
+            return Ok(None);
+        };
+        let linked = found.map(Arc::new);
         self.lock().insert(id, (Instant::now(), linked.clone()));
         Ok(linked)
     }
@@ -78,17 +83,24 @@ impl RepoLinks {
         self.lock().remove(&id);
     }
 
+    /// Forgets every lookup (an account was added, replaced or removed).
+    pub fn clear(&self) {
+        self.lock().clear();
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, HashMap<Uuid, Entry>> {
         self.0.lock().unwrap_or_else(|p| p.into_inner())
     }
 }
 
+/// `None`: no remote, or no account for it (not cached). `Some(None)`: the account's server
+/// doesn't know the repository (cached).
 async fn lookup(
     accounts: &AccountManager,
     client: &ForgejoClient,
     git: &GitBinary,
     root: &Path,
-) -> Result<Option<Linked>, LinkError> {
+) -> Result<Option<Option<Linked>>, LinkError> {
     let Some((_, url)) = primary_remote(git, root).await? else {
         return Ok(None);
     };
@@ -102,14 +114,14 @@ async fn lookup(
     };
     let base = normalize_base_url(&account.base_url).map_err(api)?;
     match links::repo_info(client, &base, &token, &repo).await {
-        Ok(info) => Ok(Some(Linked {
+        Ok(info) => Ok(Some(Some(Linked {
             account,
             base,
             repo,
             info,
-        })),
+        }))),
         // Renamed, deleted, or not visible to this account: no links.
-        Err(ForgejoError::Http { status: 404, .. }) => Ok(None),
+        Err(ForgejoError::Http { status: 404, .. }) => Ok(Some(None)),
         Err(e) => Err(api(e)),
     }
 }

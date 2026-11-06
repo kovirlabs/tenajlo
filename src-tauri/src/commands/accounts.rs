@@ -44,7 +44,10 @@ pub async fn sign_in(
     }
     let user = state.forgejo.current_user(&base, &token).await?;
     let base_url = crate::forgejo::address::base_string(&base);
-    Ok(state.accounts.sign_in(&base_url, user, token).await?)
+    let account = state.accounts.sign_in(&base_url, user, token).await?;
+    // Repositories on this server may now have Forgejo links (v1.4).
+    state.repo_links.clear();
+    Ok(account)
 }
 
 /// Signs out: removes the account and deletes its token from the keychain.
@@ -54,7 +57,9 @@ pub async fn sign_out(state: State<'_, AppState>, id: String) -> Result<(), AppE
     let id = id
         .parse()
         .map_err(|_| AppError::invalid_input("That account id isn't valid."))?;
-    Ok(state.accounts.sign_out(id).await?)
+    state.accounts.sign_out(id).await?;
+    state.repo_links.clear();
+    Ok(())
 }
 
 /// Opens the server's "Applications" settings page, where the user creates a token.

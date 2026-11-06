@@ -9,6 +9,8 @@ import { lockLabel } from "./locks/LockBadge";
 /** How to load the preview for the file shown. */
 export type PreviewProps = {
   key: string;
+  /** Changes when the file may have changed on disk (the working tree's status), to reload. */
+  version?: unknown;
   /** Repository-relative path, for the lock state. */
   path: string;
   fetch: () => Promise<Result<BinaryPreview>>;
@@ -31,7 +33,7 @@ export function BinaryPreviewView({ preview, lfs }: { preview: PreviewProps; lfs
       if (res.status === "ok") setData({ key: preview.key, preview: res.data });
       else setError(res.error);
     },
-    [preview.key],
+    [preview.key, preview.version],
   );
 
   const shown = data?.key === preview.key ? data.preview : null;

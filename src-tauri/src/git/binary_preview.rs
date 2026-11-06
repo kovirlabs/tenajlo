@@ -65,7 +65,7 @@ pub async fn preview(
             check_path(path)?;
             let old = old_path.as_deref().unwrap_or(path);
             check_path(old)?;
-            let new = working_version(&root.join(path), &lfs_dir).await;
+            let new = working_version(root, path, &lfs_dir).await;
             (format!("HEAD:{old}"), new)
         }
         PreviewSource::Commit {
@@ -144,9 +144,16 @@ async fn blob_version(
     Ok(Some(from_bytes(bytes, lfs_dir).await))
 }
 
-/// The file on disk, or `None` if it's gone (deleted) or not a regular file.
-async fn working_version(path: &Path, lfs_dir: &Path) -> Option<FileVersion> {
-    let meta = tokio::fs::symlink_metadata(path).await.ok()?;
+/// The file on disk, or `None` if it's gone (deleted), not a regular file, or reached through
+/// a symlinked folder that leads outside the repository.
+async fn working_version(root: &Path, rel: &str, lfs_dir: &Path) -> Option<FileVersion> {
+    let path = root.join(rel);
+    let real_root = dunce::canonicalize(root).ok()?;
+    let real_parent = dunce::canonicalize(path.parent()?).ok()?;
+    if !real_parent.starts_with(&real_root) {
+        return None;
+    }
+    let meta = tokio::fs::symlink_metadata(&path).await.ok()?;
     if !meta.is_file() {
         return None;
     }
@@ -157,7 +164,7 @@ async fn working_version(path: &Path, lfs_dir: &Path) -> Option<FileVersion> {
             image: None,
         });
     }
-    let bytes = tokio::fs::read(path).await.ok()?;
+    let bytes = tokio::fs::read(&path).await.ok()?;
     Some(from_bytes(bytes, lfs_dir).await)
 }
 
@@ -350,6 +357,20 @@ mod tests {
         let new = p.new.unwrap();
         assert_eq!((new.size, new.lfs), (20, false));
         assert!(new.image.unwrap().starts_with("data:image/gif"));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn working_files_behind_a_symlinked_folder_outside_are_not_read() {
+        let (_dir, root) = init_repo().await;
+        let outside = tempfile::tempdir().unwrap();
+        std::fs::write(outside.path().join("secret.png"), PNG_1X1).unwrap();
+        std::os::unix::fs::symlink(outside.path(), root.join("link")).unwrap();
+        let src = PreviewSource::Working {
+            path: "link/secret.png".into(),
+            old_path: None,
+        };
+        assert!(preview(&git(), &root, &src).await.unwrap().new.is_none());
     }
 
     #[tokio::test]

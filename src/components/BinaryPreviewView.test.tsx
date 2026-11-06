@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { BinaryPreview } from "../bindings";
 import { useLockStore } from "../stores/lockStore";
@@ -48,5 +48,23 @@ describe("BinaryPreviewView", () => {
   it("says when a file was deleted", async () => {
     show({ old: { size: 812, lfs: false, image: null }, new: null });
     expect(await screen.findByText("Deleted · was 812 bytes")).toBeTruthy();
+  });
+
+  it("reloads when the working tree changes", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: "ok",
+        data: { old: null, new: { size: 10, lfs: false, image: null } },
+      })
+      .mockResolvedValueOnce({
+        status: "ok",
+        data: { old: null, new: { size: 20, lfs: false, image: null } },
+      });
+    const props = (version: number) => ({ key: "k", version, path: "a.png", fetch });
+    const { rerender } = render(<BinaryPreviewView lfs={false} preview={props(1)} />);
+    expect(await screen.findByText("New file · 10 bytes")).toBeTruthy();
+    rerender(<BinaryPreviewView lfs={false} preview={props(2)} />);
+    expect(await screen.findByText("New file · 20 bytes")).toBeTruthy();
   });
 });

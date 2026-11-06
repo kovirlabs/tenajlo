@@ -23,6 +23,8 @@ type LockState = {
 const sortByPath = (locks: LfsLock[]) => [...locks].sort((a, b) => a.path.localeCompare(b.path));
 
 export const useLockStore = create<LockState>((set, get) => {
+  /** Bumped by every lock or unlock, so a listing that started earlier doesn't undo it. */
+  let changes = 0;
   /** Runs a lock change for the current repository; errors go to the error dialog. */
   const change = async <T>(
     run: (
@@ -36,6 +38,7 @@ export const useLockStore = create<LockState>((set, get) => {
     const res = await run(repoId);
     if (get().repoId !== repoId) return;
     set({ busy: false });
+    changes += 1;
     if (res.status === "ok") apply(res.data);
     else if (res.error.kind !== "GitCancelled") useUiStore.getState().showError(res.error);
   };
@@ -57,8 +60,14 @@ export const useLockStore = create<LockState>((set, get) => {
         set({ repoId, available: false, locks: [], error: null, busy: false });
       }
       set({ loading: true });
+      const startedAt = changes;
       const res = await listLfsLocks(repoId, background);
       if (get().repoId !== repoId) return;
+      if (startedAt !== changes) {
+        // A lock or unlock finished meanwhile; this list may not include it.
+        set({ loading: false });
+        return;
+      }
       if (res.status === "ok") {
         set({ available: res.data.available, locks: res.data.locks, error: null, loading: false });
       } else {
