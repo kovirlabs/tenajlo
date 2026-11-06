@@ -2,6 +2,8 @@ import { useId } from "react";
 import type { FileChange, StagedState } from "../bindings";
 import { FileStatusIcon } from "../components/FileStatusIcon";
 import { StageCheckbox } from "../components/StageCheckbox";
+import { LockBadge } from "../components/locks/LockBadge";
+import { useLockFor } from "../stores/lockStore";
 import { VirtualList, rowId } from "../components/VirtualList";
 import { listKeyHandler, menuPositionFor } from "../hooks/listKeys";
 import { useChangesStore } from "../stores/changesStore";
@@ -128,6 +130,7 @@ type RowProps = {
 function FileRow({ id, file, selected, busy, onSelect, onStage, onContextMenu }: RowProps) {
   const title = file.oldPath ? `${file.oldPath} → ${file.path}` : file.path;
   const conflicted = file.kind === "Conflicted";
+  const lock = useLockFor(file.path);
   return (
     <div
       id={id}
@@ -148,6 +151,7 @@ function FileRow({ id, file, selected, busy, onSelect, onStage, onContextMenu }:
         {file.path}
         {file.submodule && <span className="muted"> (submodule)</span>}
       </span>
+      {lock && <LockBadge lock={lock} />}
       <FileStatusIcon kind={file.kind} />
     </div>
   );

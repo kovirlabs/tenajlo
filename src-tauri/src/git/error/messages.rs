@@ -58,6 +58,14 @@ impl GitErrorKind {
             GitErrorKind::LfsFailed => {
                 "Git LFS couldn't transfer some large files. Check your connection and try again; the details say which files."
             }
+            GitErrorKind::LfsFileLocked => {
+                "Some files you changed are locked by someone else, so the server would lose their work. The details list them. Ask them to unlock the files, or undo your changes to them."
+            }
+            GitErrorKind::LfsAlreadyLocked => "This file is already locked. Refresh the list of locks to see who has it.",
+            GitErrorKind::LfsLockNotYours => {
+                "This lock belongs to someone else. Ask them to unlock it, or use Force unlock if they've left it by mistake."
+            }
+            GitErrorKind::LfsLocksUnsupported => "This server doesn't support file locks.",
             GitErrorKind::RepositoryNotFound => {
                 "The server couldn't find that repository. Check the address, and that your account has access to it."
             }

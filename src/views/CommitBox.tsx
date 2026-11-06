@@ -6,6 +6,7 @@ import { useChangesStore } from "../stores/changesStore";
 import { useMerging } from "../stores/conflictStore";
 import { useDraft, useDraftStore } from "../stores/draftStore";
 import { useSyncStore } from "../stores/syncStore";
+import { useLockStore } from "../stores/lockStore";
 import { useAsyncEffect } from "../hooks/useAsyncEffect";
 
 /** Summary + description + "Commit to <branch>" (spec §8). Ctrl/Cmd+Enter commits. The
@@ -18,6 +19,21 @@ const WAITING_LABEL: Record<SyncRequest, string> = {
   Push: "push",
   Publish: "publish",
 };
+
+/** A warning when an included file is locked by someone else (their lock blocks the push). */
+function useLockedByOthers(): string | null {
+  const files = useChangesStore((s) => s.status?.files);
+  const locks = useLockStore((s) => (s.available ? s.locks : null));
+  if (!files || !locks) return null;
+  const included = new Set(files.filter((f) => f.staged !== "None").map((f) => f.path));
+  const theirs = locks.filter((l) => !l.ours && included.has(l.path));
+  const first = theirs[0];
+  if (!first) return null;
+  const who = first.owner || "someone else";
+  return theirs.length === 1
+    ? `${first.path} is locked by ${who}. The push will be refused until they unlock it.`
+    : `${theirs.length} included files are locked by others (${first.path} by ${who}). The push will be refused until they're unlocked.`;
+}
 
 export function CommitBox({ repoId }: { repoId: string }) {
   const status = useChangesStore((s) => s.status);
@@ -48,6 +64,7 @@ export function CommitBox({ repoId }: { repoId: string }) {
   );
 
   const anyStaged = status?.files.some((f) => f.staged !== "None") ?? false;
+  const lockedByOthers = useLockedByOthers();
   const conflicts = status?.hasConflicts ?? false;
   const canCommit =
     !busy && !conflicts && !otherOperation && (anyStaged || merging) && summary.trim() !== "";
@@ -118,6 +135,11 @@ export function CommitBox({ repoId }: { repoId: string }) {
         onKeyDown={onKeyDown}
       />
       {conflicts && <p className="commit-hint">Resolve conflicts before committing.</p>}
+      {lockedByOthers && (
+        <p className="commit-hint" role="status">
+          {lockedByOthers}
+        </p>
+      )}
       {busy && waitingFor && (
         <p className="commit-hint muted" role="status">
           Waiting for the {WAITING_LABEL[waitingFor]} to finish…

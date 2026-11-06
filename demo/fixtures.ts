@@ -312,3 +312,21 @@ export const remoteRepositories: RemoteRepository[] = [
   remote("acme", "standards", "Tag naming and coding standards", false),
   remote("sam", "notes", "Personal notes and scripts"),
 ];
+
+/** Git LFS file locks (v1.4): one of ours on a changed file, one of a colleague's. */
+export const locks = [
+  {
+    id: "14",
+    path: "cad/impeller-housing.SLDPRT",
+    owner: "sam",
+    lockedAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+    ours: true,
+  },
+  {
+    id: "15",
+    path: "cad/pump-base.SLDASM",
+    owner: "priya",
+    lockedAt: new Date(Date.now() - 26 * 3600_000).toISOString(),
+    ours: false,
+  },
+];

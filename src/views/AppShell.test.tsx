@@ -30,6 +30,7 @@ describe("AppShell", () => {
         if (cmd === "get_status") return status;
         if (cmd === "get_lfs_status") return { used: false, installed: true };
         if (cmd === "get_history") return [];
+        if (cmd === "list_lfs_locks") return { available: false, locks: [] };
         return null;
       },
       { shouldMockEvents: true },

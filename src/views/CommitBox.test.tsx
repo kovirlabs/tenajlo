@@ -4,6 +4,7 @@ import type { FileChange, Identity } from "../bindings";
 import { useChangesStore } from "../stores/changesStore";
 import { useConflictStore } from "../stores/conflictStore";
 import { useDraftStore } from "../stores/draftStore";
+import { useLockStore } from "../stores/lockStore";
 import { useSyncStore } from "../stores/syncStore";
 import { CommitBox } from "./CommitBox";
 
@@ -144,5 +145,20 @@ describe("CommitBox", () => {
     });
     expect(screen.getByText("Waiting for the push to finish…")).toBeTruthy();
     act(() => useSyncStore.setState({ running: null }));
+  });
+
+  it("warns when an included file is locked by someone else", () => {
+    useLockStore.setState({
+      repoId: "r1",
+      available: true,
+      locks: [{ id: "1", path: "a.txt", owner: "alice", lockedAt: "", ours: false }],
+    });
+    setup("Full");
+    expect(screen.getByText(/a\.txt is locked by alice\. The push will be refused/)).toBeTruthy();
+    cleanup();
+    setup("None");
+    expect(screen.queryByText(/is locked by/)).toBeNull();
+    cleanup();
+    useLockStore.setState({ available: false, locks: [] });
   });
 });

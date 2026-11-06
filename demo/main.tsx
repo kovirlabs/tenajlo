@@ -65,6 +65,8 @@ mockIPC(
         return conflict ? f.conflictOperation : f.noOperation;
       case "get_lfs_status":
         return { used: true, installed: true };
+      case "list_lfs_locks":
+        return { available: true, locks: f.locks };
       case "get_saved_changes":
         return null;
       case "get_identity":

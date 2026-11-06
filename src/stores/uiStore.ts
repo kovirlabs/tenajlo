@@ -3,7 +3,7 @@ import type { AppError } from "../bindings";
 
 export type Tab = "changes" | "history";
 export type Dialog =
-  "newBranch" | "newRepository" | "publishRepository" | "clone" | "settings" | null;
+  "newBranch" | "newRepository" | "publishRepository" | "clone" | "settings" | "locks" | null;
 export type SettingsTab =
   "accounts" | "ssh" | "passwords" | "git" | "appearance" | "repositories" | "about";
 

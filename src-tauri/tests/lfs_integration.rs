@@ -135,7 +135,7 @@ async fn large_files_round_trip_through_lfs_with_the_account() {
 
     // Upload LFS objects, then push (what `sync` does).
     let (_a, run) = auth().await;
-    lfs::push_objects(&lfs_git, &work, "origin", "main", run)
+    lfs::push_objects(&lfs_git, &work, "origin", "main", false, run)
         .await
         .unwrap();
     let (a, run) = auth().await;

@@ -7,3 +7,8 @@ $compose exec -T -u git forgejo forgejo admin user create \
   --username tenajlo --password tenajlo-dev-password \
   --email tenajlo@example.invalid --must-change-password=false 2>/dev/null \
   || echo "user tenajlo already exists"
+# A second user for tests where someone else holds a lock (LFS locks, v1.4).
+$compose exec -T -u git forgejo forgejo admin user create \
+  --username alice --password alice-dev-password \
+  --email alice@example.invalid --must-change-password=false 2>/dev/null \
+  || echo "user alice already exists"

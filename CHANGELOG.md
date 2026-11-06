@@ -8,6 +8,13 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ### Added
 
+- **File locks for large files**: in repositories that use Git LFS, lock a CAD model or PLC
+  project before editing it so nobody else changes it at the same time. The sidebar shows how
+  many files are locked; **Manage** lists every lock with who holds it, and lets you lock a
+  file, unlock yours, or force-unlock someone else's. Locked files get a padlock in your
+  changes, the commit box warns when you include a file someone else has locked, and Tenajlo
+  won't push changes to such a file until it's unlocked.
+
 - **Keyboard-friendly lists**: in Changes, History and a commit's files, the arrow keys (and
   Home, End, Page Up, Page Down) move the selection, Space ticks or unticks a file, and the
   Menu key or Shift+F10 opens the right-click menu.

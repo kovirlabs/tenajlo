@@ -2,6 +2,7 @@
 
 pub mod branches;
 pub mod diff;
+pub mod lfs_locks;
 pub mod log;
 pub mod progress;
 pub mod status;

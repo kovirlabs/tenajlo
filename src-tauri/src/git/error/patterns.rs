@@ -43,6 +43,17 @@ const PATTERNS: &[(&str, GitErrorKind)] = &[
         "revocation server was offline",
         GitErrorKind::TlsRevocationCheck,
     ),
+    // git-lfs lock verification before a push (captured with Forgejo 11).
+    ("Unable to push locked files", GitErrorKind::LfsFileLocked),
+    ("Cannot update locked files", GitErrorKind::LfsFileLocked),
+    ("already created lock", GitErrorKind::LfsAlreadyLocked),
+    // Forgejo answers 500 when a non-owner unlocks without --force.
+    ("unable to delete lock", GitErrorKind::LfsLockNotYours),
+    ("is owned by", GitErrorKind::LfsLockNotYours),
+    (
+        "does not support the Git LFS locking API",
+        GitErrorKind::LfsLocksUnsupported,
+    ),
     ("batch response:", GitErrorKind::LfsFailed),
     ("Smudge error", GitErrorKind::LfsFailed),
     ("smudge filter lfs failed", GitErrorKind::LfsFailed),

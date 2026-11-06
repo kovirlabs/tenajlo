@@ -55,6 +55,25 @@ export const commands = {
 	watchRepository: (repoId: string) => typedError<null, AppError>(__TAURI_INVOKE("watch_repository", { repoId })),
 	/**  Whether the repository uses Git LFS and whether git-lfs is installed (for a warning). */
 	getLfsStatus: (repoId: string) => typedError<LfsStatus, AppError>(__TAURI_INVOKE("get_lfs_status", { repoId })),
+	/**  Every lock on the server. `background` (the refresh after a fetch) never prompts. */
+	listLfsLocks: (repoId: string, background: boolean) => typedError<LfsLocks, AppError>(__TAURI_INVOKE("list_lfs_locks", { repoId, background })),
+	/**  Locks `path` (repository-relative, as in the changes list). */
+	lockLfsFile: (repoId: string, path: string) => typedError<LfsLock, AppError>(__TAURI_INVOKE("lock_lfs_file", { repoId, path })),
+	/**  Lets the user pick a file in the repository and locks it. `None` if they cancelled. */
+	lockPickedLfsFile: (repoId: string) => typedError<{
+	/**  Server-side lock id (a string in the LFS API). */
+	id: string,
+	/**  Repository-relative path with `/` separators. */
+	path: string,
+	/**  The server user name of whoever holds the lock. */
+	owner: string,
+	/**  RFC 3339 time the lock was taken (as the server reports it). */
+	lockedAt: string,
+	/**  The lock belongs to the signed-in user (so it can be unlocked without forcing). */
+	ours: boolean,
+} | null, AppError>(__TAURI_INVOKE("lock_picked_lfs_file", { repoId })),
+	/**  Removes lock `lock_id`. `force` removes someone else's lock (the UI confirms first). */
+	unlockLfsFile: (repoId: string, lockId: string, force: boolean) => typedError<null, AppError>(__TAURI_INVOKE("unlock_lfs_file", { repoId, lockId, force })),
 	/**  Stages (`staged = true`) or unstages the given changed files. */
 	setStaged: (repoId: string, paths: string[], staged: boolean) => typedError<null, AppError>(__TAURI_INVOKE("set_staged", { repoId, paths, staged })),
 	/**
@@ -448,7 +467,15 @@ export type GitErrorKind = "AuthFailed" | "HostKeyUnknown" |
 /**  Windows couldn't check the certificate's revocation status (internal CA, offline CRL). */
 "TlsRevocationCheck" | 
 /**  Git LFS couldn't transfer large files. */
-"LfsFailed" | "Unknown";
+"LfsFailed" | 
+/**  The push changes files someone else has locked (git-lfs lock verification). */
+"LfsFileLocked" | 
+/**  Someone (maybe you) already holds the lock being taken. */
+"LfsAlreadyLocked" | 
+/**  Unlocking a lock that belongs to someone else without forcing. */
+"LfsLockNotYours" | 
+/**  The server has no Git LFS locking API. */
+"LfsLocksUnsupported" | "Unknown";
 
 /**  Result of the startup git check, sent to the UI. */
 export type GitInfo = {
@@ -480,6 +507,30 @@ export type GitVersion = {
 export type Identity = {
 	name: string | null,
 	email: string | null,
+};
+
+/**  A Git LFS file lock on the server. */
+export type LfsLock = {
+	/**  Server-side lock id (a string in the LFS API). */
+	id: string,
+	/**  Repository-relative path with `/` separators. */
+	path: string,
+	/**  The server user name of whoever holds the lock. */
+	owner: string,
+	/**  RFC 3339 time the lock was taken (as the server reports it). */
+	lockedAt: string,
+	/**  The lock belongs to the signed-in user (so it can be unlocked without forcing). */
+	ours: boolean,
+};
+
+/**  The repository's file locks. */
+export type LfsLocks = {
+	/**
+	 *  False when locks don't apply: no Git LFS, git-lfs missing, no remote, or a server
+	 *  without the locking API. The UI then hides everything lock-related.
+	 */
+	available: boolean,
+	locks: LfsLock[],
 };
 
 /**  Whether a repository needs LFS and whether this computer has it. */

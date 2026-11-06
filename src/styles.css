@@ -1220,3 +1220,66 @@ label.radio {
 .pane-message button {
   margin-top: 8px;
 }
+
+/* LFS file locks (v1.4). */
+.locks-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+
+.lock-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 40%;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.lock-badge.theirs {
+  color: var(--danger);
+}
+
+.lock-owner {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.locks-list {
+  margin: 8px 0;
+  /* Room for the buttons' focus ring inside the scrolling list. */
+  padding: 0 4px;
+  list-style: none;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.locks-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.locks-path {
+  flex: 1 0 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 600;
+}
+
+.locks-list .muted {
+  flex: 1;
+}

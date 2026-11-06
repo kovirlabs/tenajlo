@@ -176,6 +176,25 @@ handles it automatically: large files are uploaded and downloaded with your othe
 On Linux and macOS, install Git LFS first. If a repository needs it and it's missing, Tenajlo
 shows a warning and won't commit or push, so large files aren't stored the wrong way.
 
+### Lock files before you edit them
+
+CAD models and PLC projects can't be merged: if two people change the same file, one of them
+loses their work. In repositories that use Git LFS, Tenajlo shows a line at the top of the
+sidebar, such as "2 files locked (1 by you)", when the server supports file locks.
+
+- **Lock a file before editing it.** Click **Manage**, then **Lock a file…** and choose it. A
+  file you've already changed can also be locked from its right-click menu (**Lock file**).
+- Locked files in your changes show a padlock: grey for yours, red with the person's name for
+  someone else's.
+- If you include a file someone else has locked, the commit box warns you, and Tenajlo won't
+  push it until they unlock it.
+- When you're done, push your changes, then **Unlock** the file (in **Manage**, or **Unlock
+  file** in the right-click menu).
+- **Force unlock…** removes someone else's lock. Only use it when they've finished or left the
+  lock by mistake.
+
+The list refreshes when you open the repository and whenever Tenajlo checks the server.
+
 ## SSH keys
 
 Your SSH key needs to be added to your Forgejo account. Tenajlo can do this for you in

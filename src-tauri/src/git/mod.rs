@@ -13,6 +13,7 @@ pub mod identity;
 pub mod ignore;
 pub mod init;
 pub mod lfs;
+pub mod lfs_locks;
 pub mod line_staging;
 pub mod log;
 pub mod merge;

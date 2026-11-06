@@ -7,6 +7,7 @@ import { useUiStore } from "../stores/uiStore";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { ContextMenu, type MenuItem } from "../components/ContextMenu";
 import { useChangesStore } from "../stores/changesStore";
+import { useLockStore } from "../stores/lockStore";
 
 export type MenuPosition = { x: number; y: number };
 
@@ -16,6 +17,34 @@ const NO_FILES: readonly FileChange[] = [];
 /** `file` is null for the list header's menu. `extension`: what "Ignore all .ext files"
  *  would ignore (untracked files only). */
 type MenuState = (MenuPosition & { file: FileChange | null; extension: string | null }) | null;
+
+/** "Lock file" / "Unlock file" for a changed file, when the repository uses LFS locks. A
+ *  lock held by someone else is shown but managed from the File locks dialog. */
+function lockItems(file: FileChange): MenuItem[] {
+  const locks = useLockStore.getState();
+  if (!locks.available || file.kind === "Untracked" || file.submodule) return [];
+  const lock = locks.locks.find((l) => l.path === file.path);
+  if (!lock) {
+    return [
+      { label: "Lock file", onSelect: () => void locks.lock(file.path), disabled: locks.busy },
+    ];
+  }
+  if (lock.ours) {
+    return [
+      {
+        label: "Unlock file",
+        onSelect: () => void locks.unlock(lock, false),
+        disabled: locks.busy,
+      },
+    ];
+  }
+  return [
+    {
+      label: `Locked by ${lock.owner || "someone else"}…`,
+      onSelect: () => useUiStore.getState().openDialog("locks"),
+    },
+  ];
+}
 
 /** Files "Discard all changes" applies to: conflicts and submodules are handled elsewhere. */
 export function discardable(files: readonly FileChange[]): FileChange[] {
@@ -81,6 +110,7 @@ export function useFileActions() {
         });
       }
     }
+    list.push(...lockItems(file));
     if (discardAll.length > 1) list.push(discardAllItem);
     return list;
   };

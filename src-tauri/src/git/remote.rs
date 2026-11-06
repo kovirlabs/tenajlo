@@ -110,15 +110,29 @@ pub(super) async fn run_remote(
     args: Vec<String>,
     r: RemoteRun,
 ) -> Result<(), GitError> {
+    run_remote_output(git, root, args, r, Access::Mutating, REMOTE_TIMEOUT)
+        .await
+        .map(|_| ())
+}
+
+/// [`run_remote`] that returns git's stdout, with its own `access` and `timeout`.
+pub(super) async fn run_remote_output(
+    git: &GitBinary,
+    root: &Path,
+    args: Vec<String>,
+    r: RemoteRun,
+    access: Access,
+    timeout: Duration,
+) -> Result<Vec<u8>, GitError> {
     let RemoteRun {
         env,
         config,
         cancel,
         mut on_progress,
     } = r;
-    let mut cmd = GitCommand::new(args, Access::Mutating)
+    let mut cmd = GitCommand::new(args, access)
         .cwd(root)
-        .timeout(REMOTE_TIMEOUT)
+        .timeout(timeout)
         .cancel_on(cancel)
         .on_stderr_line(move |line| {
             if let Some(p) = parse_progress(line) {
@@ -131,8 +145,7 @@ pub(super) async fn run_remote(
     for kv in config {
         cmd = cmd.config(kv);
     }
-    cmd.run(git).await?;
-    Ok(())
+    Ok(cmd.run(git).await?.stdout)
 }
 
 /// `git fetch --prune <remote>`. `remote` must be a configured remote name.
