@@ -6,6 +6,21 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Everyday problems get a title that says what happened (for example "The server has newer
+  commits", with a **Get the server's commits** button) instead of "Something went wrong".
+- The commit button says why it's disabled when no files are ticked.
+- **Undo** disappears once the commit is pushed, you switch branches, or the commit is a
+  merge (which can't be undone), and it says how long ago you committed.
+- Long paths in file lists cut off the folder rather than the file name. A renamed file shows
+  its old name, and says so when its contents didn't change.
+- Right-click menus work with the arrow keys, and right-clicking a file selects it.
+- **New branch** says when a branch with that name already exists.
+- The chosen repository in the clone list is clearly highlighted, and permission names on the
+  sign-in screen no longer break in the middle of a word.
+- The repository list no longer has an **Accounts…** button; accounts are in Settings.
+
 ### Fixed
 
 - **Pushes always check file locks.** Before, Tenajlo only refused a push that changes someone
@@ -28,6 +43,14 @@ All notable changes to Tenajlo are listed here. The format follows
 - Publish repository suggests a name the server accepts (a folder called "My Project" becomes
   `My-Project`), can't be cancelled halfway, and says that names can't end in `.git`.
 - After a lock or unlock fails, the lock list reloads to match the server.
+- Changes you leave on a branch come back with the same files ticked.
+- History moves to the newest commit as you work, unless you picked an older one.
+- "Sign in to Forgejo" no longer shows on the start screen when you're already signed in.
+- Settings → Git no longer shows `\\?\` in front of the bundled Git's path on Windows.
+- Settings → Repositories shows the real folder new clones go in (for example under OneDrive).
+- Signing in to a server that only uses `http://` without typing it explains that, instead of
+  "Couldn't reach the server".
+- The discard error says Recycle Bin on Windows.
 
 ## [1.4.0] - 2026-11-05
 
