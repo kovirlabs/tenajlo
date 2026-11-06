@@ -6,6 +6,8 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-05
+
 ### Added
 
 - **File locks for large files**: in repositories that use Git LFS, lock a CAD model or PLC
@@ -21,7 +23,6 @@ All notable changes to Tenajlo are listed here. The format follows
   menu shows the branch's open pull request (and its number next to the branch name), or
   offers **Create pull request…** once the branch is pushed. In History, pushed commits show
   whether their checks passed, failed or are still running, with **View on Forgejo**.
-
 - **Keyboard-friendly lists**: in Changes, History and a commit's files, the arrow keys (and
   Home, End, Page Up, Page Down) move the selection, Space ticks or unticks a file, and the
   Menu key or Shift+F10 opens the right-click menu.
@@ -43,7 +44,6 @@ All notable changes to Tenajlo are listed here. The format follows
   rounded buttons; Changes/History is a pill switch; the selected file or commit gets an accent
   bar; and file status badges are solid. Checkboxes use the accent color instead of the system
   blue. The website's dark mode matches.
-
 - **Commit messages are kept per repository** while Tenajlo is open, so switching to
   another repository and back no longer loses a half-written summary.
 - Tenajlo now also checks the server when you open a repository or come back to the window,
@@ -55,7 +55,6 @@ All notable changes to Tenajlo are listed here. The format follows
 ### Fixed
 
 - When the list of changes can't be loaded, there's now a **Try again** button.
-
 - **Cancel now works while a push or pull is waiting.** If a background fetch was still running,
   clicking Cancel on a push or pull did nothing, and the push still ran once the fetch finished.
   Now it stops right away.
@@ -172,7 +171,8 @@ First public release:
   theme.
 - First-run welcome, plain-language error messages, daily log files.
 
-[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/kovirlabs/tenajlo/compare/v1.2.0...v1.4.0
 [1.2.0]: https://github.com/kovirlabs/tenajlo/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/kovirlabs/tenajlo/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/kovirlabs/tenajlo/compare/v1.1.1...v1.1.2
