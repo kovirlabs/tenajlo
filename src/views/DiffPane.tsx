@@ -10,6 +10,8 @@ type Props = {
   source: {
     key: string;
     title: string;
+    /** The file's old path when it was renamed. */
+    renamedFrom?: string | null;
     fetch: () => Promise<Result<WorkingDiff>>;
     /** For binary and LFS files: the file's path and how to load sizes and images. */
     preview?: { path: string; fetch: () => Promise<Result<BinaryPreview>> };
@@ -50,6 +52,10 @@ export function DiffPane({ source, version, empty, onStageLines, busy = false }:
           <p>{error.message}</p>
           <ErrorDetails details={error.details} />
         </div>
+      ) : diff && key === source.key && diff.type === "Unchanged" && source.renamedFrom ? (
+        <p className="pane-message muted">
+          Renamed from {source.renamedFrom}. The contents didn&apos;t change.
+        </p>
       ) : diff && key === source.key ? (
         <DiffView
           diff={diff}

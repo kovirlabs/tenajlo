@@ -467,11 +467,28 @@ code.nowrap {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
+/* The folder gives way before the file name (see FilePath.tsx). */
 .file-path {
   flex: 1;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.file-dir {
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--fg-muted);
+}
+
+.file-name {
+  flex: 0 0 auto;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-icon {
