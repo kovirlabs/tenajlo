@@ -13,6 +13,21 @@ Tenajlo; you don't need to install them.
 > Tenajlo's installer isn't code-signed yet, so Windows may say "Windows protected your PC".
 > Choose **More info → Run anyway** if you downloaded it from Tenajlo's Releases page.
 
+Or install it with a package manager. Each one also installs for your user account only:
+
+```powershell
+winget install KovirLabs.Tenajlo        # winget (built into Windows 10 and 11)
+choco install tenajlo                   # Chocolatey
+scoop bucket add tenajlo https://github.com/kovirlabs/tenajlo
+scoop install tenajlo                   # Scoop
+```
+
+Update with the same package manager (`winget upgrade KovirLabs.Tenajlo`,
+`choco upgrade tenajlo`, `scoop update tenajlo`), or with Tenajlo's own update banner if you
+installed with winget or Chocolatey. If you installed with Scoop, use `scoop update tenajlo`
+and turn update checks off in **Settings → About**: Tenajlo's own updater would install a
+second copy outside Scoop.
+
 **Debian and Ubuntu (x64):** download `Tenajlo_<version>_amd64.deb` from the Releases page
 and install it with:
 

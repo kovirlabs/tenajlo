@@ -1,0 +1,28 @@
+{
+  "version": "1.4.0",
+  "description": "Desktop Git client for self-hosted Forgejo",
+  "homepage": "https://kovirlabs.github.io/tenajlo/",
+  "license": "Apache-2.0",
+  "notes": [
+    "Update Tenajlo with 'scoop update tenajlo'. If Tenajlo offers an update itself, turn",
+    "update checks off in Settings -> About: its installer would add a second copy outside Scoop."
+  ],
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/kovirlabs/tenajlo/releases/download/v1.4.0/Tenajlo_1.4.0_x64-setup.exe#/dl.7z",
+      "hash": "44d9d316e72cc01ec98a731bc2b65caf0e38136cd8902d407b813feb15401f33"
+    }
+  },
+  "post_install": "Remove-Item \"$dir\\`$*\", \"$dir\\uninstall*\" -Force -Recurse -ErrorAction Ignore",
+  "shortcuts": [["tenajlo.exe", "Tenajlo"]],
+  "checkver": {
+    "github": "https://github.com/kovirlabs/tenajlo"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/kovirlabs/tenajlo/releases/download/v$version/Tenajlo_$version_x64-setup.exe#/dl.7z"
+      }
+    }
+  }
+}

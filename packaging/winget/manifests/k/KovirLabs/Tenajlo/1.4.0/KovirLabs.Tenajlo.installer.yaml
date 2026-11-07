@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.12.0.schema.json
+
+PackageIdentifier: KovirLabs.Tenajlo
+PackageVersion: 1.4.0
+InstallerLocale: en-US
+MinimumOSVersion: 10.0.17763.0
+InstallerType: nullsoft
+Scope: user
+InstallModes:
+  - interactive
+  - silent
+  - silentWithProgress
+# Tauri's NSIS installer: /S is fully silent, /P is "passive" (progress bar only).
+InstallerSwitches:
+  Silent: /S
+  SilentWithProgress: /P
+UpgradeBehavior: install
+# Tauri writes HKCU\...\Uninstall\<productName>, so the product code is the product name.
+ProductCode: Tenajlo
+ReleaseDate: 2026-11-07
+AppsAndFeaturesEntries:
+  - DisplayName: Tenajlo
+    Publisher: Kovir Labs
+    ProductCode: Tenajlo
+InstallationMetadata:
+  DefaultInstallLocation: '%LocalAppData%\Tenajlo'
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/kovirlabs/tenajlo/releases/download/v1.4.0/Tenajlo_1.4.0_x64-setup.exe
+    InstallerSha256: 44D9D316E72CC01EC98A731BC2B65CAF0E38136CD8902D407B813FEB15401F33
+ManifestType: installer
+ManifestVersion: 1.12.0

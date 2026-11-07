@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chocolatey package for Tenajlo. See docs/releasing.md → Package managers.
+     scripts/update-packaging.mjs rewrites <version> and the URL/checksum in tools/. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>tenajlo</id>
+    <version>1.4.0</version>
+    <title>Tenajlo</title>
+    <authors>Kovir Labs</authors>
+    <owners>Kovir Labs</owners>
+    <projectUrl>https://kovirlabs.github.io/tenajlo/</projectUrl>
+    <projectSourceUrl>https://github.com/kovirlabs/tenajlo</projectSourceUrl>
+    <packageSourceUrl>https://github.com/kovirlabs/tenajlo/tree/main/packaging/chocolatey</packageSourceUrl>
+    <docsUrl>https://kovirlabs.github.io/tenajlo/guide/</docsUrl>
+    <bugTrackerUrl>https://github.com/kovirlabs/tenajlo/issues</bugTrackerUrl>
+    <iconUrl>https://cdn.jsdelivr.net/gh/kovirlabs/tenajlo@main/src-tauri/icons/128x128.png</iconUrl>
+    <licenseUrl>https://github.com/kovirlabs/tenajlo/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <copyright>Copyright 2026 Kovir Labs</copyright>
+    <tags>tenajlo forgejo git git-client git-lfs gui version-control foss</tags>
+    <summary>Desktop Git client for self-hosted Forgejo</summary>
+    <description><![CDATA[Tenajlo is a desktop Git client for self-hosted [Forgejo](https://forgejo.org) servers, in the spirit of GitHub Desktop. Clone, commit, push, pull, resolve conflicts and work with Git LFS files without the command line.
+
+Git and Git LFS are bundled, so nothing else needs to be installed.
+
+The installer is per-user: Tenajlo goes into `%LocalAppData%\Tenajlo` of the account that runs `choco install`.
+]]></description>
+    <releaseNotes>https://github.com/kovirlabs/tenajlo/releases</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
