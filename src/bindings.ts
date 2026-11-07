@@ -65,6 +65,11 @@ export const commands = {
 	/**  `owner/name` on the server. */
 	fullName: string,
 	defaultBranch: string,
+	/**
+	 *  The branch's name on the server (its upstream's), which can differ from the local
+	 *  name; the local name when it has no upstream yet.
+	 */
+	serverBranch: string,
 	/**  The open pull request from this branch, if any. */
 	pull: PullRequest | null,
 } | null, AppError>(__TAURI_INVOKE("get_branch_link", { repoId, branch })),
@@ -371,6 +376,11 @@ export type BranchLink = {
 	/**  `owner/name` on the server. */
 	fullName: string,
 	defaultBranch: string,
+	/**
+	 *  The branch's name on the server (its upstream's), which can differ from the local
+	 *  name; the local name when it has no upstream yet.
+	 */
+	serverBranch: string,
 	/**  The open pull request from this branch, if any. */
 	pull: PullRequest | null,
 };

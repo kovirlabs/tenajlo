@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { useBranchStore } from "../stores/branchStore";
 import { useChangesStore } from "../stores/changesStore";
 import { useHistoryStore } from "../stores/historyStore";
@@ -61,5 +61,33 @@ describe("useRepoRefresh", () => {
     expect(unlisten).toHaveBeenCalled();
     window.dispatchEvent(new Event("focus"));
     expect(changes).toHaveBeenCalledTimes(3);
+  });
+
+  it("reloads history when a push changes what's on the server, not just on new commits", async () => {
+    const history = vi.fn(async () => {});
+    useHistoryStore.setState({ refresh: history });
+    useChangesStore.setState({ refresh: vi.fn(async () => {}) });
+    useBranchStore.setState({ refresh: vi.fn(async () => {}) });
+    useSyncStore.setState({ refresh: vi.fn(async () => {}) });
+    useConflictStore.setState({ refresh: vi.fn(async () => {}) });
+    const branch = (ahead: number) => ({
+      name: "main",
+      tip: "abc",
+      upstream: "origin/main",
+      ahead,
+      behind: 0,
+      upstreamGone: false,
+    });
+    const status = (ahead: number) => ({ branch: branch(ahead), files: [], hasConflicts: false });
+    useChangesStore.setState({ repoId: "r1", status: status(1) });
+
+    render(<Probe id="r1" />);
+    await waitFor(() => expect(history).toHaveBeenCalledTimes(1));
+    // Pushed: same HEAD, nothing ahead any more, so the "Not pushed" marker must go.
+    act(() => useChangesStore.setState({ status: status(0) }));
+    await waitFor(() => expect(history).toHaveBeenCalledTimes(2));
+    // A refresh that changes nothing doesn't reload.
+    act(() => useChangesStore.setState({ status: status(0) }));
+    expect(history).toHaveBeenCalledTimes(2);
   });
 });

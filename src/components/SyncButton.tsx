@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { SyncRequest, SyncState } from "../bindings";
 import { formatProgress } from "../lib/progress";
 import { formatRelative } from "../lib/time";
@@ -73,7 +74,18 @@ const RUNNING_TITLE: Record<SyncRequest, string> = {
   Publish: "Publishing…",
 };
 
+/** Re-renders once a minute, so "Checked 3 minutes ago" keeps up between fetches (with
+ *  background checks off, nothing else would update it). */
+function useMinuteTick() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+}
+
 export function SyncButton() {
+  useMinuteTick();
   const state = useSyncStore((s) => s.state);
   const running = useSyncStore((s) => s.running);
   const run = useSyncStore((s) => s.run);

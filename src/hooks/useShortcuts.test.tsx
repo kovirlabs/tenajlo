@@ -40,4 +40,17 @@ describe("useShortcuts", () => {
     expect(run).not.toHaveBeenCalled();
     expect(useUiStore.getState().dialog).toBe("settings");
   });
+
+  it("ignores them under a confirmation or error, which the UI store doesn't track", () => {
+    render(<Probe />);
+    const dialog = document.createElement("dialog");
+    dialog.setAttribute("open", "");
+    document.body.append(dialog);
+    press("P");
+    press("N");
+    fireEvent.keyDown(window, { key: ",", ctrlKey: true });
+    expect(run).not.toHaveBeenCalled();
+    expect(useUiStore.getState().dialog).toBeNull();
+    dialog.remove();
+  });
 });

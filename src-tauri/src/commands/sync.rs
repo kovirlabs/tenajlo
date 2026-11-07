@@ -84,16 +84,13 @@ pub async fn sync(
             return Err(AppError::lfs_missing());
         }
         if lfs.used {
-            if let Err(e) = lfs::push_objects(
-                &git,
-                &root,
-                remote,
-                branch,
-                state.lock_support.get(id),
-                make_run(),
-            )
-            .await
-            {
+            let known = state.lock_support.get(id);
+            let (res, learned) =
+                lfs::push_objects_verified(&git, &root, remote, branch, known, make_run).await;
+            if let Some(supported) = learned {
+                state.lock_support.set(id, supported);
+            }
+            if let Err(e) = res {
                 return Err(explain_failure(&state, &auth, e).await);
             }
         }

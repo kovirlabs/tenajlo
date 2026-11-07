@@ -1,4 +1,5 @@
-//! Parses `git lfs locks --verify --json` and the `--json` replies of `git lfs lock/unlock`.
+//! Parses `git lfs locks --json` (with and without `--verify`) and the `--json` replies of
+//! `git lfs lock/unlock`.
 
 use serde::{Deserialize, Serialize};
 
@@ -84,6 +85,38 @@ pub fn parse_verified_locks(stdout: &[u8]) -> Result<Vec<LfsLock>, String> {
     Ok(locks)
 }
 
+/// Parses `git lfs locks --json` (a plain array): every lock, none marked ours yet.
+pub fn parse_locks(stdout: &[u8]) -> Result<Vec<LfsLock>, String> {
+    let json = json_start(stdout);
+    if json.is_empty() {
+        return Ok(Vec::new());
+    }
+    let raw: Vec<RawLock> = serde_json::from_slice(json).map_err(|e| e.to_string())?;
+    Ok(raw.into_iter().map(|l| convert(l, false)).collect())
+}
+
+/// Every lock in `all`, marked ours when `verified` says so, sorted by path. The verify
+/// endpoint needs write access, so for a read-only user it answers with nothing at all:
+/// `all` is the full list and `verified` only says which locks are ours. Locks taken
+/// between the two requests (only in `verified`) are kept too.
+pub fn merge_verified(all: Vec<LfsLock>, verified: Vec<LfsLock>) -> Vec<LfsLock> {
+    let ours = |id: &str| verified.iter().any(|v| v.id == id && v.ours);
+    let mut locks: Vec<LfsLock> = all
+        .into_iter()
+        .map(|mut l| {
+            l.ours = ours(&l.id);
+            l
+        })
+        .collect();
+    for v in &verified {
+        if !locks.iter().any(|l| l.id == v.id) {
+            locks.push(v.clone());
+        }
+    }
+    locks.sort_by(|a, b| a.path.cmp(&b.path));
+    locks
+}
+
 /// Parses `git lfs lock --json`: the new lock (git-lfs 3 prints an array, older ones an object).
 pub fn parse_new_lock(stdout: &[u8]) -> Result<LfsLock, String> {
     let json = json_start(stdout);
@@ -119,6 +152,39 @@ mod tests {
 
     // Captured from git-lfs 3.7.1 against Forgejo 11.
     const VERIFY: &str = r#"{"ours":[{"id":"1","path":"a.bin","owner":{"name":"tenajlo"},"locked_at":"2026-11-05T23:54:48Z"}],"theirs":[{"id":"7","path":"CAD/Pumpe Gehäuse.SLDPRT","owner":{"name":"alice"},"locked_at":"2026-11-05T23:56:43Z"}]}"#;
+
+    // Captured from git-lfs 3.7.1 against Forgejo 11 (plain `git lfs locks --json`).
+    const PLAIN: &str = r#"warning: current Git remote contains credentials
+[{"id":"6","path":"a.bin","owner":{"name":"tenajlo"},"locked_at":"2026-11-06T22:55:55Z"},{"id":"7","path":"CAD\\Pumpe Gehäuse.SLDPRT","owner":null,"locked_at":"2026-11-06T22:56:00Z"}]"#;
+
+    #[test]
+    fn plain_listing_has_every_lock_none_ours() {
+        let locks = parse_locks(PLAIN.as_bytes()).unwrap();
+        assert_eq!(locks.len(), 2);
+        assert_eq!(locks[1].path, "CAD/Pumpe Gehäuse.SLDPRT");
+        assert_eq!(locks[1].owner, "");
+        assert!(locks.iter().all(|l| !l.ours));
+        assert_eq!(parse_locks(b"").unwrap(), Vec::new());
+        assert_eq!(parse_locks(b"[]").unwrap(), Vec::new());
+    }
+
+    #[test]
+    fn merge_marks_ours_and_keeps_what_verify_hid() {
+        let all = parse_locks(PLAIN.as_bytes()).unwrap();
+        // A read-only user: verify answers with nothing, every lock is still listed.
+        let reader = merge_verified(all.clone(), Vec::new());
+        assert_eq!(reader.len(), 2);
+        assert!(reader.iter().all(|l| !l.ours));
+
+        // The holder of lock 6, plus a lock taken between the two requests.
+        let verified = parse_verified_locks(
+            br#"{"ours":[{"id":"6","path":"a.bin","owner":{"name":"tenajlo"}},{"id":"9","path":"b.bin","owner":{"name":"tenajlo"}}],"theirs":[]}"#,
+        )
+        .unwrap();
+        let mine = merge_verified(all, verified);
+        let summary: Vec<(&str, bool)> = mine.iter().map(|l| (l.id.as_str(), l.ours)).collect();
+        assert_eq!(summary, [("7", false), ("6", true), ("9", true)]);
+    }
 
     #[test]
     fn verified_locks_split_ours_and_theirs() {

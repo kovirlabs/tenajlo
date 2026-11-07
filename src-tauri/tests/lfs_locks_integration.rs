@@ -113,7 +113,7 @@ async fn locks_are_shared_and_block_other_peoples_pushes() {
         ),
         "{again:?}"
     );
-    let listed = lfs_locks::list(&g, &mine, "origin", run(&env))
+    let listed = lfs_locks::list(&g, &mine, "origin", || run(&env))
         .await
         .unwrap();
     assert_eq!(listed.len(), 1);
@@ -124,7 +124,7 @@ async fn locks_are_shared_and_block_other_peoples_pushes() {
     clone(&g, &url_for(OTHER, OTHER_PASSWORD), &theirs, run(&env))
         .await
         .unwrap();
-    let listed = lfs_locks::list(&g, &theirs, "origin", run(&env))
+    let listed = lfs_locks::list(&g, &theirs, "origin", || run(&env))
         .await
         .unwrap();
     assert_eq!((listed[0].owner.as_str(), listed[0].ours), (USER, false));
@@ -153,15 +153,108 @@ async fn locks_are_shared_and_block_other_peoples_pushes() {
         "{refused:?}"
     );
 
+    // Refused too before Tenajlo has listed this server's locks (it verifies when unsure)...
+    let (unsure, learned) =
+        lfs::push_objects_verified(&g, &theirs, "origin", "main", None, || run(&env)).await;
+    assert!(
+        matches!(
+            unsure,
+            Err(GitError::Failed {
+                kind: GitErrorKind::LfsFileLocked,
+                ..
+            })
+        ),
+        "{unsure:?}"
+    );
+    assert_eq!(learned, None);
+
+    // ...and when the repository's config turns verification off for this server's LFS URL,
+    // as git-lfs itself does after a server error: that key outranks lfs.locksverify.
+    let lfs_url = format!("http://localhost:3000/{repo}.git/info/lfs");
+    git(
+        &g,
+        &theirs,
+        &env,
+        &["config", &format!("lfs.{lfs_url}.locksverify"), "false"],
+    )
+    .await;
+    let overridden = lfs::push_objects(&g, &theirs, "origin", "main", true, run(&env)).await;
+    assert!(
+        matches!(
+            overridden,
+            Err(GitError::Failed {
+                kind: GitErrorKind::LfsFileLocked,
+                ..
+            })
+        ),
+        "{overridden:?}"
+    );
+
     // The owner unlocks; the other user's push now goes through.
     lfs_locks::unlock(&g, &mine, "origin", &lock.id, false, run(&env))
         .await
         .unwrap();
-    assert!(lfs_locks::list(&g, &mine, "origin", run(&env))
+    assert!(lfs_locks::list(&g, &mine, "origin", || run(&env))
         .await
         .unwrap()
         .is_empty());
     lfs::push_objects(&g, &theirs, "origin", "main", true, run(&env))
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn read_only_collaborators_still_see_locks() {
+    let dir = tempfile::tempdir().unwrap();
+    let env = isolated(dir.path());
+    let g = resolve(None, None).unwrap().with_lfs(true);
+    let (repo, _) = private_repos().await;
+    api(
+        reqwest::Method::PUT,
+        &format!("repos/{repo}/collaborators/{OTHER}"),
+        serde_json::json!({ "permission": "read" }),
+    )
+    .await;
+    let url_for =
+        |user: &str, pass: &str| format!("http://{user}:{pass}@localhost:3000/{repo}.git");
+
+    let mine = dir.path().join("mine");
+    clone(&g, &url_for(USER, PASSWORD), &mine, run(&env))
+        .await
+        .unwrap();
+    std::fs::write(
+        mine.join(".gitattributes"),
+        "*.SLDPRT filter=lfs diff=lfs merge=lfs -text\n",
+    )
+    .unwrap();
+    std::fs::write(mine.join("Pump.SLDPRT"), [1u8; 512]).unwrap();
+    commit_all(&g, &mine, &env, "CAD").await;
+    lfs::push_objects(&g, &mine, "origin", "main", false, run(&env))
+        .await
+        .unwrap();
+    remote::push(&g, &mine, "origin", "main", "main", false, run(&env))
+        .await
+        .unwrap();
+    lfs_locks::lock(&g, &mine, "origin", "Pump.SLDPRT", run(&env))
+        .await
+        .unwrap();
+
+    // A reader can't use the verify endpoint (it needs write access), but must still see
+    // who has the file locked before asking them for it.
+    let reader = dir.path().join("reader");
+    clone(&g, &url_for(OTHER, OTHER_PASSWORD), &reader, run(&env))
+        .await
+        .unwrap();
+    let listed = lfs_locks::list(&g, &reader, "origin", || run(&env))
+        .await
+        .unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(
+        (
+            listed[0].path.as_str(),
+            listed[0].owner.as_str(),
+            listed[0].ours
+        ),
+        ("Pump.SLDPRT", USER, false)
+    );
 }

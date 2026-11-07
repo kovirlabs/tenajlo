@@ -39,8 +39,12 @@ export const useLockStore = create<LockState>((set, get) => {
     if (get().repoId !== repoId) return;
     set({ busy: false });
     changes += 1;
-    if (res.status === "ok") apply(res.data);
-    else if (res.error.kind !== "GitCancelled") useUiStore.getState().showError(res.error);
+    if (res.status === "ok") return apply(res.data);
+    if (res.error.kind === "GitCancelled") return;
+    useUiStore.getState().showError(res.error);
+    // The server may not match the list any more (the lock was already removed elsewhere, or
+    // someone else took it first): show what's there now, without prompting.
+    void get().load(repoId, true);
   };
   const add = (lock: LfsLock | null) => {
     if (lock)

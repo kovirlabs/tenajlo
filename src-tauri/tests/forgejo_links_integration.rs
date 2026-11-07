@@ -140,4 +140,25 @@ async fn branch_pull_request_and_commit_checks() {
     assert_eq!(checks.checks.len(), 2);
     assert_eq!(checks.checks[0].context, "build (push)");
     assert_eq!(checks.checks[1].description, "Failing after 31s");
+
+    // With pull requests turned off the server answers 404 for them: that's "no pull
+    // request", not a failure that would hide the checks and View on Forgejo too.
+    api(
+        reqwest::Method::PATCH,
+        &format!("repos/{repo}"),
+        serde_json::json!({ "has_pull_requests": false }),
+    )
+    .await;
+    assert_eq!(
+        links::pull_for_branch(
+            &client,
+            &linked.base,
+            &token,
+            &linked.repo,
+            "feature/low-pressure"
+        )
+        .await
+        .unwrap(),
+        None
+    );
 }

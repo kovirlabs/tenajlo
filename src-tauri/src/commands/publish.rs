@@ -186,7 +186,7 @@ fn create_error(
             "There's already a repository named {name} in {place}. Choose another name."
         )),
         CreateRepoError::InvalidName => AppError::invalid_input(
-            "That name can't be used. Use letters, numbers, dashes (-), underscores (_) and dots (.), up to 100 characters.",
+            "That name can't be used. Use letters, numbers, dashes (-), underscores (_) and dots (.), up to 100 characters, and don't end it with .git or .wiki.",
         ),
         CreateRepoError::Api(e) => super::account_api_error(state, account, e),
     }

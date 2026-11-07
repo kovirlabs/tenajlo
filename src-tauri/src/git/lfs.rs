@@ -5,8 +5,8 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use super::error::GitError;
-use super::exec::GitBinary;
+use super::error::{GitError, GitErrorKind};
+use super::exec::{Access, GitBinary, GitCommand};
 use super::remote::{run_remote, RemoteRun};
 
 /// Whether a repository needs LFS and whether this computer has it.
@@ -40,6 +40,36 @@ pub fn status(git: &GitBinary, root: &Path) -> LfsStatus {
     }
 }
 
+/// Uploads `branch`'s LFS objects with lock verification whenever the server might support
+/// locks. `supported` is what is known about the server's lock API (`None`: not asked yet).
+///
+/// Without verification git-lfs only warns about files someone else has locked and pushes
+/// anyway, so an unknown server is verified too. If it turns out not to have the lock API,
+/// the push runs again without verification. Returns the result and what is now known.
+pub async fn push_objects_verified(
+    git: &GitBinary,
+    root: &Path,
+    remote: &str,
+    branch: &str,
+    supported: Option<bool>,
+    make_run: impl Fn() -> RemoteRun,
+) -> (Result<(), GitError>, Option<bool>) {
+    if supported == Some(false) {
+        let res = push_objects(git, root, remote, branch, false, make_run()).await;
+        return (res, supported);
+    }
+    match push_objects(git, root, remote, branch, true, make_run()).await {
+        Err(GitError::Failed {
+            kind: GitErrorKind::LfsLocksUnsupported,
+            ..
+        }) => {
+            let res = push_objects(git, root, remote, branch, false, make_run()).await;
+            (res, Some(false))
+        }
+        res => (res, supported),
+    }
+}
+
 /// Uploads the LFS objects `branch` needs to `remote` (`git lfs push`), so a push never
 /// depends on the repository's pre-push hook being installed. Names must be validated.
 ///
@@ -54,6 +84,11 @@ pub async fn push_objects(
     mut r: RemoteRun,
 ) -> Result<(), GitError> {
     if verify_locks {
+        // git-lfs prefers `lfs.<url>.locksverify` (which it sets to false itself after a
+        // server error) to the plain key, so override those too.
+        for key in url_locksverify_keys(git, root).await? {
+            r.config.push(format!("{key}=true"));
+        }
         r.config.push("lfs.locksverify=true".into());
     }
     run_remote(
@@ -69,6 +104,30 @@ pub async fn push_objects(
         r,
     )
     .await
+}
+
+/// The repository's URL-scoped `lfs.<url>.locksverify` keys, as git names them.
+async fn url_locksverify_keys(git: &GitBinary, root: &Path) -> Result<Vec<String>, GitError> {
+    // Exit 1: no such keys.
+    let out = GitCommand::new(
+        [
+            "config",
+            "--name-only",
+            "--get-regexp",
+            r"^lfs\..+\.locksverify$",
+        ],
+        Access::ReadOnly,
+    )
+    .ok_exit_codes(&[0, 1])
+    .cwd(root)
+    .run(git)
+    .await?;
+    Ok(String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(str::to_owned)
+        .collect())
 }
 
 #[cfg(test)]

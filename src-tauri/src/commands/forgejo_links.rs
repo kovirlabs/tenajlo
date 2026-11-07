@@ -10,7 +10,7 @@ use tauri_plugin_opener::OpenerExt;
 use super::{account_api_error, parse_id};
 use crate::error::AppError;
 use crate::forgejo::links::{self, CommitChecks, ForgejoPage, PullRequest};
-use crate::git::{branch_name, log};
+use crate::git::{branch_name, branches, log};
 use crate::repo_links::{LinkError, Linked};
 use crate::state::AppState;
 
@@ -21,6 +21,9 @@ pub struct BranchLink {
     /// `owner/name` on the server.
     pub full_name: String,
     pub default_branch: String,
+    /// The branch's name on the server (its upstream's), which can differ from the local
+    /// name; the local name when it has no upstream yet.
+    pub server_branch: String,
     /// The open pull request from this branch, if any.
     pub pull: Option<PullRequest>,
 }
@@ -56,18 +59,25 @@ pub async fn get_branch_link(
     let Some(l) = linked(&state, &repo_id).await? else {
         return Ok(None);
     };
+    let root = state.repos.root(parse_id(&repo_id)?)?;
+    let git = state.git()?;
+    branch_name::validate(&git, &root, &branch).await?;
+    let server_branch = branches::server_branch(&git, &root, &branch)
+        .await?
+        .unwrap_or(branch);
     let pull = links::pull_for_branch(
         &state.forgejo,
         &l.base,
         &token(&state, &l).await?,
         &l.repo,
-        &branch,
+        &server_branch,
     )
     .await
     .map_err(|e| account_api_error(&state, &l.account, e))?;
     Ok(Some(BranchLink {
         full_name: l.info.full_name.clone(),
         default_branch: l.info.default_branch.clone(),
+        server_branch,
         pull,
     }))
 }

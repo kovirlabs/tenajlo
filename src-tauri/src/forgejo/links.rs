@@ -136,9 +136,13 @@ pub async fn pull_for_branch(
     branch: &str,
 ) -> Result<Option<PullRequest>, ForgejoError> {
     let segments = ["repos", repo.owner.as_str(), repo.name.as_str(), "pulls"];
-    let pulls: Vec<ApiPull> =
-        all_pages_with(client, base, &segments, &[("state", "open")], token).await?;
-    Ok(pick_pull(pulls, &repo.full_name(), branch))
+    match all_pages_with::<ApiPull>(client, base, &segments, &[("state", "open")], token).await {
+        Ok(pulls) => Ok(pick_pull(pulls, &repo.full_name(), branch)),
+        // Pull requests are turned off for this repository: there's no pull request, and the
+        // rest of the links (checks, View on Forgejo) still work.
+        Err(ForgejoError::Http { status: 404, .. }) => Ok(None),
+        Err(e) => Err(e),
+    }
 }
 
 fn pick_pull(pulls: Vec<ApiPull>, full_name: &str, branch: &str) -> Option<PullRequest> {

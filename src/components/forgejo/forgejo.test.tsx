@@ -13,11 +13,11 @@ vi.mock("../../api/forgejo", () => ({
   openForgejoPage: vi.fn(async () => ({ status: "ok", data: null })),
 }));
 
-const link = (pull: { number: number; title: string } | null) =>
+const link = (pull: { number: number; title: string } | null, serverBranch = "feature/x") =>
   useForgejoStore.setState({
     repoId: "r",
     branch: "feature/x",
-    link: { fullName: "team/pump", defaultBranch: "main", pull },
+    link: { fullName: "team/pump", defaultBranch: "main", serverBranch, pull },
   });
 
 const pushed = (upstream: string | null) =>
@@ -76,6 +76,17 @@ describe("Forgejo links", () => {
     expect(openForgejoPage).toHaveBeenCalledWith("r", {
       type: "NewPullRequest",
       branch: "feature/x",
+    });
+  });
+
+  it("compares the branch's name on the server, which can differ from the local one", () => {
+    link(null, "evan/feature-x");
+    pushed("origin/evan/feature-x");
+    render(<BranchPullRequestSection close={() => {}} />);
+    fireEvent.click(screen.getByText("Create pull request…"));
+    expect(openForgejoPage).toHaveBeenCalledWith("r", {
+      type: "NewPullRequest",
+      branch: "evan/feature-x",
     });
   });
 

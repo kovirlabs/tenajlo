@@ -5,7 +5,7 @@ import { useAccountStore } from "../stores/accountStore";
 import { useRepoStore } from "../stores/repoStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useUiStore } from "../stores/uiStore";
-import { PublishRepositoryDialog } from "./PublishRepositoryDialog";
+import { PublishRepositoryDialog, suggestedName } from "./PublishRepositoryDialog";
 
 const api = vi.hoisted(() => ({ getPublishOptions: vi.fn(), publishRepository: vi.fn() }));
 vi.mock("../api/publish", () => api);
@@ -131,5 +131,31 @@ describe("PublishRepositoryDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sign in…" }));
     expect(useUiStore.getState()).toMatchObject({ dialog: "settings", settingsTab: "accounts" });
     expect(api.getPublishOptions).not.toHaveBeenCalled();
+  });
+
+  it("suggests a name Forgejo accepts from the folder name", () => {
+    expect(suggestedName("My Project")).toBe("My-Project");
+    expect(suggestedName("Pumpe Gehäuse (alt)")).toBe("Pumpe-Geh-use-alt");
+    expect(suggestedName("tools.git")).toBe("tools");
+    expect(suggestedName(".hidden-")).toBe("hidden");
+    expect(suggestedName("plc_exports-2.0")).toBe("plc_exports-2.0");
+  });
+
+  it("can't be cancelled mid-publish, and an error after closing still shows", async () => {
+    api.getPublishOptions.mockResolvedValue({ status: "ok", data: options() });
+    let finish: (v: unknown) => void = () => {};
+    api.publishRepository.mockReturnValue(new Promise((r) => (finish = r)));
+    const showError = vi.fn();
+    useUiStore.setState({ showError });
+    const { unmount } = render(<PublishRepositoryDialog />);
+    await screen.findByDisplayValue("pump-station");
+    fireEvent.click(screen.getByRole("button", { name: "Publish repository" }));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveProperty("disabled", true);
+
+    // Closed anyway (Escape): the failure goes to the error dialog instead of nowhere.
+    unmount();
+    const error = { kind: "Git", message: "Created on the server but couldn't connect." };
+    finish({ status: "error", error });
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(error));
   });
 });
