@@ -7,7 +7,10 @@ import { PublishRepositoryDialog } from "../components/PublishRepositoryDialog";
 import { ErrorDialog } from "../components/ErrorDialog";
 import { NewBranchDialog } from "../components/branches/NewBranchDialog";
 import { LocksDialog } from "../components/locks/LocksDialog";
+import { useCloneLinks } from "../hooks/useCloneLinks";
 import { useShortcuts } from "../hooks/useShortcuts";
+import { useCloneStore } from "../stores/cloneStore";
+import { useUiStore } from "../stores/uiStore";
 import { Toolbar } from "../components/Toolbar";
 import { UpdateBanner } from "../components/UpdateBanner";
 import { useUpdateStore } from "../stores/updateStore";
@@ -44,9 +47,15 @@ export function AppShell() {
 
   useShortcuts(repo !== null && !repo.missing);
 
+  const showWelcome = !repo && repoCount === 0 && !welcomeCompleted;
+  const dialog = useUiStore((s) => s.dialog);
+  const cloning = useCloneStore((s) => s.running !== null);
+  // Open in Tenajlo links wait until nothing else is in the way (spec §8.3).
+  useCloneLinks(loaded && !showWelcome && (dialog === null || dialog === "clone") && !cloning);
+
   let body;
   if (!loaded) body = <main className="centered" aria-busy="true" />;
-  else if (!repo && repoCount === 0 && !welcomeCompleted) body = <Welcome />;
+  else if (showWelcome) body = <Welcome />;
   else if (!repo) body = <NoRepository />;
   else if (repo.missing) body = <MissingRepository repo={repo} />;
   else body = <RepositoryView key={repo.id} repo={repo} />;

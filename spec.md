@@ -94,6 +94,7 @@ Code may be ported from GitHub Desktop where useful (MIT). Ported files must kee
 | Secrets | `keyring` (Windows Credential Manager, macOS Keychain, Secret Service) |
 | HTTP | `reqwest` 0.13 with `rustls` + `rustls-platform-verifier`, so the OS verifier and trust store apply (internal CA) |
 | FS watching | `notify` + `notify-debouncer-full` |
+| Open in Tenajlo links (v1.5) | `tauri-plugin-deep-link` (scheme registration, link events) + `tauri-plugin-single-instance` with its `deep-link` feature (a second launch hands its link to the running copy); both used from Rust only (§8.3) |
 | Errors | `thiserror` (library) / `anyhow` only at command boundary |
 | Logging | `tracing` + rolling file appender, secrets redacted |
 | Frontend | React 18+, TypeScript strict, Vite, Zustand, TanStack Query optional for API data |
@@ -302,6 +303,25 @@ The layout mirrors GitHub Desktop, which users may already know.
 - Visual identity: Tenajlo's own warm "solar" palette (light and dark), not GitHub's Primer colors or toolbar/tab shapes.
 - Respect the OS dark/light setting. Meet WCAG AA contrast.
 
+### 8.3 Open in Tenajlo links (v1.5)
+
+`tenajlo://clone?url=<percent-encoded clone URL>` opens Tenajlo with the Clone dialog on its *URL* tab and the address filled in. The purpose is Forgejo's "Open with" menu: an admin adds Tenajlo once and every repository page offers **Open with Tenajlo** next to the clone URL.
+
+- **Forgejo setup (verified against Forgejo 11.0):** *Site administration → Configuration → Settings → Repository*, the "Open with" editors box (config key `repository.open-with.editor-apps`), one `Name = URL` line per app. Forgejo replaces `{url}` with `encodeURIComponent(<clone URL>)`, using HTTPS or SSH as chosen in the clone box. Saving the box replaces the built-in list (VS Code, VSCodium, IntelliJ), so admins who want to keep those add them back:
+  ```
+  Tenajlo = tenajlo://clone?url={url}
+  VS Code = vscode://vscode.git/clone?url={url}
+  VSCodium = vscodium://vscode.git/clone?url={url}
+  ```
+- **Registration:** `plugins.deep-link.desktop.schemes = ["tenajlo"]` in `tauri.conf.json`. The bundler registers the scheme in the NSIS installer (per-user, `HKCU\Software\Classes\tenajlo`), the `.deb` desktop file (`MimeType=x-scheme-handler/tenajlo`) and the macOS `Info.plist` (`CFBundleURLTypes`). Debug builds on Windows and Linux also register themselves at startup so links can be tried with `pnpm tauri dev`; macOS only honors bundled apps, so there it needs a built `.app`.
+- **Delivery:** a link that starts Tenajlo arrives on the command line (Windows, Linux) or as an open event (macOS). When Tenajlo is already running, Windows and Linux start a second process; `tauri-plugin-single-instance` hands its arguments to the running copy, which focuses its window, and the second process exits. Any second launch now focuses the existing window instead of opening another copy. Rust keeps the latest valid link (`take_clone_link`) and emits `clone-link-received`. The frontend takes the link only when the main screen is up and nothing is in the way: not during startup or the welcome screen, not while another dialog is open or a clone is running. Until then the link waits.
+- **Security:** the link is untrusted input from any web page.
+  - It never clones by itself. It only fills in the dialog; the user still checks the folder and clicks *Clone*.
+  - Rust parses and checks it (`open_link.rs`, a pure function with unit tests): scheme `tenajlo`, action `clone` (case-insensitive, an optional trailing `/`), no user, port, path or fragment, and exactly one query parameter, `url`. Links up to 4096 characters; the decoded address up to 2048, with no control characters or whitespace and no leading `-`.
+  - The address must pass the same rules as the *URL* tab (§5.2): `https://`, `ssh://` or scp-style `user@host:path`; `http://` only for loopback test servers (a real server over plain `http` would send the password unencrypted); no password, nothing git or ssh could read as an option, and no `helper::address` (git remote helpers such as `ext::`). In addition, an `http(s)` address must not include a user name, since a token can be hidden there. Local paths and `file://` are refused.
+  - Anything else (unknown actions or parameters, a bad address) is ignored and logged at warn level, with the parameters decoded and passed through `redact()` and the line shortened to 300 characters. The user sees nothing.
+  - The frontend receives only the checked address and holds no parsing logic. The WebView gets no deep-link or single-instance permissions.
+
 ---
 
 ## 9. Data and persistence
@@ -331,7 +351,8 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 6. The trampoline listener binds to loopback only, uses per-operation random tokens, and rejects everything else.
 7. Never auto-accept SSH host keys. Never set `http.sslVerify=false`, and offer no UI toggle for it. Untrusted certs are fixed in the OS trust store.
 8. Updates (v1.1) use the Tauri updater with signature verification, from the public GitHub Releases endpoint (`https://github.com/kovirlabs/tenajlo/releases/latest/download/latest.json`; drafts are never served). The updater runs in Rust only; the WebView gets no updater permissions. Tenajlo checks once at startup if Settings → About → "Check for updates when Tenajlo starts" is on (the default), shows a banner, and installs only when the user clicks "Install and restart", never during a fetch, pull, push or clone. The public key is in `tauri.conf.json` (`plugins.updater.pubkey`); a build without it never checks. Copies installed from a release package update in place: Windows (NSIS, passive install), macOS (`.app`), and Linux `.deb` (`dpkg -i` through `pkexec`, so the user is asked for an administrator password; the plugin falls back to a zenity/kdialog password prompt, then `sudo`). The package type is recorded in the binary by the bundler; development builds have none and never update themselves (they show a link to the release page).
-9. Repository paths opened by the user are canonicalized. Tenajlo operates only inside the selected repo root.
+9. Open in Tenajlo links (v1.5) are untrusted: checked in Rust, never clone without the user clicking *Clone*, rejected links logged only in redacted form (§8.3).
+10. Repository paths opened by the user are canonicalized. Tenajlo operates only inside the selected repo root.
 
 ---
 
@@ -366,6 +387,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo
 | v1.2 | Publish repository | Create the repository on Forgejo (user or organization) from a local repo with no remote, add `origin`, publish the branch (§8.1) |
 | v1.3 | Polish | Keyboard-driven lists, *Discard all changes…*, per-repository commit drafts (in memory), *Remove from list…* in the repository dropdown, "waiting for the fetch/push" hint, fetch on repository open and window focus when the last fetch is over a minute old (same on/off setting), *Not pushed* marker and *Copy ID* in History, solar theme |
 | v1.4 | Engineering files and Forgejo links | LFS file locks, binary/image previews with LFS sizes, branch pull request link and badge, commit checks and *View on Forgejo*, plain sync wording (§8.1) |
+| v1.5 | Open in Tenajlo | `tenajlo://clone?url=…` links fill in the Clone dialog (never clone by themselves), for Forgejo's "Open with" menu; single instance (§8.3) |
 | v2 | Forgejo native | OAuth2 PKCE sign-in. Deferred 2026-11-05: Forgejo has no dynamic client registration, so each server's admin must register a Tenajlo OAuth2 app with a loopback redirect and Tenajlo needs its client ID; access tokens expire (about 1 h), so a refresh token must be kept in the keychain, a new stored-secret format. PAT sign-in stays. |
 
 ### 12.1 Backlog

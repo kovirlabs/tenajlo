@@ -6,6 +6,22 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Open in Tenajlo links.** A `tenajlo://clone?url=…` link opens Tenajlo (or brings the
+  running copy to the front) with the Clone dialog on the **URL** tab and the address filled
+  in. Forgejo administrators can add **Open with Tenajlo** to every repository's clone menu
+  (Site administration → Configuration → Settings → Repository, "Open with" editors:
+  `Tenajlo = tenajlo://clone?url={url}`). A link never clones by itself: you still choose the
+  folder and click **Clone**, and links with an address Tenajlo wouldn't accept are ignored.
+- Starting Tenajlo while it's already open brings the open window to the front instead of
+  starting a second copy.
+
+### Fixed
+
+- The **URL** tab of the Clone dialog refuses `helper::address` addresses (such as `ext::…`),
+  which would run a git remote helper instead of connecting to a server.
+
 ## [1.4.1] - 2026-11-07
 
 ### Changed
