@@ -6,6 +6,8 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-11-07
+
 ### Changed
 
 - Everyday problems get a title that says what happened (for example "The server has newer
@@ -222,7 +224,8 @@ First public release:
   theme.
 - First-run welcome, plain-language error messages, daily log files.
 
-[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/kovirlabs/tenajlo/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/kovirlabs/tenajlo/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/kovirlabs/tenajlo/compare/v1.2.0...v1.4.0
 [1.2.0]: https://github.com/kovirlabs/tenajlo/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/kovirlabs/tenajlo/compare/v1.1.2...v1.1.3
