@@ -131,4 +131,35 @@ describe("NewBranchDialog", () => {
     fireEvent.submit(input.closest("form") as HTMLFormElement);
     await waitFor(() => expect(api.createBranch).toHaveBeenLastCalledWith("r1", "fix-pump"));
   });
+
+  it("says when the branch already exists instead of trying to create it", async () => {
+    setup([]);
+    cleanup();
+    api.createBranch.mockClear();
+    useUiStore.setState({ dialog: "newBranch" });
+    render(<NewBranchDialog />);
+    const input = screen.getByLabelText("Name");
+    fireEvent.change(input, { target: { value: "feature" } });
+    expect(await screen.findByText(/already exists/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create branch" })).toHaveProperty("disabled", true);
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(api.createBranch).not.toHaveBeenCalled();
+  });
+
+  it("treats a name that differs only in capitals as taken", async () => {
+    setup([]);
+    cleanup();
+    api.createBranch.mockClear();
+    useUiStore.setState({ dialog: "newBranch" });
+    render(<NewBranchDialog />);
+    const input = screen.getByLabelText("Name");
+    fireEvent.change(input, { target: { value: "Feature" } });
+    expect(await screen.findByText(/differ only in capital letters/)).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("A branch named feature");
+    expect(screen.getByRole("button", { name: "Create branch" })).toHaveProperty("disabled", true);
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(api.createBranch).not.toHaveBeenCalled();
+  });
 });

@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { FileChange, StagedState } from "../bindings";
+import { FilePath, diffTitle } from "../components/FilePath";
 import { FileStatusIcon } from "../components/FileStatusIcon";
 import { StageCheckbox } from "../components/StageCheckbox";
 import { LockBadge } from "../components/locks/LockBadge";
@@ -108,7 +109,11 @@ export function ChangesList() {
             busy={busy}
             onSelect={() => selectFile(f.path)}
             onStage={(stage) => void setStaged([f.path], stage)}
-            onContextMenu={(e) => actions.open(f, e)}
+            onContextMenu={(e) => {
+              // The menu is about this file: select it, as the keyboard's Menu key would.
+              selectFile(f.path);
+              actions.open(f, e);
+            }}
           />
         )}
       />
@@ -128,7 +133,7 @@ type RowProps = {
 };
 
 function FileRow({ id, file, selected, busy, onSelect, onStage, onContextMenu }: RowProps) {
-  const title = file.oldPath ? `${file.oldPath} → ${file.path}` : file.path;
+  const title = diffTitle(file.path, file.oldPath);
   const conflicted = file.kind === "Conflicted";
   const lock = useLockFor(file.path);
   return (
@@ -147,10 +152,9 @@ function FileRow({ id, file, selected, busy, onSelect, onStage, onContextMenu }:
         disabled={busy || conflicted}
         onChange={onStage}
       />
-      <span className="file-path">
-        {file.path}
-        {file.submodule && <span className="muted"> (submodule)</span>}
-      </span>
+      <FilePath path={file.path}>
+        {file.submodule && <span className="muted">&nbsp;(submodule)</span>}
+      </FilePath>
       {lock && <LockBadge lock={lock} />}
       <FileStatusIcon kind={file.kind} />
     </div>

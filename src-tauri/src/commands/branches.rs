@@ -28,7 +28,22 @@ pub async fn create_branch(
     let git = state.git()?;
     let name = branch_name::sanitize(&name);
     branch_name::validate(&git, &root, &name).await?;
+    refuse_case_twin(&branches::branches(&git, &root).await?, &name)?;
     Ok(switch::create(&git, &root, &name).await?)
+}
+
+/// Refuses a branch name that only differs in capitals from an existing local branch: on
+/// Windows and macOS the two would share one file and move together.
+fn refuse_case_twin(
+    list: &crate::git::parse::branches::BranchList,
+    name: &str,
+) -> Result<(), AppError> {
+    match switch::case_twin(list, name) {
+        Some(twin) => Err(AppError::invalid_input(format!(
+            "There's already a branch named {twin}. Names that differ only in capital letters get mixed up on Windows and Mac, so choose another name or use {twin}."
+        ))),
+        None => Ok(()),
+    }
 }
 
 /// Switches to a local branch, or creates a tracking branch for a remote-only one.
@@ -48,6 +63,7 @@ pub async fn switch_branch(
     })?;
     if let switch::Target::Track { local, .. } = &target {
         branch_name::validate(&git, &root, local).await?;
+        refuse_case_twin(&list, local)?;
     }
     let current = status::status(&git, &root).await?;
     if current.has_conflicts {

@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { getBinaryPreview } from "../api/diff";
 import { getCommitDiff } from "../api/history";
+import { FilePath, diffTitle } from "../components/FilePath";
 import { FileStatusIcon } from "../components/FileStatusIcon";
 import { CommitChecksLine } from "../components/forgejo/CommitChecksLine";
 import { listKeyHandler } from "../hooks/listKeys";
@@ -75,10 +76,10 @@ export function CommitDetail({ repoId }: { repoId: string }) {
               role="option"
               aria-selected={f.path === selectedFile?.path}
               className={f.path === selectedFile?.path ? "file-row selected" : "file-row"}
-              title={f.oldPath ? `${f.oldPath} → ${f.path}` : f.path}
+              title={diffTitle(f.path, f.oldPath)}
               onClick={() => selectFile(f)}
             >
-              <span className="file-path">{f.path}</span>
+              <FilePath path={f.path} />
               <FileStatusIcon kind={f.kind} />
             </li>
           ))}
@@ -89,7 +90,8 @@ export function CommitDetail({ repoId }: { repoId: string }) {
               selectedFile
                 ? {
                     key: `commit:${repoId}:${commit.sha}:${selectedFile.path}`,
-                    title: selectedFile.path,
+                    title: diffTitle(selectedFile.path, selectedFile.oldPath),
+                    renamedFrom: selectedFile.oldPath,
                     fetch: () =>
                       getCommitDiff(repoId, commit.sha, selectedFile.path, selectedFile.oldPath),
                     preview: {

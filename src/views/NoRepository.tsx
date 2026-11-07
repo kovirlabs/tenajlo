@@ -1,8 +1,10 @@
+import { useAccountStore } from "../stores/accountStore";
 import { useRepoStore } from "../stores/repoStore";
 import { useUiStore } from "../stores/uiStore";
 
 export function NoRepository() {
   const addLocal = useRepoStore((s) => s.addLocal);
+  const signedIn = useAccountStore((s) => s.accounts.length > 0);
   return (
     <main className="centered">
       <div className="empty">
@@ -25,13 +27,15 @@ export function NoRepository() {
           >
             Create a new repository…
           </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => useUiStore.getState().openSettings("accounts")}
-          >
-            Sign in to Forgejo…
-          </button>
+          {!signedIn && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => useUiStore.getState().openSettings("accounts")}
+            >
+              Sign in to Forgejo…
+            </button>
+          )}
         </div>
       </div>
     </main>

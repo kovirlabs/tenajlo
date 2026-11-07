@@ -8,6 +8,16 @@ import { useDraft, useDraftStore } from "../stores/draftStore";
 import { useSyncStore } from "../stores/syncStore";
 import { useLockStore } from "../stores/lockStore";
 import { useAsyncEffect } from "../hooks/useAsyncEffect";
+import { formatRelative } from "../lib/time";
+
+type LastCommit = {
+  sha: string;
+  summary: string;
+  branch: string | null;
+  at: string;
+  /** Merge commits can't be undone (git/undo.rs refuses them). */
+  merge: boolean;
+};
 
 /** Summary + description + "Commit to <branch>" (spec §8). Ctrl/Cmd+Enter commits. The
  *  message is a per-repository draft, so switching repositories doesn't lose it. */
@@ -51,7 +61,7 @@ export function CommitBox({ repoId }: { repoId: string }) {
   );
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [askIdentity, setAskIdentity] = useState(false);
-  const [lastCommit, setLastCommit] = useState<{ sha: string; summary: string } | null>(null);
+  const [lastCommit, setLastCommit] = useState<LastCommit | null>(null);
 
   const [identityVersion, setIdentityVersion] = useState(0);
 
@@ -75,9 +85,16 @@ export function CommitBox({ repoId }: { repoId: string }) {
     if (!canCommit) return;
     if (missingIdentity) return setAskIdentity(true);
     const committedSummary = summary.trim();
+    const committedBranch = status?.branch.name ?? null;
     const res = await mutate((id) => commitChanges(id, summary, description));
     if (res?.status === "ok") {
-      setLastCommit({ sha: res.data, summary: committedSummary });
+      setLastCommit({
+        sha: res.data,
+        summary: committedSummary,
+        branch: committedBranch,
+        at: new Date().toISOString(),
+        merge: merging,
+      });
       clearDraft(repoId);
     }
   };
@@ -96,8 +113,15 @@ export function CommitBox({ repoId }: { repoId: string }) {
     }
   };
 
-  // Only offer Undo while our commit is still the branch tip.
-  const canUndo = lastCommit !== null && status?.branch.tip === lastCommit.sha;
+  // Only offer Undo for an ordinary commit while it is still the tip of the branch it was made
+  // on, and not on the server yet (with an upstream, nothing ahead means it was pushed).
+  const tip = status?.branch;
+  const canUndo =
+    lastCommit !== null &&
+    !lastCommit.merge &&
+    tip?.tip === lastCommit.sha &&
+    tip.name === lastCommit.branch &&
+    !(tip.upstream && tip.ahead === 0);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
@@ -111,7 +135,7 @@ export function CommitBox({ repoId }: { repoId: string }) {
       {canUndo && (
         <div className="undo-bar" role="status">
           <span>
-            Committed just now · <strong>{lastCommit.summary}</strong>
+            Committed {formatRelative(lastCommit.at)} · <strong>{lastCommit.summary}</strong>
           </span>
           <button type="button" className="secondary" disabled={busy} onClick={() => void undo()}>
             Undo
@@ -135,6 +159,9 @@ export function CommitBox({ repoId }: { repoId: string }) {
         onKeyDown={onKeyDown}
       />
       {conflicts && <p className="commit-hint">Resolve conflicts before committing.</p>}
+      {!conflicts && !merging && !anyStaged && (status?.files.length ?? 0) > 0 && (
+        <p className="commit-hint">Tick the files to include in this commit.</p>
+      )}
       {lockedByOthers && (
         <p className="commit-hint" role="status">
           {lockedByOthers}

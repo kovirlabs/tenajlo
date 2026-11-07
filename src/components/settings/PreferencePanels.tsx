@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AppError, Editor, EditorOption, PullStrategy, Theme } from "../../bindings";
+import { defaultRepositoryFolder } from "../../api/repos";
 import { chooseFile, chooseFolder, listEditors } from "../../api/settings";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { InlineError } from "../InlineError";
@@ -56,6 +57,15 @@ export function RepositoriesPanel() {
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const [error, setError] = useState<AppError | null>(null);
+  // The real folder (e.g. OneDrive\Documents\Tenajlo), not a made-up "Documents/Tenajlo".
+  const [defaultFolder, setDefaultFolder] = useState("");
+  useAsyncEffect(
+    async (live) => {
+      const res = await defaultRepositoryFolder();
+      if (live() && res.status === "ok") setDefaultFolder(res.data);
+    },
+    [settings?.defaultCloneFolder],
+  );
   if (!settings) return null;
 
   const save = async (change: Parameters<typeof update>[0]) => setError(await update(change));
@@ -72,7 +82,7 @@ export function RepositoriesPanel() {
           <input
             readOnly
             aria-label="Default clone folder"
-            value={settings.defaultCloneFolder ?? "Documents/Tenajlo"}
+            value={settings.defaultCloneFolder ?? defaultFolder}
           />
           <button type="button" className="secondary" onClick={() => void choose()}>
             Choose…

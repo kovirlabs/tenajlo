@@ -32,6 +32,12 @@ const api = vi.hoisted(() => ({
 vi.mock("../../api/settings", () => api);
 vi.mock("../../api/changes", () => ({ setGlobalIdentity: vi.fn() }));
 vi.mock("../../api/accounts", () => ({ listAccounts: vi.fn(async () => []) }));
+vi.mock("../../api/repos", () => ({
+  defaultRepositoryFolder: vi.fn(async () => ({
+    status: "ok",
+    data: String.raw`C:\Users\evan\OneDrive\Documents\Tenajlo`,
+  })),
+}));
 
 function open(tab: "git" | "repositories" | "appearance") {
   useSettingsStore.setState({ settings: defaults });
@@ -62,6 +68,11 @@ describe("SettingsDialog", () => {
 
   it("saves pull strategy and shows rejected values inline", async () => {
     open("repositories");
+    await waitFor(() =>
+      expect((screen.getByLabelText("Default clone folder") as HTMLInputElement).value).toBe(
+        String.raw`C:\Users\evan\OneDrive\Documents\Tenajlo`,
+      ),
+    );
     fireEvent.click(screen.getByLabelText(/Always merge/));
     await waitFor(() =>
       expect(api.saveSettings).toHaveBeenCalledWith({ ...defaults, pullStrategy: "Merge" }),
