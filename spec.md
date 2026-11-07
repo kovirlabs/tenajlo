@@ -342,12 +342,12 @@ Every JSON file has a `"schemaVersion"` field and a migration function. Writes a
 | Git parsers | Rust unit tests with fixture outputs (porcelain v2, log, diff, progress lines), including unicode paths, renames, binaries, and CRLF |
 | Git operations | Rust tests creating temp repos via `tempfile` plus real git, plus a bare repo as a fake remote |
 | Auth/trampoline | Tests with a mocked prompt responder: token validation, timeout, cancel, erase |
-| Forgejo client | Integration tests against `codeberg.org/forgejo/forgejo` in Docker (seeded user + PAT), behind `--features integration` |
+| Forgejo client | Integration tests against `codeberg.org/forgejo/forgejo` in Docker (seeded user + PAT), behind `--features integration`. The same suite also runs against Gitea (`dev/gitea.yml`, current release and the last 1.x line) by pointing `TENAJLO_FORGEJO_URL` and `TENAJLO_FORGEJO_SSH_PORT` at it |
 | Frontend | Vitest + React Testing Library for components and store logic. `api/` is mocked. |
 | End-to-end (v1.1) | Tauri WebDriver smoke test: sign in, clone, commit, push |
 | Manual matrix | Windows domain machine with internal CA, Ubuntu, SSH with passphrase key, PAT with HTTPS |
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace` on Windows, Linux and macOS, `pnpm lint`, `pnpm typecheck` and `pnpm test`, and the Forgejo integration suite in Docker, on every push. Version tags build the Windows installer, a Linux `.deb` and a macOS (Apple Silicon) `.dmg` into a draft GitHub Release (`release.yml`).
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs `cargo fmt --check`, `cargo clippy -D warnings` and `cargo test --workspace` on Windows, Linux and macOS, `pnpm lint`, `pnpm typecheck` and `pnpm test`, and the integration suite in Docker against Forgejo and Gitea, on every push. Version tags build the Windows installer, a Linux `.deb` and a macOS (Apple Silicon) `.dmg` into a draft GitHub Release (`release.yml`).
 
 ---
 

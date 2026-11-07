@@ -139,7 +139,7 @@ impl Ssh {
 }
 
 fn ssh_url(full_name: &str) -> String {
-    format!("ssh://git@localhost:2222/{full_name}.git")
+    format!("ssh://git@localhost:{}/{full_name}.git", ssh_port())
 }
 
 #[tokio::test]
@@ -153,6 +153,7 @@ async fn clone_and_push_over_ssh_with_host_key_and_passphrase_prompts() {
     };
     let ssh = ssh_env(dir.path(), &key, user).await;
     let git = resolve(None, None).unwrap();
+    let host_prompt = format!("host [localhost]:{} ED25519", ssh_port());
 
     let dest = dir.path().join("work").join("plc");
     let (_token, run) = ssh.run(CancellationToken::new());
@@ -161,14 +162,14 @@ async fn clone_and_push_over_ssh_with_host_key_and_passphrase_prompts() {
     assert_eq!(
         ssh.kinds(),
         [
-            "host [localhost]:2222 ED25519",
+            host_prompt.as_str(),
             "passphrase retry=false",
             "passphrase retry=true"
         ]
     );
     let known = std::fs::read_to_string(&ssh.known_hosts).unwrap();
     assert!(
-        known.starts_with("[localhost]:2222 ssh-ed25519 "),
+        known.starts_with(&format!("[localhost]:{} ssh-ed25519 ", ssh_port())),
         "OpenSSH recorded the key"
     );
 
@@ -230,7 +231,10 @@ async fn rejecting_the_host_key_cancels_without_trusting_it() {
         "{err:?}"
     );
     assert!(cancel.is_cancelled());
-    assert_eq!(ssh.kinds(), ["host [localhost]:2222 ED25519"]);
+    assert_eq!(
+        ssh.kinds(),
+        [format!("host [localhost]:{} ED25519", ssh_port())]
+    );
     assert!(!dest.exists(), "partial clone removed");
     let known = std::fs::read_to_string(&ssh.known_hosts).unwrap_or_default();
     assert!(known.is_empty(), "host key not recorded: {known}");

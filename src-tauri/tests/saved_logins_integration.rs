@@ -96,7 +96,7 @@ async fn remembered_login_is_saved_reused_and_forgotten_when_rejected() {
     let (_a, run) = auth().await;
     clone(&git, &url, &work, run).await.unwrap();
     assert_eq!(prompts.load(Ordering::SeqCst), 1);
-    let (user, secret) = saved.login("http", "localhost:3000", None).await.unwrap();
+    let (user, secret) = saved.login("http", &host(), None).await.unwrap();
     assert_eq!((user.as_str(), secret.expose()), (USER, password.expose()));
 
     // 2. Fetch: answered by Tenajlo's helper, no dialog.
@@ -106,15 +106,10 @@ async fn remembered_login_is_saved_reused_and_forgotten_when_rejected() {
 
     // 3. The saved password stops working: git's `erase` makes Tenajlo forget it.
     saved
-        .save_login(
-            "http",
-            "localhost:3000",
-            USER,
-            Secret::new("expired".into()),
-        )
+        .save_login("http", &host(), USER, Secret::new("expired".into()))
         .await
         .unwrap();
     let (_a, run) = auth().await;
     assert!(remote::fetch(&git, &work, "origin", run).await.is_err());
-    assert!(saved.login("http", "localhost:3000", None).await.is_none());
+    assert!(saved.login("http", &host(), None).await.is_none());
 }

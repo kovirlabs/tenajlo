@@ -38,7 +38,7 @@ async fn branch_pull_request_and_commit_checks() {
 
     // A clone whose remote has no credentials in it: the account is found by host.
     let work = dir.path().join("work");
-    let authed = format!("http://{USER}:{PASSWORD}@localhost:3000/{repo}.git");
+    let authed = authed_url(USER, PASSWORD, &repo);
     clone(&git, &authed, &work, RemoteRun::quiet())
         .await
         .unwrap();
@@ -95,7 +95,7 @@ async fn branch_pull_request_and_commit_checks() {
         email: String::new(),
     };
     accounts
-        .sign_in(BASE, user, token(&["read:user", "read:repository"]).await)
+        .sign_in(&BASE, user, token(&["read:user", "read:repository"]).await)
         .await
         .unwrap();
     let client = ForgejoClient::new().unwrap();

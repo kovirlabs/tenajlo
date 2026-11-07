@@ -25,6 +25,7 @@ cargo clippy --all-targets -- -D warnings   # also with --target x86_64-pc-windo
 cargo clippy --all-targets --features integration -- -D warnings   # also compiles the Forgejo integration tests (no Docker needed)
 cargo test --workspace       # unit + temp-repo tests + askpass crate (needs git >= 2.40 and git-lfs on PATH; on a fresh checkout run `node scripts/build-askpass.mjs` first, or tauri-build copies its empty placeholder over the askpass test binary)
 cargo test --features integration   # needs Forgejo in Docker: docker compose -f dev/forgejo.yml up -d && dev/seed-forgejo.sh
+TENAJLO_FORGEJO_URL=http://localhost:3001 TENAJLO_FORGEJO_SSH_PORT=2223 cargo test --features integration   # same suite against Gitea: docker compose -f dev/gitea.yml up -d && dev/seed-forgejo.sh gitea
 ```
 
 Before calling a task done, run `cargo fmt`, `cargo clippy -D warnings` (with and without `--features integration`), `cargo test --workspace`, `pnpm typecheck`, `pnpm lint`, and `pnpm test`. All must pass.
