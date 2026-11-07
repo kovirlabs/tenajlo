@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { fill, renderGuide, renderToc, rewriteHref, slug } from "./build-site.mjs";
+import {
+  PAGES,
+  fill,
+  pageValues,
+  renderGuide,
+  renderToc,
+  rewriteHref,
+  slug,
+} from "./build-site.mjs";
 
 describe("build-site", () => {
   it("makes GitHub-style heading anchors", () => {
@@ -18,6 +26,29 @@ describe("build-site", () => {
       "https://github.com/kovirlabs/tenajlo/blob/main/docs/releasing.md#update-signing",
     );
     expect(rewriteHref("user-guide.md#install")).toBe("#install");
+  });
+
+  it("links between the site's pages", () => {
+    const setup = "docs/forgejo-team-setup.md";
+    expect(rewriteHref("user-guide.md", setup)).toBe("../guide/");
+    expect(rewriteHref("user-guide.md#ssh-keys", setup)).toBe("../guide/#ssh-keys");
+    expect(rewriteHref("forgejo-team-setup.md#checklist")).toBe("../forgejo-setup/#checklist");
+    expect(rewriteHref("#checklist", setup)).toBe("#checklist");
+    expect(rewriteHref("releasing.md", setup)).toBe(
+      "https://github.com/kovirlabs/tenajlo/blob/main/docs/releasing.md",
+    );
+  });
+
+  it("fills each page's metadata and highlights its menu link", () => {
+    const setup = PAGES.find((p) => p.dir === "forgejo-setup");
+    const values = pageValues(setup, "T", "C");
+    expect(values.canonical).toBe("https://kovirlabs.github.io/tenajlo/forgejo-setup/");
+    expect(values.ogTitle).toBe(
+      "Setting up Forgejo for an engineering team that won't use the CLI",
+    );
+    expect(values.navSetup).toBe(' aria-current="page"');
+    expect(values.navGuide).toBe("");
+    expect(values.source).toContain("blob/main/docs/forgejo-team-setup.md");
   });
 
   it("fills each template marker exactly once", () => {

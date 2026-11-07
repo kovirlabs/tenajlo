@@ -42,6 +42,9 @@ Windows 10/11 is the main platform; Linux and macOS work too.
 
 - [User guide](docs/user-guide.md) (also [on the website](https://kovirlabs.github.io/tenajlo/guide/)):
   install, sign in, clone, commit, share, conflicts, troubleshooting
+- [Setting up Forgejo for an engineering team](docs/forgejo-team-setup.md) (also
+  [on the website](https://kovirlabs.github.io/tenajlo/forgejo-setup/)): server settings, Git
+  LFS and file locks for CAD and PLC files, teams, branch protection, onboarding
 - [Releasing](docs/releasing.md): how installers are built and checked
 - [Specification](spec.md): scope, architecture and security model
 
