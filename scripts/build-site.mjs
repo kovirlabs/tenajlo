@@ -48,12 +48,12 @@ export const PAGES = [
     src: "docs/forgejo-desktop-client.md",
     dir: "forgejo-desktop-client",
     nav: "guides",
-    title: "A desktop Git client for Forgejo · Tenajlo",
-    ogTitle: "A desktop Git client for Forgejo",
+    title: "A desktop Git client for Forgejo and Gitea · Tenajlo",
+    ogTitle: "A desktop Git client for Forgejo and Gitea",
     description:
       "Looking for a GitHub Desktop alternative for your self-hosted Forgejo or Gitea server? What to look for in a desktop Git client for Forgejo, and how Tenajlo does it.",
     ogDescription:
-      "What to look for in a desktop Git client for a self-hosted Forgejo server, and how Tenajlo does it.",
+      "What to look for in a desktop Git client for a self-hosted Forgejo or Gitea server, and how Tenajlo does it.",
   },
   {
     src: "docs/git-for-cad.md",

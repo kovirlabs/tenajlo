@@ -1,4 +1,4 @@
-# A desktop Git client for Forgejo
+# A desktop Git client for Forgejo and Gitea
 
 [Forgejo](https://forgejo.org) gives your team a fast, self-hosted home for its repositories.
 Its web interface covers reviews, issues and settings. For the daily work of getting a copy of
@@ -80,9 +80,11 @@ teams need: sign-in to your own server, company-network support, and Git LFS fil
 
 ## Does it work with Gitea?
 
-Forgejo started as a fork of Gitea, and the two share most of their API. Tenajlo is built and
-tested against Forgejo, and Gitea servers may work too. Plain Git operations (clone, pull,
-push, branches) work with any Git server, as long as you use the **URL** tab to clone.
+Yes. Forgejo started as a fork of Gitea, and the two share the API Tenajlo uses. Every change
+to Tenajlo is tested against Forgejo 11 and Gitea 1.27 and 28: sign-in, the repository list,
+publishing, SSH keys, Git LFS and file locks, pull request links and checks. Plain Git
+operations (clone, pull, push, branches) work with any Git server, as long as you use the
+**URL** tab to clone.
 
 ## What Tenajlo doesn't do
 
