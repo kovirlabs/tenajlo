@@ -96,15 +96,71 @@ impl GitError {
     /// A failed invocation: redacts `stderr` and classifies it. Some failures are only
     /// explained on stdout (merge: "CONFLICT (content): …"), so that's the fallback.
     pub fn failed(stderr: &str, stdout: &[u8], exit_code: Option<i32>) -> Self {
-        let stderr = crate::redact::redact(stderr);
+        let mut stderr = crate::redact::redact(stderr);
+        let stdout = String::from_utf8_lossy(stdout);
         let kind = match classify(&stderr) {
-            GitErrorKind::Unknown => classify(&String::from_utf8_lossy(stdout)),
+            GitErrorKind::Unknown => classify(&stdout),
             kind => kind,
         };
+        if kind == GitErrorKind::LfsFileLocked {
+            // git-lfs prints which files are locked, and by whom, on stdout; stderr only says
+            // "Cannot update locked files." The message promises the details list them.
+            if let Some(list) = locked_files(&stdout) {
+                stderr = format!("{}\n{stderr}", crate::redact::redact(&list));
+            }
+        }
         GitError::Failed {
             kind,
             exit_code,
             stderr,
         }
+    }
+}
+
+/// git-lfs's "Unable to push locked files:" block (the header and its `* path - owner` lines).
+fn locked_files(stdout: &str) -> Option<String> {
+    let mut lines = stdout
+        .lines()
+        .skip_while(|l| !l.starts_with("Unable to push locked files"));
+    let header = lines.next()?;
+    let files: Vec<&str> = lines.take_while(|l| l.starts_with("* ")).collect();
+    (!files.is_empty()).then(|| format!("{header}\n{}", files.join("\n")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn locked_push_details_name_the_files() {
+        // Captured from git-lfs 3.7.1 against Forgejo 11: the list is on stdout.
+        let stdout = "Unable to push locked files:\n\
+                      * CAD/Pumpe Gehäuse.SLDPRT - alice (refs: main)\n\
+                      Uploading LFS objects: 100% (1/1), 9.1 KB | 0 B/s, done.\n";
+        let GitError::Failed { kind, stderr, .. } =
+            GitError::failed("Cannot update locked files.\n", stdout.as_bytes(), Some(2))
+        else {
+            panic!("expected Failed");
+        };
+        assert_eq!(kind, GitErrorKind::LfsFileLocked);
+        assert_eq!(
+            stderr,
+            "Unable to push locked files:\n\
+             * CAD/Pumpe Gehäuse.SLDPRT - alice (refs: main)\n\
+             Cannot update locked files.\n"
+        );
+    }
+
+    #[test]
+    fn other_failures_keep_stderr_alone() {
+        let GitError::Failed { stderr, .. } = GitError::failed(
+            "Cannot update locked files.\n",
+            b"nothing useful\n",
+            Some(2),
+        ) else {
+            panic!("expected Failed");
+        };
+        assert_eq!(stderr, "Cannot update locked files.\n");
+        assert_eq!(locked_files("Unable to push locked files:\n"), None);
     }
 }
