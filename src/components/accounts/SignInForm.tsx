@@ -117,7 +117,7 @@ export function SignInForm({ initialServer, onSignedIn, onCancel, cancelLabel, s
         {(scopes ?? info.requiredScopes).map((s, i) => (
           <span key={s}>
             {i > 0 && ", "}
-            <code>{s}</code>
+            <code className="nowrap">{s}</code>
           </span>
         ))}
         . Tenajlo keeps it in this computer's password store, never in a file.

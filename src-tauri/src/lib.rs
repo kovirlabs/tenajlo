@@ -126,7 +126,13 @@ pub fn run() {
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             builder.mount_events(app);
-            let bundled_git_dir = app.path().resource_dir().ok().map(|d| d.join("mingit"));
+            // resource_dir() can be a `\\?\` verbatim path on Windows; git mishandles those, and
+            // Settings → Git would show the prefix. dunce drops it when that's safe.
+            let bundled_git_dir = app
+                .path()
+                .resource_dir()
+                .ok()
+                .map(|d| dunce::simplified(&d).join("mingit"));
             let data_dir = app.path().app_data_dir()?;
             if let Some(guard) = logging::init(&data_dir.join("logs")) {
                 app.manage(guard);

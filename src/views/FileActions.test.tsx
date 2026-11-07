@@ -78,7 +78,7 @@ describe("file context menu", () => {
 
   it("offers ignore options for new files", async () => {
     setup([file("logs/run.log", "Untracked")]);
-    fireEvent.contextMenu(screen.getByText("logs/run.log"));
+    fireEvent.contextMenu(screen.getByTitle("logs/run.log"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Ignore all .log files" }));
     expect(ignoreFile).toHaveBeenCalledWith("r1", "logs/run.log", true);
   });
@@ -94,10 +94,10 @@ describe("file context menu", () => {
 
   it("opens the file in the editor or shows it in its folder", async () => {
     setup([file("plc/main.st", "Modified")]);
-    fireEvent.contextMenu(screen.getByText("plc/main.st"));
+    fireEvent.contextMenu(screen.getByTitle("plc/main.st"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Open in editor" }));
     expect(openRepoFile).toHaveBeenCalledWith("r1", "plc/main.st");
-    fireEvent.contextMenu(screen.getByText("plc/main.st"));
+    fireEvent.contextMenu(screen.getByTitle("plc/main.st"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Show in folder" }));
     expect(revealRepoFile).toHaveBeenCalledWith("r1", "plc/main.st");
   });

@@ -166,8 +166,13 @@ pub async fn discard_changes(
                 .map(|(p, e)| format!("{p}: {e}"))
                 .collect::<Vec<_>>()
                 .join("\n");
+            let bin = if cfg!(windows) {
+                "Recycle Bin"
+            } else {
+                "Trash"
+            };
             Err(AppError::internal(
-                "Some files couldn't be moved to the Trash, so their changes were kept. They may be open in another program.",
+                format!("Some files couldn't be moved to the {bin}, so their changes were kept. They may be open in another program."),
                 details,
             ))
         }

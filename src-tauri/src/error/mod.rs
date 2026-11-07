@@ -236,6 +236,10 @@ impl From<ForgejoError> for AppError {
                 AppErrorKind::Server,
                 GitErrorKind::TlsUntrusted.user_message().to_owned(),
             ),
+            ForgejoError::NotHttps(_) => (
+                AppErrorKind::Server,
+                "That server doesn't use HTTPS. If it's a test server on this computer, type http:// at the start of the address.".to_owned(),
+            ),
             ForgejoError::Unreachable(_) => (
                 AppErrorKind::Server,
                 "Couldn't reach the server. Check the address and your network or VPN connection.".to_owned(),
