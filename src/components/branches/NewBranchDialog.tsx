@@ -13,11 +13,20 @@ export function NewBranchDialog() {
   const from = useChangesStore((s) => s.status?.branch.name);
   const [name, setName] = useState("");
   const [preview, setPreview] = useState("");
-  const isTaken = (branch: string) =>
-    useBranchStore.getState().branches?.local.some((b) => b.name === branch) ?? false;
-  const exists = useBranchStore(
-    (s) => preview !== "" && (s.branches?.local.some((b) => b.name === preview) ?? false),
-  );
+  // The existing branch `name` would clash with: the same name, or one that differs only in
+  // capitals (Windows and macOS treat those as the same branch; Rust refuses them too).
+  const takenBy = (branch: string) => {
+    const folded = branch.toLowerCase();
+    return (
+      useBranchStore.getState().branches?.local.find((b) => b.name.toLowerCase() === folded)
+        ?.name ?? null
+    );
+  };
+  const existing = useBranchStore((s) => {
+    if (!preview) return null;
+    const folded = preview.toLowerCase();
+    return s.branches?.local.find((b) => b.name.toLowerCase() === folded)?.name ?? null;
+  });
 
   useAsyncEffect(
     async (live) => {
@@ -31,7 +40,7 @@ export function NewBranchDialog() {
     // Recompute rather than use `preview`: Enter can land before the preview for the
     // latest keystroke arrives, which would create the previous name.
     const branch = await previewBranchName(name);
-    if (!branch || isTaken(branch)) return;
+    if (!branch || takenBy(branch) !== null) return;
     const res = await mutate((id) => createBranch(id, branch));
     if (res?.status === "ok") {
       setName("");
@@ -50,16 +59,25 @@ export function NewBranchDialog() {
       >
         <label>
           Name
-          <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
         </label>
         {name.trim() !== "" && preview !== name.trim() && (
           <p className="muted">
             Will be created as <code>{preview || "(no valid characters)"}</code>
           </p>
         )}
-        {exists && (
+        {existing !== null && (
           <p className="form-error" role="alert">
-            A branch named <code>{preview}</code> already exists.
+            A branch named <code>{existing}</code> already exists.
+            {existing !== preview &&
+              " Names that differ only in capital letters get mixed up on Windows and Mac."}
           </p>
         )}
         <p className="muted">
@@ -70,7 +88,7 @@ export function NewBranchDialog() {
           <button type="button" className="secondary" onClick={close}>
             Cancel
           </button>
-          <button type="submit" disabled={!preview || exists}>
+          <button type="submit" disabled={!preview || existing !== null}>
             Create branch
           </button>
         </div>

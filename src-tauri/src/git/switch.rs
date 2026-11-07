@@ -38,6 +38,18 @@ pub enum Target {
     },
 }
 
+/// A local branch whose name differs from `name` only in capital letters (`feature` for
+/// `Feature`). Windows and macOS file systems treat those as the same file, so git can end up
+/// with two branches that move together; and a server that has both breaks fetches there.
+pub fn case_twin<'a>(branches: &'a BranchList, name: &str) -> Option<&'a str> {
+    let folded = name.to_lowercase();
+    branches
+        .local
+        .iter()
+        .map(|b| b.name.as_str())
+        .find(|b| *b != name && b.to_lowercase() == folded)
+}
+
 /// Resolves a name from the branch dropdown. `None` if it's not a known branch.
 pub fn resolve_target(branches: &BranchList, name: &str) -> Option<Target> {
     if branches.local.iter().any(|b| b.name == name) {
@@ -267,5 +279,32 @@ mod tests {
         }
         delete(&git, &repo, "unmerged", true).await.unwrap();
         assert!(!git_in(&repo, &["branch"]).await.contains("unmerged"));
+    }
+
+    #[tokio::test]
+    async fn case_twin_finds_names_that_differ_only_in_capitals() {
+        let (_tmp, repo) = init_repo().await;
+        let git = git();
+        git_in(&repo, &["commit", "-q", "--allow-empty", "-m", "init"]).await;
+        git_in(&repo, &["branch", "feature"]).await;
+        git_in(&repo, &["branch", "Größe"]).await;
+        // As after a clone: packed refs, which let git create a twin on Windows and macOS.
+        git_in(&repo, &["pack-refs", "--all"]).await;
+
+        let list = branches(&git, &repo).await.unwrap();
+        assert_eq!(case_twin(&list, "Feature"), Some("feature"));
+        assert_eq!(case_twin(&list, "FEATURE"), Some("feature"));
+        assert_eq!(
+            case_twin(&list, "GRÖSSE"),
+            None,
+            "not a case-only difference"
+        );
+        assert_eq!(case_twin(&list, "größe"), Some("Größe"));
+        assert_eq!(
+            case_twin(&list, "feature"),
+            None,
+            "the same name isn't a twin"
+        );
+        assert_eq!(case_twin(&list, "features"), None);
     }
 }

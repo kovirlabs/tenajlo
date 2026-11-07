@@ -23,6 +23,11 @@ All notable changes to Tenajlo are listed here. The format follows
 
 ### Fixed
 
+- **New branch** refuses a name that differs from an existing branch only in capital letters
+  (`Feature` next to `feature`). On Windows and macOS git could create both after a clone, and
+  then a commit on one silently moved the other too. Tracking a server branch checks the same.
+- When a push is refused because someone else has files locked, the details now say which files
+  and who has them. Before, they only said "Cannot update locked files."
 - **Pushes always check file locks.** Before, Tenajlo only refused a push that changes someone
   else's locked file if it had already listed the server's locks that session, and a setting
   git-lfs writes after a server error could turn the check off for good. Otherwise git-lfs
