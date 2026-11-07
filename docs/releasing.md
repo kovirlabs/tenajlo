@@ -150,3 +150,20 @@ than publishing updates nobody can verify.
 Only if the private key leaks: generate a new pair, update both secrets and `pubkey`, and
 release. Copies with the old public key will reject updates signed with the new one, so tell
 users to download the new version by hand.
+
+## Codeberg mirror
+
+`.github/workflows/mirror.yml` pushes `main` and the `v*` tags to Codeberg after every push, so
+the Forgejo community can find Tenajlo there. Installers stay on GitHub Releases. One-time
+setup:
+
+1. On Codeberg, create the `kovirlabs` organization (or use a personal account) and an empty
+   `tenajlo` repository. In its description, say it's a mirror and link to the GitHub
+   releases; turn off issues and pull requests there so reports land in one place.
+2. Create a Codeberg access token with the `write:repository` permission.
+3. In the GitHub repository's **Settings → Secrets and variables → Actions**, add the
+   variables `CODEBERG_REPO` (`kovirlabs/tenajlo`) and `CODEBERG_USER` (the account that
+   owns the token), and the secret `CODEBERG_TOKEN`.
+4. Run the **Mirror to Codeberg** workflow once by hand (**Actions → Run workflow**).
+
+Until `CODEBERG_REPO` is set, the workflow is skipped.
