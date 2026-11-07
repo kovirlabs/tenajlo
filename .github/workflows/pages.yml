@@ -1,6 +1,5 @@
 # Publishes the website to https://kovirlabs.github.io/tenajlo/: site/ (the landing page) plus
-# guide/ and forgejo-setup/, rendered from docs/user-guide.md and docs/forgejo-team-setup.md
-# by scripts/build-site.mjs.
+# the Markdown pages listed in scripts/build-site.mjs (guide/ from docs/user-guide.md, and so on).
 name: Pages
 
 on:
@@ -10,6 +9,9 @@ on:
       - "site/**"
       - "docs/user-guide.md"
       - "docs/forgejo-team-setup.md"
+      - "docs/forgejo-desktop-client.md"
+      - "docs/git-for-cad.md"
+      - "docs/git-for-plc.md"
       - "scripts/build-site.mjs"
       - "scripts/guide-template.html"
       - ".github/workflows/pages.yml"

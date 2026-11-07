@@ -61,8 +61,7 @@
       <nav aria-label="Main">
         <a href="#features">Features</a>
         <a href="#networks">Company networks</a>
-        <a href="guide/">User guide</a>
-        <a href="forgejo-setup/">Forgejo setup</a>
+        <a href="#guides">Guides</a>
         <a href="#get">Get Tenajlo</a>
         <a href="https://github.com/kovirlabs/tenajlo">GitHub</a>
       </nav>
@@ -208,31 +207,81 @@
         </ul>
       </section>
 
+      <section id="guides" class="features">
+        <h2>Guides</h2>
+        <div class="grid">
+          <article>
+            <h3><a href="guide/">User guide</a></h3>
+            <p>
+              Install Tenajlo, sign in to Forgejo, clone, commit, share changes, resolve conflicts,
+              and work with large files and SSH keys.
+            </p>
+          </article>
+          <article>
+            <h3><a href="forgejo-setup/">Set up Forgejo for your team</a></h3>
+            <p>
+              For the person running the server: settings, Git LFS and file locks for CAD and PLC
+              files, teams, branch protection and onboarding engineers who won't use the CLI.
+            </p>
+          </article>
+          <article>
+            <h3><a href="forgejo-desktop-client/">A desktop client for Forgejo</a></h3>
+            <p>
+              What to look for in a Git app for a self-hosted Forgejo server, and how Tenajlo
+              compares with general-purpose clients.
+            </p>
+          </article>
+          <article>
+            <h3><a href="git-for-cad/">Version control for CAD files</a></h3>
+            <p>
+              Keep SolidWorks, Inventor and AutoCAD files in Git with Git LFS and file locks, so
+              nobody overwrites a colleague's assembly.
+            </p>
+          </article>
+          <article>
+            <h3><a href="git-for-plc/">Version control for PLC projects</a></h3>
+            <p>
+              Track TIA Portal, Studio 5000 and TwinCAT projects in Git: what to commit, what to
+              lock, and how to review changes before they reach a machine.
+            </p>
+          </article>
+        </div>
+      </section>
+
       <section id="get" class="get">
         <h2>Get Tenajlo</h2>
         <p>
-          Tenajlo 1.0 is in final testing. The Windows installer will appear on the
-          <a href="https://github.com/kovirlabs/tenajlo/releases">releases page</a>. Until then, you
-          can build it from source.
+          Free and open source. Download the latest version from the
+          <a href="https://github.com/kovirlabs/tenajlo/releases/latest">releases page</a>:
         </p>
+        <ul class="checks">
+          <li>
+            <strong>Windows 10/11:</strong> <code>Tenajlo_&lt;version&gt;_x64-setup.exe</code>.
+            Installs for your user account, no administrator rights needed. Git and Git LFS are
+            included.
+          </li>
+          <li>
+            <strong>Debian and Ubuntu:</strong> <code>Tenajlo_&lt;version&gt;_amd64.deb</code>,
+            installed with <code>sudo apt install ./Tenajlo_&lt;version&gt;_amd64.deb</code>.
+          </li>
+          <li>
+            <strong>macOS (Apple Silicon):</strong>
+            <code>Tenajlo_&lt;version&gt;_aarch64.dmg</code>.
+          </li>
+        </ul>
         <div class="actions">
-          <a class="button primary" href="https://github.com/kovirlabs/tenajlo/releases"
-            >Releases</a
+          <a class="button primary" href="https://github.com/kovirlabs/tenajlo/releases/latest"
+            >Download Tenajlo</a
           >
+          <a class="button" href="guide/#install">Installation help</a>
           <a class="button" href="https://github.com/kovirlabs/tenajlo#build-from-source"
             >Build from source</a
           >
-          <a class="button" href="guide/">User guide</a>
         </div>
-        <p>
-          Running the Forgejo server? See
-          <a href="forgejo-setup/"
-            >Setting up Forgejo for an engineering team that won't use the CLI</a
-          >: Git LFS and file locks for CAD and PLC files, teams, branch protection and onboarding.
-        </p>
         <p class="fineprint">
           Built and tested for Forgejo; Gitea servers use the same API and may work too. Needs Git
-          2.40+ and Git LFS on Linux and macOS; Windows includes both.
+          2.40+ and Git LFS on Linux and macOS; Windows includes both. Tenajlo updates itself, and
+          you can turn that off in Settings.
         </p>
       </section>
     </main>

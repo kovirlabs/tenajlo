@@ -1,5 +1,5 @@
-// Builds the website: copies site/ and renders each Markdown page in PAGES (the user guide and
-// the Forgejo setup guide) into <dir>/index.html with scripts/guide-template.html. The pages stay
+// Builds the website: copies site/ and renders each Markdown page in PAGES (the user guide, the
+// Forgejo setup guide and the other guides) into <dir>/index.html with scripts/guide-template.html. The pages stay
 // Markdown in the repo (reviewed with the code, tagged with each release); this only publishes
 // them. The Pages workflow runs it on main.
 //
@@ -19,7 +19,7 @@ const REPO_BLOB = "https://github.com/kovirlabs/tenajlo/blob/main/";
 /**
  * The Markdown pages on the website. `dir` is the page's folder under the site root (one level
  * deep, so the template's `../` links reach the site root); `nav` is the main-menu link it
- * highlights.
+ * highlights: "guide" (User guide) or "guides" (Guides).
  */
 export const PAGES = [
   {
@@ -36,13 +36,46 @@ export const PAGES = [
   {
     src: "docs/forgejo-team-setup.md",
     dir: "forgejo-setup",
-    nav: "setup",
+    nav: "guides",
     title: "Forgejo setup for engineering teams · Tenajlo",
     ogTitle: "Setting up Forgejo for an engineering team that won't use the CLI",
     description:
       "For Forgejo admins: server settings, reverse proxy limits, teams, Git LFS and file locks for CAD and PLC files, branch protection and onboarding for engineers who use Tenajlo instead of the command line.",
     ogDescription:
       "Server settings, Git LFS and file locks for CAD and PLC files, teams, branch protection and onboarding for engineers who won't use the command line.",
+  },
+  {
+    src: "docs/forgejo-desktop-client.md",
+    dir: "forgejo-desktop-client",
+    nav: "guides",
+    title: "A desktop Git client for Forgejo · Tenajlo",
+    ogTitle: "A desktop Git client for Forgejo",
+    description:
+      "Looking for a GitHub Desktop alternative for your self-hosted Forgejo or Gitea server? What to look for in a desktop Git client for Forgejo, and how Tenajlo does it.",
+    ogDescription:
+      "What to look for in a desktop Git client for a self-hosted Forgejo server, and how Tenajlo does it.",
+  },
+  {
+    src: "docs/git-for-cad.md",
+    dir: "git-for-cad",
+    nav: "guides",
+    title: "Version control for CAD files with Git · Tenajlo",
+    ogTitle: "Version control for CAD files with Git and Forgejo",
+    description:
+      "How to keep SolidWorks, Inventor, AutoCAD and other CAD files in Git with Git LFS and file locking on a self-hosted Forgejo server, without the command line.",
+    ogDescription:
+      "Keep SolidWorks, Inventor and AutoCAD files in Git with Git LFS and file locks, without the command line.",
+  },
+  {
+    src: "docs/git-for-plc.md",
+    dir: "git-for-plc",
+    nav: "guides",
+    title: "Version control for PLC projects with Git · Tenajlo",
+    ogTitle: "Version control for PLC projects with Git and Forgejo",
+    description:
+      "How to track TIA Portal, Studio 5000, TwinCAT and CODESYS projects in Git on a self-hosted Forgejo server: what to commit, what to lock, and reviewing changes before they reach a machine.",
+    ogDescription:
+      "Track TIA Portal, Studio 5000 and TwinCAT projects in Git: what to commit, what to lock, and how to review changes.",
   },
 ];
 
@@ -156,7 +189,7 @@ export function pageValues(page, toc, content) {
     canonical: url,
     ogUrl: url,
     navGuide: current("guide"),
-    navSetup: current("setup"),
+    navGuides: current("guides"),
     toc,
     content,
     source: `<a href="${REPO_BLOB}${page.src}">${page.src}</a>`,
