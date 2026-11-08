@@ -1,0 +1,27 @@
+# Throwaway Gitea for running the integration tests against Gitea as well as Forgejo.
+# Same settings as dev/forgejo.yml, on other host ports so both can run at once:
+#
+#   docker compose -f dev/gitea.yml up -d
+#   dev/seed-forgejo.sh gitea
+#   cd src-tauri && TENAJLO_FORGEJO_URL=http://localhost:3001 TENAJLO_FORGEJO_SSH_PORT=2223 \
+#     cargo test --features integration
+#
+# GITEA_TAG picks another release (CI also runs the last 1.x line, GITEA_TAG=1.27).
+# Listens on loopback only. Data lives in the container and is discarded with it.
+services:
+  gitea:
+    image: docker.gitea.com/gitea:${GITEA_TAG:-28.3}
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__server__ROOT_URL=http://localhost:3001/
+      # The container's sshd listens on 22; the host maps it to 2223.
+      - GITEA__server__SSH_DOMAIN=localhost
+      - GITEA__server__SSH_PORT=2223
+      - GITEA__service__DISABLE_REGISTRATION=true
+      - GITEA__server__LFS_START_SERVER=true
+    ports:
+      - "127.0.0.1:3001:3000"
+      - "127.0.0.1:2223:22"

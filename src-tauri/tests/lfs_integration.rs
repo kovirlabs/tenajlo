@@ -57,7 +57,7 @@ async fn large_files_round_trip_through_lfs_with_the_account() {
     };
     let full = ["read:user", "read:repository", "write:repository"];
     accounts
-        .sign_in(BASE, user, token(&full).await)
+        .sign_in(&BASE, user, token(&full).await)
         .await
         .unwrap();
     let no_prompts: PromptFn = Arc::new(|p| panic!("unexpected prompt {:?}", p.kind));
