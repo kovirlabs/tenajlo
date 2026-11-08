@@ -1,17 +1,14 @@
 <!doctype html>
-<!-- Template for site/guide/ (built by scripts/build-site.mjs from docs/user-guide.md).
-     The contents and guide placeholders below are filled in at build time. Edit the guide in
-     docs/user-guide.md. -->
+<!-- Template for the site's Markdown pages: guide/ (docs/user-guide.md) and forgejo-setup/
+     (docs/forgejo-team-setup.md). scripts/build-site.mjs fills in the placeholders below
+     from its PAGES list. Edit the text in the Markdown files. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>User guide · Tenajlo</title>
-    <meta
-      name="description"
-      content="How to install Tenajlo, sign in to Forgejo, clone, commit, push and pull, handle conflicts, use Git LFS and SSH keys, and fix common problems."
-    />
-    <link rel="canonical" href="https://kovirlabs.github.io/tenajlo/guide/" />
+    <title>{{title}}</title>
+    <meta name="description" content="{{description}}" />
+    <link rel="canonical" href="{{canonical}}" />
     <link rel="icon" href="../assets/icon.svg" type="image/svg+xml" />
     <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="../assets/icon-128.png" />
@@ -19,12 +16,9 @@
 
     <meta property="og:type" content="article" />
     <meta property="og:site_name" content="Tenajlo" />
-    <meta property="og:title" content="Tenajlo user guide" />
-    <meta
-      property="og:description"
-      content="Install Tenajlo and use it with your Forgejo server: clone, commit, share changes, conflicts, large files and SSH keys."
-    />
-    <meta property="og:url" content="https://kovirlabs.github.io/tenajlo/guide/" />
+    <meta property="og:title" content="{{ogTitle}}" />
+    <meta property="og:description" content="{{ogDescription}}" />
+    <meta property="og:url" content="{{ogUrl}}" />
     <meta
       property="og:image"
       content="https://kovirlabs.github.io/tenajlo/assets/social-card.png"
@@ -40,7 +34,8 @@
       </a>
       <nav aria-label="Main">
         <a href="../#features">Features</a>
-        <a href="./" aria-current="page">User guide</a>
+        <a href="../guide/" {{navGuide}}>User guide</a>
+        <a href="../forgejo-setup/" {{navSetup}}>Forgejo setup</a>
         <a href="../#get">Get Tenajlo</a>
         <a href="https://github.com/kovirlabs/tenajlo">GitHub</a>
       </nav>
@@ -54,11 +49,7 @@
       <article class="guide-body">
         {{content}}
         <p class="fineprint">
-          This guide is
-          <a href="https://github.com/kovirlabs/tenajlo/blob/main/docs/user-guide.md"
-            >docs/user-guide.md</a
-          >
-          in the Tenajlo repository. Spotted a mistake?
+          This page is {{source}} in the Tenajlo repository. Spotted a mistake?
           <a href="https://github.com/kovirlabs/tenajlo/issues">Open an issue</a>.
         </p>
       </article>
