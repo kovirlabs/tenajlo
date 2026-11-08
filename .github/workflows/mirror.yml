@@ -1,0 +1,45 @@
+# Mirrors main and the release tags to Codeberg, so people in the Forgejo community can find,
+# star and follow Tenajlo there. Releases (installers) stay on GitHub; the Codeberg README
+# points to them.
+#
+# One-time setup (see docs/releasing.md, "Codeberg mirror"):
+#   - repository variables CODEBERG_REPO (for example kovirlabs/tenajlo) and CODEBERG_USER
+#     (the Codeberg account that owns the token)
+#   - repository secret CODEBERG_TOKEN: that account's access token with write:repository
+# Until CODEBERG_REPO is set, the job is skipped.
+name: Mirror to Codeberg
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror
+  cancel-in-progress: false
+
+jobs:
+  codeberg:
+    if: vars.CODEBERG_REPO != ''
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Push main and tags
+        env:
+          CODEBERG_REPO: ${{ vars.CODEBERG_REPO }}
+          CODEBERG_USER: ${{ vars.CODEBERG_USER }}
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
+        run: |
+          # The token goes in a header, not the URL, so it can't end up in Git's output.
+          auth=$(printf '%s:%s' "$CODEBERG_USER" "$CODEBERG_TOKEN" | base64 -w0)
+          echo "::add-mask::$auth"
+          git -c "http.https://codeberg.org/.extraheader=Authorization: Basic $auth" \
+            push --force "https://codeberg.org/${CODEBERG_REPO}.git" \
+            "refs/remotes/origin/main:refs/heads/main" "refs/tags/v*:refs/tags/v*"
