@@ -1,13 +1,68 @@
-//! Shared helpers for tests against the dev Forgejo (`dev/forgejo.yml`).
+//! Shared helpers for tests against the dev Forgejo (`dev/forgejo.yml`) or Gitea
+//! (`dev/gitea.yml`). The server comes from `TENAJLO_FORGEJO_URL` (default
+//! `http://localhost:3000`) and its SSH port from `TENAJLO_FORGEJO_SSH_PORT` (default 2222).
 #![allow(dead_code)] // each test binary uses a different subset
 
 use std::collections::HashMap;
+use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use tenajlo_lib::auth::secrets::{Secret, SecretError, SecretStore};
 
-pub const BASE: &str = "http://localhost:3000";
+/// The server's base URL without a trailing slash. Formats as a string (`"{BASE}/x"`) and
+/// derefs to `&str` (`&BASE`).
+pub const BASE: Base = Base;
+
+pub struct Base;
+
+impl Base {
+    pub fn as_str(&self) -> &'static str {
+        static URL: OnceLock<String> = OnceLock::new();
+        URL.get_or_init(|| {
+            std::env::var("TENAJLO_FORGEJO_URL")
+                .unwrap_or_else(|_| "http://localhost:3000".into())
+                .trim_end_matches('/')
+                .to_owned()
+        })
+    }
+}
+
+impl std::ops::Deref for Base {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl fmt::Display for Base {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// `host:port` of the server, as git's credential protocol names it.
+pub fn host() -> String {
+    let url = reqwest::Url::parse(&BASE).unwrap();
+    format!(
+        "{}:{}",
+        url.host_str().unwrap(),
+        url.port_or_known_default().unwrap()
+    )
+}
+
+/// The server's SSH port on localhost.
+pub fn ssh_port() -> u16 {
+    std::env::var("TENAJLO_FORGEJO_SSH_PORT").map_or(2222, |p| p.parse().unwrap())
+}
+
+/// `{BASE}/{repo}.git` with a username and password in it (test setup only).
+pub fn authed_url(user: &str, password: &str, repo: &str) -> String {
+    let mut url = reqwest::Url::parse(&format!("{BASE}/{repo}.git")).unwrap();
+    url.set_username(user).unwrap();
+    url.set_password(Some(password)).unwrap();
+    url.to_string()
+}
 pub const USER: &str = "tenajlo";
 pub const PASSWORD: &str = "tenajlo-dev-password";
 

@@ -71,8 +71,7 @@ async fn locks_are_shared_and_block_other_peoples_pushes() {
         serde_json::json!({ "permission": "write" }),
     )
     .await;
-    let url_for =
-        |user: &str, pass: &str| format!("http://{user}:{pass}@localhost:3000/{repo}.git");
+    let url_for = |user: &str, pass: &str| authed_url(user, pass, &repo);
 
     // The owner adds a CAD file through LFS.
     let mine = dir.path().join("mine");
@@ -170,7 +169,7 @@ async fn locks_are_shared_and_block_other_peoples_pushes() {
 
     // ...and when the repository's config turns verification off for this server's LFS URL,
     // as git-lfs itself does after a server error: that key outranks lfs.locksverify.
-    let lfs_url = format!("http://localhost:3000/{repo}.git/info/lfs");
+    let lfs_url = format!("{BASE}/{repo}.git/info/lfs");
     git(
         &g,
         &theirs,
@@ -215,8 +214,7 @@ async fn read_only_collaborators_still_see_locks() {
         serde_json::json!({ "permission": "read" }),
     )
     .await;
-    let url_for =
-        |user: &str, pass: &str| format!("http://{user}:{pass}@localhost:3000/{repo}.git");
+    let url_for = |user: &str, pass: &str| authed_url(user, pass, &repo);
 
     let mine = dir.path().join("mine");
     clone(&g, &url_for(USER, PASSWORD), &mine, run(&env))

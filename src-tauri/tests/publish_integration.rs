@@ -3,20 +3,33 @@
 //! `dev/forgejo.yml`.
 #![cfg(feature = "integration")]
 
+use tenajlo_lib::auth::secrets::Secret;
 use tenajlo_lib::forgejo::address::normalize_base_url;
 use tenajlo_lib::forgejo::publish::{self, CreateRepoError, NewRepository, Owner, PUBLISH_SCOPES};
-use tenajlo_lib::forgejo::repos::list_repositories;
+use tenajlo_lib::forgejo::repos::{list_repositories, RemoteRepository};
 use tenajlo_lib::forgejo::ForgejoClient;
 
 mod common;
 use common::*;
 
+/// The user's repositories, minus the `pub-*` ones that
+/// `publish_scopes_create_for_user_and_org` creates while this binary's tests run in parallel.
+async fn repos_not_published_here(
+    client: &ForgejoClient,
+    base: &reqwest::Url,
+    token: &Secret,
+) -> Vec<RemoteRepository> {
+    let mut repos = list_repositories(client, base, token).await.unwrap();
+    repos.retain(|r| !r.name.starts_with("pub-"));
+    repos
+}
+
 #[tokio::test]
 async fn sign_in_scopes_cannot_publish_and_probes_create_nothing() {
     let client = ForgejoClient::new().unwrap();
-    let base = normalize_base_url(BASE).unwrap();
+    let base = normalize_base_url(&BASE).unwrap();
     let signed_in = token(&["read:user", "read:repository", "write:repository"]).await;
-    let before = list_repositories(&client, &base, &signed_in).await.unwrap();
+    let before = repos_not_published_here(&client, &base, &signed_in).await;
 
     assert!(!publish::can_create_for_user(&client, &base, &signed_in)
         .await
@@ -37,7 +50,7 @@ async fn sign_in_scopes_cannot_publish_and_probes_create_nothing() {
         Err(CreateRepoError::NotAllowed)
     ));
     assert_eq!(
-        list_repositories(&client, &base, &signed_in).await.unwrap(),
+        repos_not_published_here(&client, &base, &signed_in).await,
         before,
         "permission checks must not create anything"
     );
@@ -46,7 +59,7 @@ async fn sign_in_scopes_cannot_publish_and_probes_create_nothing() {
 #[tokio::test]
 async fn publish_scopes_create_for_user_and_org() {
     let client = ForgejoClient::new().unwrap();
-    let base = normalize_base_url(BASE).unwrap();
+    let base = normalize_base_url(&BASE).unwrap();
     let full = token(&PUBLISH_SCOPES).await;
     let name = format!("pub-{}", &uuid::Uuid::new_v4().to_string()[..8]);
     let org = format!("org-{name}");

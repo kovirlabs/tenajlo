@@ -46,7 +46,7 @@ describe("build-site", () => {
     expect(values.ogTitle).toBe(
       "Setting up Forgejo for an engineering team that won't use the CLI",
     );
-    expect(values.navGuides).toBe(' aria-current="page"');
+    expect(values.navSetup).toBe(' aria-current="page"');
     expect(values.navGuide).toBe("");
     expect(values.source).toContain("blob/main/docs/forgejo-team-setup.md");
   });

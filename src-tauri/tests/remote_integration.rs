@@ -37,7 +37,7 @@ async fn env_with(token: Secret) -> Env {
     let accounts = AccountManager::load(dir.path(), Arc::new(Keychain::default()));
     let user = ForgejoClient::new()
         .unwrap()
-        .current_user(&normalize_base_url(BASE).unwrap(), &token)
+        .current_user(&normalize_base_url(&BASE).unwrap(), &token)
         .await;
     let user = user.unwrap_or(tenajlo_lib::forgejo::ForgejoUser {
         login: USER.into(),
@@ -45,7 +45,7 @@ async fn env_with(token: Secret) -> Env {
         avatar_url: None,
         email: String::new(),
     });
-    accounts.sign_in(BASE, user, token).await.unwrap();
+    accounts.sign_in(&BASE, user, token).await.unwrap();
     // Any prompt means the account credential wasn't used; record it and cancel.
     let prompts = Arc::new(Mutex::new(Vec::new()));
     let seen = prompts.clone();
@@ -124,7 +124,7 @@ async fn account_token_lists_clones_and_pushes_private_repos() {
 
     let listed = repos::list_repositories(
         &ForgejoClient::new().unwrap(),
-        &normalize_base_url(BASE).unwrap(),
+        &normalize_base_url(&BASE).unwrap(),
         &tok,
     )
     .await
