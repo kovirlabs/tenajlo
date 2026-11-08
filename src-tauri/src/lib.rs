@@ -8,6 +8,7 @@ pub mod forgejo;
 pub mod git;
 pub mod logging;
 pub mod notifications;
+pub mod open_link;
 pub mod operations;
 pub mod os_trash;
 pub mod redact;
@@ -30,6 +31,7 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             commands::app::check_git,
             commands::app::get_app_info,
             commands::app::open_logs_folder,
+            commands::app::take_clone_link,
             commands::repos::list_repositories,
             commands::repos::add_local_repository,
             commands::repos::default_repository_folder,
@@ -108,7 +110,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             watcher::RepoChanged,
             auth::broker::AuthPromptRequested,
             commands::remote_op::GitProgress,
-            commands::updates::UpdateProgress
+            commands::updates::UpdateProgress,
+            open_link::CloneLinkReceived
         ])
 }
 
@@ -116,6 +119,15 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
 pub fn run() {
     let builder = specta_builder();
     tauri::Builder::default()
+        // First, so a second launch (e.g. an Open in Tenajlo link on Windows/Linux) exits early
+        // and hands its arguments to this copy. With the `deep-link` feature, the link is passed
+        // on to the deep-link plugin's `on_open_url` before this callback runs.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            open_link::focus_main_window(app);
+        }))
+        // Rust-side only (open_link.rs); the WebView gets no deep-link permissions.
+        .plugin(tauri_plugin_deep_link::init())
+        .manage(open_link::PendingCloneLink::default())
         .plugin(tauri_plugin_dialog::init())
         // Rust-side only (token settings link); the WebView gets no opener permissions.
         .plugin(tauri_plugin_opener::init())
@@ -159,6 +171,7 @@ pub fn run() {
                 tracing::error!("tenajlo-askpass sidecar missing; run `node scripts/build-askpass.mjs`");
             }
             app.manage(state::AppState::new(bundled_git_dir, repos, accounts, saved_secrets, settings, forgejo, prompts, trampoline, askpass));
+            open_link::listen(app.handle());
             Ok(())
         })
         .run(tauri::generate_context!())

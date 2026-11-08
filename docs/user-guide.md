@@ -85,6 +85,15 @@ offers **Sign in again**. Paste a new token; nothing else changes.
 You can also paste an address on the **URL** tab, for example
 `https://git.example.com/team/project.git` or `git@git.example.com:team/project.git`.
 
+### Open in Tenajlo from a Forgejo page
+
+If your Forgejo administrator has added Tenajlo to the server, a repository's page has
+**Open with Tenajlo** in its clone menu (next to **HTTPS** / **SSH**). Click it, and Tenajlo
+starts (or comes to the front) with the Clone dialog open on the **URL** tab and the address
+filled in. Your browser may ask whether to open Tenajlo first. Nothing is copied until you
+check the **Local folder** and click **Clone**, so a link on a web page can't clone anything
+on its own. Links with an address Tenajlo wouldn't accept on the **URL** tab are ignored.
+
 For an HTTPS address on a server you haven't signed in to, Tenajlo asks for a username and
 password (or access token) when it's needed. Tick **Remember this password** to keep it in
 your computer's password store. Tenajlo only saves it once the server accepts it, and forgets
