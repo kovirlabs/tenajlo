@@ -35,10 +35,12 @@ jobs:
         # Take the id from the create call itself: a new draft doesn't show up in the release
         # list straight away.
         run: |
+          # Download table plus this version's CHANGELOG.md section.
+          node scripts/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md
           id=$(gh api -X POST "repos/$GITHUB_REPOSITORY/releases" \
             -f tag_name="$GITHUB_REF_NAME" -F draft=true \
             -f name="Tenajlo $GITHUB_REF_NAME" \
-            -f body="See docs/user-guide.md for what's new and how to install." \
+            -F body=@release-notes.md \
             --jq .id)
           if [ -z "$id" ]; then
             echo "Creating the draft release returned no id" >&2
