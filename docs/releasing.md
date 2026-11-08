@@ -33,7 +33,9 @@ generates `THIRD_PARTY_LICENSES.html`, and builds the NSIS installer. Linux (`ub
 the `.deb` runs on older glibc too) and macOS (Apple Silicon) build a `.deb` and a `.dmg` in
 parallel; they use the system's git, so they skip the MinGit download. Each platform's build
 settings are in `src-tauri/tauri.<platform>.conf.json`. A first job creates the draft release
-and the three builds upload into it, along with the license list.
+and the three builds upload into it, along with the license list. The draft's notes are a
+download table plus the version's `CHANGELOG.md` section (`scripts/release-notes.mjs`); the
+job fails if the section is missing. Edit the draft on GitHub to add highlights.
 
 ## 3. Check before publishing
 
