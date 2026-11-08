@@ -82,6 +82,101 @@ sets up a local Forgejo with users, a token and a sample repository for this:
 Then publish the draft release. Installed copies only see a release once it's published:
 `latest.json` is served from the latest _published_ release.
 
+## 4. After publishing
+
+Publishing triggers `.github/workflows/package-managers.yml`, which opens the winget pull
+request and pushes the Chocolatey package (each only if its secret is set; see
+[Package managers](#package-managers)). Then point the Scoop manifest and the Chocolatey files
+in this repository at the new installer and commit:
+
+```bash
+node scripts/update-packaging.mjs 1.2.3
+git commit -am "Packaging: point Scoop and Chocolatey at v1.2.3"
+```
+
+The script takes the installer's SHA-256 from the digest GitHub publishes for the asset. Scoop
+users get the new version on their next `scoop update` once this commit is on `main`.
+
+## Package managers
+
+Windows users can install Tenajlo with winget, Scoop or Chocolatey. All three install the same
+NSIS installer from the GitHub release, per-user and without administrator rights.
+
+| Manager    | Where the package lives                                      | Updated by                                              |
+| ---------- | ------------------------------------------------------------ | ------------------------------------------------------- |
+| winget     | `microsoft/winget-pkgs` (`KovirLabs.Tenajlo`)                | `package-managers.yml` → `wingetcreate update --submit` |
+| Scoop      | `bucket/tenajlo.json` in this repository                     | `scripts/update-packaging.mjs` after each release       |
+| Chocolatey | community.chocolatey.org (`tenajlo`), `packaging/chocolatey` | `package-managers.yml` → `choco push`                   |
+
+`packaging/winget/manifests/` holds the manifests for the first winget submission (v1.4.0).
+After that, winget-pkgs is the source of truth and wingetcreate copies the previous version's
+manifest forward, so the files here don't need to change.
+
+### One-time setup (in this order)
+
+1. **Merge the packaging files** (this repository): `bucket/`, `packaging/`,
+   `scripts/update-packaging.mjs` and `package-managers.yml`. Scoop works as soon as they're
+   on `main`: `scoop bucket add tenajlo https://github.com/kovirlabs/tenajlo`. Don't merge the
+   winget and Chocolatey commands in the user guide until steps 2 and 4 are accepted.
+2. **First winget submission** (on a Windows machine): winget-pkgs only accepts updates
+   through wingetcreate once the package exists, so the first version is a normal PR.
+   - `winget install wingetcreate`, then from this repository:
+     `wingetcreate submit packaging/winget/manifests/k/KovirLabs/Tenajlo/1.4.0` (it signs you
+     in to GitHub, forks `microsoft/winget-pkgs` and opens the PR), or copy that folder into a
+     fork of winget-pkgs at the same path and open the PR by hand.
+   - Before submitting, `winget validate --manifest <folder>` and
+     `winget install --manifest <folder>` (needs `winget settings --enable LocalManifestFiles`
+     as administrator) check it locally.
+   - The PR runs Microsoft's validation pipeline (installs the app in a VM, scans it). A
+     moderator merges it, usually within a few days. Unsigned installers are accepted, but
+     the scan can flag them for manual review; answer any bot or moderator comments on the PR.
+3. **`WINGET_TOKEN` secret** (for automatic updates): create a GitHub personal access token
+   **(classic)** with only the `public_repo` scope, on the account that will own the
+   winget-pkgs fork (wingetcreate doesn't support fine-grained tokens). Give it an expiry and
+   a calendar reminder. Then `gh secret set WINGET_TOKEN`. From the next published release,
+   the workflow opens the winget-pkgs PR itself; it still needs a moderator to merge it.
+4. **Chocolatey** (optional): create an account on community.chocolatey.org, then on a
+   Windows machine `cd packaging/chocolatey`, `choco pack`, and
+   `choco push tenajlo.1.4.0.nupkg --source https://push.chocolatey.org/ --api-key <key>`.
+   The first version of a package goes through automated checks (validation, verification —
+   it installs and uninstalls the package — and a VirusTotal scan) and then **human
+   moderation**, which can take days to weeks. Unsigned installers are allowed but the
+   VirusTotal step tends to flag them, which needs a reply on the package page. Once the
+   package is approved, add the API key (Account → API Keys) as the `CHOCO_API_KEY` secret;
+   later versions are pushed by the workflow and go through the same automated checks.
+
+If a submission fails or is rejected, rerun it from Actions → **Package managers** → Run
+workflow with the version.
+
+### Notes
+
+- **Scoop** extracts the NSIS installer with 7-Zip (`#/dl.7z`) instead of running it, the
+  usual way Scoop packages Tauri apps. That keeps it per-user and out of Apps & Features, but
+  Tenajlo still thinks it's an NSIS install, so its own update banner would run the installer
+  and put a second copy in `%LocalAppData%\Tenajlo`. The manifest's notes tell Scoop users to
+  update with `scoop update tenajlo` and turn update checks off in Settings → About.
+  `checkver` and `autoupdate` let Scoop's own tooling (`checkver.ps1 tenajlo -u`) bump it too.
+- **Chocolatey** usually runs elevated. The installer is per-user, so Tenajlo lands in the
+  `%LocalAppData%` of the account that ran `choco install` (normally the signed-in user, via
+  UAC). An elevated _different_ account would install it for that account instead.
+- **winget** runs the installer with `/S` (silent) or `/P` (progress bar only); the
+  manifest's `ProductCode: Tenajlo` matches the uninstall key Tauri writes, so `winget upgrade`
+  and `winget uninstall` find it, including after the in-app updater installed a new version.
+- **SmartScreen**: package managers don't avoid the code-signing question. winget and
+  Chocolatey check the SHA-256, but Windows may still show "unknown publisher" for interactive
+  installs, as with a direct download.
+
+### No Homebrew cask
+
+Homebrew 5.0 deprecated casks that fail macOS Gatekeeper (not code-signed with a Developer ID
+and notarized), and announced that such casks would be removed from the official
+`homebrew/cask` tap from September 2026, along with the `--no-quarantine` escape hatch. Tenajlo's
+macOS app is ad hoc signed and not notarized (see below), so it can't go into the official
+tap. If a Homebrew install is wanted anyway, the route is a personal tap: a separate
+`kovirlabs/homebrew-tenajlo` repository with a `Casks/tenajlo.rb`, installed with
+`brew install kovirlabs/tenajlo/tenajlo`. Users would still need to allow the app once in
+System Settings.
+
 ## Updating bundled Git or Git LFS
 
 Edit the `MINGIT` / `GIT_LFS` constants in `scripts/fetch-mingit.mjs`: version, URL and the

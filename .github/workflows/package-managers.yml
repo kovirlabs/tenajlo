@@ -1,0 +1,113 @@
+# After a release is published, sends the new Windows installer to package managers:
+#   - winget: wingetcreate opens a pull request on microsoft/winget-pkgs (needs WINGET_TOKEN)
+#   - Chocolatey: packs packaging/chocolatey and pushes it (needs CHOCO_API_KEY)
+# Each job runs only when its secret is set. Scoop needs nothing here: bucket/tenajlo.json is
+# bumped in the repository (scripts/update-packaging.mjs). See docs/releasing.md → Package
+# managers for the one-time setup. Run it by hand (Actions → Package managers → Run workflow)
+# to retry a version.
+name: Package managers
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published version to submit, without the "v" (e.g. 1.4.1)
+        required: true
+
+permissions: {}
+
+jobs:
+  prepare:
+    # Pre-releases stay off package managers.
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      winget: ${{ steps.check.outputs.winget }}
+      choco: ${{ steps.check.outputs.choco }}
+    steps:
+      - name: Work out the version and which secrets are set
+        id: check
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          HAS_WINGET: ${{ secrets.WINGET_TOKEN != '' }}
+          HAS_CHOCO: ${{ secrets.CHOCO_API_KEY != '' }}
+        run: |
+          version="${INPUT_VERSION:-${TAG#v}}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Not a release version: '$version'" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "winget=$HAS_WINGET" >> "$GITHUB_OUTPUT"
+          echo "choco=$HAS_CHOCO" >> "$GITHUB_OUTPUT"
+          [ "$HAS_WINGET" = "true" ] || echo "::notice::WINGET_TOKEN isn't set; skipping winget."
+          [ "$HAS_CHOCO" = "true" ] || echo "::notice::CHOCO_API_KEY isn't set; skipping Chocolatey."
+
+  winget:
+    needs: prepare
+    if: needs.prepare.outputs.winget == 'true'
+    runs-on: windows-latest
+    permissions: {}
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      # Pinned wingetcreate release, checked against its published SHA-256.
+      WINGETCREATE_URL: https://github.com/microsoft/winget-create/releases/download/v1.12.13.0/wingetcreate.exe
+      WINGETCREATE_SHA256: 24042bd37915805615e6cf969ac57c6439124c3fe85823327f5f3fb24bd9ffea
+    steps:
+      - name: Download wingetcreate
+        shell: pwsh
+        run: |
+          Invoke-WebRequest $env:WINGETCREATE_URL -OutFile wingetcreate.exe
+          $hash = (Get-FileHash wingetcreate.exe -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $env:WINGETCREATE_SHA256) { throw "wingetcreate.exe SHA-256 mismatch: $hash" }
+      - name: Open the winget-pkgs pull request
+        shell: pwsh
+        env:
+          # wingetcreate reads the token from here, which keeps it off the command line.
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          $tag = "v$env:VERSION"
+          $url = "https://github.com/kovirlabs/tenajlo/releases/download/$tag/Tenajlo_$($env:VERSION)_x64-setup.exe"
+          .\wingetcreate.exe update KovirLabs.Tenajlo `
+            --version $env:VERSION `
+            --urls "$url|x64" `
+            --release-notes-url "https://github.com/kovirlabs/tenajlo/releases/tag/$tag" `
+            --release-date (Get-Date -Format yyyy-MM-dd) `
+            --submit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  chocolatey:
+    needs: prepare
+    if: needs.prepare.outputs.choco == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Points the package at this release's installer and its GitHub-published SHA-256.
+      - name: Update the package to this version
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: node scripts/update-packaging.mjs $env:VERSION
+      - name: Pack and push
+        shell: pwsh
+        working-directory: packaging/chocolatey
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+        run: |
+          choco pack tenajlo.nuspec
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          choco push "tenajlo.$env:VERSION.nupkg" --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
