@@ -11,6 +11,11 @@ export const commands = {
 	getAppInfo: () => typedError<AppInfo, AppError>(__TAURI_INVOKE("get_app_info")),
 	/**  Opens the log folder in Explorer / Finder (to attach logs to a bug report). */
 	openLogsFolder: () => typedError<null, AppError>(__TAURI_INVOKE("open_logs_folder")),
+	/**
+	 *  The clone URL from an Open in Tenajlo link that hasn't been shown yet, if any (spec §8.3).
+	 *  Taking it clears it, so each link opens the Clone dialog once.
+	 */
+	takeCloneLink: () => __TAURI_INVOKE<string | null>("take_clone_link"),
 	/**  Lists added repositories, most recently opened first. */
 	listRepositories: () => __TAURI_INVOKE<RepositoryList>("list_repositories"),
 	/**  Opens a folder picker and adds the chosen repository. `None` if the user cancelled. */
@@ -261,6 +266,7 @@ export const commands = {
 /** Events */
 export const events = {
 	authPromptRequested: makeEvent<AuthPromptRequested>("auth-prompt-requested"),
+	cloneLinkReceived: makeEvent<CloneLinkReceived>("clone-link-received"),
 	gitProgress: makeEvent<GitProgress>("git-progress"),
 	repoChanged: makeEvent<RepoChanged>("repo-changed"),
 	updateProgress: makeEvent<UpdateProgress>("update-progress"),
@@ -417,6 +423,15 @@ export type Check = {
 
 /**  The combined result of a commit's checks (Forgejo Actions and other CI). */
 export type CheckState = "Pending" | "Success" | "Warning" | "Failure";
+
+/**
+ *  Sent to the frontend when a valid link arrives. The frontend then calls `take_clone_link`
+ *  (once its main screen is up), which also covers links that arrived before it listened.
+ */
+export type CloneLinkReceived = {
+	/**  The checked clone URL. */
+	url: string,
+};
 
 /**  One commit in the History list. */
 export type Commit = {

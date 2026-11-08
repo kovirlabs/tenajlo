@@ -266,27 +266,6 @@ If you use Forgejo Actions (for example, to check a PLC export compiles or to re
 drawings to PDF), Tenajlo shows each commit's checks in **History**. You can also require
 them under **Enable status check** in the same branch rule.
 
-## Add an "Open in Tenajlo" button
-
-Forgejo can show desktop apps in the clone menu on every repository page. Add Tenajlo there,
-and engineers can open any repository in Tenajlo's Clone dialog with one click, with the
-address already filled in. (Tenajlo 1.5 and later. The link only fills in the dialog; the
-engineer still chooses the folder and clicks **Clone**.)
-
-1. Open **Site Administration → Configuration → Settings → Repository**.
-2. In the **Open with** editor apps box, enter:
-
-   ```text
-   Tenajlo = tenajlo://clone?url={url}
-   VS Code = vscode://vscode.git/clone?url={url}
-   VSCodium = vscodium://vscode.git/clone?url={url}
-   ```
-
-   Saving this list replaces Forgejo's built-in one, so keep any other apps your team uses.
-
-3. Save. Repository pages now offer **Open with Tenajlo** next to the clone address, for
-   HTTPS or SSH, whichever the engineer picked.
-
 ## Onboard engineers
 
 ### 1. Install Tenajlo
@@ -340,7 +319,6 @@ Give new engineers the [Tenajlo user guide](user-guide.md) and three rules:
 - [ ] Template repository with `.gitattributes` and `.gitignore`
 - [ ] Branch protection on production branches
 - [ ] SSH host key fingerprints published (if you offer SSH)
-- [ ] **Open with Tenajlo** added to the clone menu
 - [ ] Tenajlo installed and a test engineer has cloned, locked, committed and pushed a CAD
       file end to end
 

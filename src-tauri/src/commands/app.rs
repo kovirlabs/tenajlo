@@ -61,3 +61,11 @@ fn logs_dir(app: &AppHandle) -> Result<std::path::PathBuf, AppError> {
         .map(|d| d.join("logs"))
         .map_err(|e| AppError::internal("Tenajlo couldn't find its data folder.", e.to_string()))
 }
+
+/// The clone URL from an Open in Tenajlo link that hasn't been shown yet, if any (spec §8.3).
+/// Taking it clears it, so each link opens the Clone dialog once.
+#[tauri::command]
+#[specta::specta]
+pub fn take_clone_link(pending: State<'_, crate::open_link::PendingCloneLink>) -> Option<String> {
+    pending.take()
+}

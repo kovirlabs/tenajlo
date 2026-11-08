@@ -13,7 +13,7 @@ use common::*;
 #[tokio::test]
 async fn checks_permission_then_adds_a_generated_key() {
     let client = ForgejoClient::new().unwrap();
-    let base = normalize_base_url(BASE).unwrap();
+    let base = normalize_base_url(&BASE).unwrap();
 
     let read_only = token(&["read:user", "read:repository", "write:repository"]).await;
     assert!(!keys::can_add_keys(&client, &base, &read_only)

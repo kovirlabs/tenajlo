@@ -19,6 +19,8 @@ type Protocol = "https" | "ssh";
 /** Clone dialog (spec §8.1): pick a Forgejo repository or paste a URL, then a local folder. */
 export function CloneDialog() {
   const dialog = useDialog("clone");
+  // A new Open in Tenajlo link starts the dialog over with its address.
+  const linkSeq = useCloneStore((s) => s.linkSeq);
   const close = () => {
     // Closing (e.g. Escape) while cloning stops the clone.
     useCloneStore.getState().cancel();
@@ -26,7 +28,7 @@ export function CloneDialog() {
   };
   return (
     <Modal open={dialog.open} title="Clone a repository" onClose={close}>
-      <CloneBody onClose={close} />
+      <CloneBody key={linkSeq} onClose={close} />
     </Modal>
   );
 }
@@ -36,10 +38,12 @@ function CloneBody({ onClose }: { onClose: () => void }) {
   const accounts = useAccountStore((s) => s.accounts);
   const loadAccounts = useAccountStore((s) => s.load);
   const running = useCloneStore((s) => s.running);
-  const [tab, setTab] = useState<Tab>("forgejo");
+  // Opened by an Open in Tenajlo link (spec §8.3): start on the URL tab with its address.
+  const [linkUrl] = useState(() => useCloneStore.getState().linkUrl);
+  const [tab, setTab] = useState<Tab>(linkUrl ? "url" : "forgejo");
   const [picked, setPicked] = useState<RemoteRepository | null>(null);
   const [protocol, setProtocol] = useState<Protocol>("https");
-  const [typedUrl, setTypedUrl] = useState("");
+  const [typedUrl, setTypedUrl] = useState(linkUrl ?? "");
   const [path, setPath] = useState("");
   const [pathChosen, setPathChosen] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
@@ -49,6 +53,11 @@ function CloneBody({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     void loadAccounts();
   }, [loadAccounts]);
+
+  // The link is used once; opening the dialog from the menu later starts empty.
+  useEffect(() => {
+    if (linkUrl) useCloneStore.getState().clearLink();
+  }, [linkUrl]);
 
   useTauriEvent(onProgress, (p) => useCloneStore.getState().onProgress(p.opId, p.progress));
 

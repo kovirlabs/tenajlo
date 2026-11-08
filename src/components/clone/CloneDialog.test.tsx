@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Account, RemoteRepository } from "../../bindings";
 import { useAccountStore } from "../../stores/accountStore";
 import { useCloneStore } from "../../stores/cloneStore";
@@ -48,7 +48,13 @@ describe("CloneDialog", () => {
   beforeEach(() => {
     accounts = [account];
     useAccountStore.setState({ accounts: [], loaded: false });
-    useCloneStore.setState({ lists: {}, loadingAccount: null, listError: null, running: null });
+    useCloneStore.setState({
+      lists: {},
+      loadingAccount: null,
+      listError: null,
+      running: null,
+      linkUrl: null,
+    });
     useUiStore.setState({ dialog: "clone" });
     cloneApi.suggestClonePath.mockImplementation(async (url: string) => ({
       status: "ok",
@@ -140,6 +146,34 @@ describe("CloneDialog", () => {
       "/work/x",
     );
     expect(useUiStore.getState().dialog).toBe("clone");
+  });
+
+  it("opens on the URL tab with an Open in Tenajlo link's address, without cloning", async () => {
+    useUiStore.setState({ dialog: null });
+    useCloneStore.getState().showLink("https://git.example.com/acme/plc.git");
+    expect(useUiStore.getState().dialog).toBe("clone");
+    render(<CloneDialog />);
+
+    expect(screen.getByRole("tab", { name: "URL" }).getAttribute("aria-selected")).toBe("true");
+    expect((screen.getByLabelText("Repository address") as HTMLInputElement).value).toBe(
+      "https://git.example.com/acme/plc.git",
+    );
+    const folder = screen.getByLabelText("Local folder") as HTMLInputElement;
+    await waitFor(() => expect(folder.value).toBe("/Users/evan/Documents/Tenajlo/plc"));
+    expect(useCloneStore.getState().linkUrl).toBeNull();
+    expect(cloneApi.cloneRepository).not.toHaveBeenCalled();
+
+    // Another link while the dialog is open replaces the address.
+    act(() => useCloneStore.getState().showLink("git@git.example.com:acme/hmi.git"));
+    expect((screen.getByLabelText("Repository address") as HTMLInputElement).value).toBe(
+      "git@git.example.com:acme/hmi.git",
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Local folder") as HTMLInputElement).value).toBe(
+        "/Users/evan/Documents/Tenajlo/hmi",
+      ),
+    );
+    expect(cloneApi.cloneRepository).not.toHaveBeenCalled();
   });
 
   it("asks to sign in when there are no accounts", async () => {

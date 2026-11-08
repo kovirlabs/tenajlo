@@ -37,6 +37,10 @@ pub fn validate_url(url: &str) -> Result<(), CloneError> {
         return Err(CloneError::InvalidUrl("starts with -"));
     }
     if let Some((user_host, path)) = scp_like(url) {
+        // `helper::address` runs a git remote helper (`ext::`, `fd::`…), not an ssh clone.
+        if path.starts_with(':') {
+            return Err(CloneError::InvalidUrl("remote helper address"));
+        }
         let host = user_host.rsplit_once('@').map_or(user_host, |(_, h)| h);
         if host.is_empty() || host.starts_with('-') || user_host.starts_with('-') || path.is_empty()
         {
@@ -168,6 +172,8 @@ mod tests {
             "-oProxyCommand=evil:x",
             "git@-oProxyCommand=evil:x",
             "git@h:",
+            "ext::sh -c evil",
+            "fd::17",
             "C:\\repos\\x",
             "/tmp/x",
             "https://",

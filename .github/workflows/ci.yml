@@ -116,3 +116,41 @@ jobs:
         if: failure()
         working-directory: .
         run: docker compose -f dev/forgejo.yml logs --tail 200
+
+  integration-gitea:
+    # The same integration tests against Gitea (dev/gitea.yml): the current release and the
+    # last 1.x line, so "works with Gitea" stays a tested claim.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        gitea: ["28.3", "1.27"]
+    env:
+      GITEA_TAG: ${{ matrix.gitea }}
+      TENAJLO_FORGEJO_URL: http://localhost:3001
+      TENAJLO_FORGEJO_SSH_PORT: "2223"
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Linux libraries for Tauri
+        working-directory: .
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev git-lfs
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: node scripts/build-askpass.mjs
+        working-directory: .
+      - name: Start Gitea
+        working-directory: .
+        run: |
+          docker compose -f dev/gitea.yml up -d
+          until curl -sf http://localhost:3001/api/v1/version; do sleep 1; done
+          dev/seed-forgejo.sh gitea
+      - run: cargo test --features integration --locked --test '*'
+      - name: Gitea logs
+        if: failure()
+        working-directory: .
+        run: docker compose -f dev/gitea.yml logs --tail 200
