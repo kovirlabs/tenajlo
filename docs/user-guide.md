@@ -116,10 +116,12 @@ The rest stays in your files for a later commit. Renamed files, links, and files
 Git LFS can only be included whole.
 
 Made a mistake? Right after committing, click **Undo** in the commit box. Your changes stay
-there, ready to commit again.
+there, ready to commit again. **Undo** goes away once the commit is pushed or you switch
+branches, and isn't offered for merge commits.
 
 Right-click a file for more: **Open in editor**, **Show in folder**, **Discard changes…**
-(discarded new files go to the Recycle Bin, so you can get them back), and **Ignore**.
+(discarded files go to the Recycle Bin on Windows or the Trash elsewhere, so you can get them
+back), **Ignore this file**, and **Ignore all .<extension> files**.
 Right-click the "changed files" line above the list for **Discard all changes…**.
 
 Your summary and description are kept if you switch to another repository and come back.
@@ -153,8 +155,9 @@ repository or come back to the window (change or turn this off in **Settings →
 While a check, push or pull is running, a commit or other change you start waits for it to
 finish; the commit box says so.
 
-In **History**, commits marked **Not pushed** are only on your computer so far. Right-click a
-commit (or use the **Copy ID** link above its files) to copy its full commit ID.
+The **History** tab lists the branch's commits, newest first. Click one to see its files and
+what changed in each. Commits marked **Not pushed** are only on your computer so far.
+Right-click a commit (or use the **Copy ID** link above its files) to copy its full commit ID.
 
 To take a repository off Tenajlo's list, open the repository list, right-click it, and choose
 **Remove from list…**. Its folder and files stay on your computer.
@@ -181,8 +184,13 @@ token with the permissions it lists and paste it.
 
 ### When you and someone else both changed the branch
 
-Pull then says your branch and the server's have both changed, and offers **Merge the
-server's changes**. That combines both sets of changes with a merge commit; then push.
+Pull then says "You and the server both have new commits" and offers **Merge the server's
+changes**. That combines both sets of changes with a merge commit; then push. (To merge
+without being asked, or to rebase instead, change **When pulling** in **Settings →
+Repositories**.)
+
+If you send commits but a teammate sent theirs first, Tenajlo says "The server has newer
+commits" and offers **Get the server's commits**. Get them, then send yours again.
 
 ### Conflicts
 
@@ -201,7 +209,18 @@ Changed your mind? **Abort merge** puts your branch back exactly as it was.
 Use the **Current branch** menu to switch branches or create a new one (Ctrl+Shift+N). If you
 have unfinished changes when switching, Tenajlo asks whether to **Bring my changes** to the
 other branch or **Leave my changes** on the branch you're leaving (you get them back when you
-return).
+return). If Tenajlo can't put them back on its own, a banner says you have saved changes;
+click **Restore**.
+
+- **Remote branches** in the menu are branches on the server you don't have yet. Click one
+  to get your own copy of it and switch to it.
+- **New branch…** starts a branch from the one you're on. Branch names can't differ from an
+  existing branch only in capital letters (`Feature` next to `feature`), because Windows and
+  macOS would treat them as the same.
+- **Delete a branch** by right-clicking it under **Other branches** and choosing
+  **Delete…**. This only removes it from your computer, not from the server. If it has
+  commits that aren't on any other branch, Tenajlo warns you first and asks you to confirm
+  with **Delete anyway**.
 
 ### Pull requests and checks on Forgejo
 
@@ -275,7 +294,9 @@ Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its s
 - **Passwords:** passwords and SSH passphrases you chose to remember. **Forget** removes one;
   Tenajlo asks for it next time.
 - **Git:** your name and email for commits, and which Git program to use.
-- **Repositories:** where new clones go, what Pull does, how often to check the server,
+- **Repositories:** where new clones go, what Pull does when you and the server both have new
+  commits (**Only when it's safe**, the default, asks before merging; **Always merge**; or
+  **Rebase**, for experienced Git users), how often to check the server,
   whether to show a notification when the server has new commits on your branch (only while
   you're using another window), and which editor opens files.
 - **Appearance:** light, dark, or the same as your computer.
@@ -284,6 +305,23 @@ Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its s
   shows a banner when one is available. **Install and restart** downloads it, checks it's
   signed by Tenajlo's release key, installs it and restarts. On Linux, installing asks for
   your administrator password, because the `.deb` package is installed for the whole computer.
+
+## Keyboard shortcuts
+
+On a Mac, use ⌘ instead of Ctrl.
+
+| Keys                                | What it does                                   |
+| ----------------------------------- | ---------------------------------------------- |
+| Ctrl+T                              | Open the repository list                       |
+| Ctrl+Shift+N                        | New branch                                     |
+| Ctrl+Shift+P                        | Send your commits to the server (push/publish) |
+| Ctrl+Enter                          | Commit (in the commit box)                     |
+| Ctrl+,                              | Settings                                       |
+| Arrow keys, Home, End, Page Up/Down | Move through the files or commits list         |
+| Space                               | Tick or untick the selected file               |
+| Menu key or Shift+F10               | Open the right-click menu                      |
+
+The Ctrl shortcuts do nothing while a dialog is open.
 
 ## Troubleshooting
 
@@ -295,6 +333,7 @@ Tenajlo uses your computer's own SSH (on Windows, the built-in OpenSSH and its s
 | "The server doesn't allow pushing directly to this branch"                 | Create a new branch, push it, and open a pull request on Forgejo.                                                                          |
 | "A file path is too long for Windows"                                      | Clone to a shorter folder, such as `C:\src`.                                                                                               |
 | "Another program seems to be using this repository"                        | Close other Git tools. If none are running, delete the `.lock` file named in **Details**.                                                  |
+| "Can't find <repository>"                                                  | The folder was moved or deleted. Click **Remove from list**, then add it again from its new place with **Add local…**.                     |
 
 Every error has a **Details** section with Git's exact output. Include it when asking for
 help. Tenajlo removes passwords and tokens from it.
