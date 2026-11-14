@@ -5495,7 +5495,7 @@ dependencies = [
 name = "tenajlo"
 version = "1.4.1"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.1",
  "dunce",
  "getrandom 0.4.3",
  "keyring",
